@@ -2,13 +2,21 @@
 
 *Canonical anchors: Casella & Berger; Wasserman.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapters 1 and 2 treated $\hat\beta = (X^\top X)^{-1}X^\top y$ as a purely algebraic object: given the design matrix $X$ and the observed response vector $y$, the least-squares estimator is a fixed formula and the loss $L(\beta) = \lVert y - X\beta \rVert^2$ is a deterministic surface. That framing is enough to motivate the mechanics, but it papers over the most important fact about marketing data: weekly sales figures are noisy. The same media schedule run in two consecutive quarters will produce different revenue outcomes — different weather, different competitor promotions, different consumer sentiment. $y$ is not a fixed signal; it is a single realization of a random process.
+
+*"If you reran the same campaign, you'd get different sales — so how much of $\hat\beta$ is signal, and how much is luck?"*
+
+Probability theory is the language for making that question precise. We model the observed response as
+
+$$
+y = X\beta + \varepsilon, \qquad \varepsilon \sim \mathcal{N}(0, \sigma^2 I),
+$$
+
+where $\beta$ is a fixed but unknown parameter vector and $\varepsilon$ is a random draw. Making $y$ random immediately gives $\hat\beta$ a sampling distribution — it becomes a random vector in its own right, and we can ask for its mean, covariance, and the probability that it deviates from the truth by more than any given amount. The probabilistic framing also reinterprets the work of Chapter 2: minimizing $L(\beta)$ is equivalent to maximizing the Gaussian log-likelihood, so least squares is maximum likelihood estimation in disguise.
+
+This chapter builds the probabilistic toolkit in the order it is needed: random vectors and covariance matrices, probability distributions and the multivariate normal, conditioning, likelihood and MLE, the law of large numbers and the central limit theorem, and Bayes' theorem. That ladder carries directly into Part II, where we place a prior on $\beta$ and work with a full posterior distribution over media effects, and into Part III, where Monte Carlo methods make high-dimensional posteriors tractable [@casella2002].
 
 ## Theory & Proofs
 
