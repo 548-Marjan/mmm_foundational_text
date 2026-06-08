@@ -62,7 +62,7 @@ execute:
 
 format:
   html:
-    theme: cosmo
+    theme: [cosmo, theme.scss]
     toc: true
     number-sections: true
     html-math-method: katex
