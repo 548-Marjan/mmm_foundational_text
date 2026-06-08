@@ -297,8 +297,48 @@ At `corr=0.3` the design is well-conditioned (`cond(X)≈1.3`, smallest eigenval
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** In words, what is the column space $\mathcal{C}(X)$ of a media design matrix $X$, and what does it represent? The columns of $X$ hold the spend (or transformed spend) for each channel, so $\mathcal{C}(X)$ is the set of all sales patterns the model can possibly reproduce by mixing channels. Explain, in plain terms, what it means *practically* when the observed sales vector satisfies $y \notin \mathcal{C}(X)$ — and why this is the normal situation rather than a failure.
+
+**C2.** Explain why perfect collinearity between two channels makes $\beta$ unidentifiable. Give the explanation twice: once in terms of the *columns of $X$* (what happens geometrically when one channel's column is a scalar multiple of another), and once in terms of the *Gram matrix $X^\top X$* (what happens to its rank and its eigenvalues).
+
+**C3.** A colleague reports a fitted media model in which two channel coefficients come out as $+15$ and $-14$, even though both channels are known to drive sales upward. Using the condition number $\kappa(X)$, explain what is likely going on, why these particular point estimates should not be trusted, and what you would expect to see in $\kappa(X)$ to confirm your diagnosis.
+
 ### B -- By Hand
+
+**B1.** For
+$$
+X = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix},
+\qquad
+y = \begin{bmatrix} 1 \\ 0 \\ 2 \end{bmatrix},
+$$
+form the Gram matrix $X^\top X$ and the vector $X^\top y$, then solve the normal equations $X^\top X\,\hat\beta = X^\top y$ for $\hat\beta$ by hand.
+
+**B2.** Find the eigenvalues and corresponding *unit* eigenvectors of
+$$
+A = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix},
+$$
+and verify directly that the two eigenvectors are orthogonal.
+
+**B3.** Show that the matrix $A = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}$ is positive definite ($A \succ 0$) in two independent ways: first using the eigenvalue criterion (all eigenvalues positive), and separately by completing the square in the quadratic form $z^\top A z$ for $z = (z_1, z_2)^\top$ to show it is strictly positive whenever $z \neq 0$.
 
 ### P -- Prove It
 
+**P1.** Suppose $X$ has full column rank. Prove that
+$$
+\hat\beta = (X^\top X)^{-1} X^\top y
+$$
+minimizes $\lVert y - X\beta \rVert^2$ over all $\beta$. You may cite the fact that full column rank implies $X^\top X \succ 0$ (hence invertible), and you may use either the normal-equations/orthogonality argument or a direct expansion of the objective.
+
+**P2.** Prove that eigenvectors of a real symmetric matrix corresponding to distinct eigenvalues are orthogonal. That is, if $A = A^\top$, $Av_1 = \lambda_1 v_1$, $Av_2 = \lambda_2 v_2$, and $\lambda_1 \neq \lambda_2$, then $v_1^\top v_2 = 0$.
+
+**P3.** Prove that a symmetric positive-definite matrix $A \succ 0$ is invertible. (Hint: what does positive definiteness say about the eigenvalues of $A$, and what does the product of the eigenvalues say about $\det A$?)
+
 ### A -- Applied / Code
+
+**A1.** Extend the chapter's `make_X` / `solve_three_ways` code into a variance experiment. Sweep `corr` over `[0, 0.5, 0.9, 0.99, 0.999]`. For each value, hold the design matrix $X$ fixed and draw $100$ resampled responses $y = X\beta_{\text{true}} + \text{noise}$ (fresh Gaussian noise each draw), refitting $\hat\beta$ every time. Record the empirical variance of one coefficient — say the `search` coefficient — across the $100$ fits, and plot that variance against the condition number $\kappa(X)$ of the corresponding design. Describe the trend you expect to see and relate it to the collapse of the smallest eigenvalue of $X^\top X$.
+
+**A2.** Let
+$$
+\Sigma = \begin{bmatrix} 1 & 0.8 \\ 0.8 & 1 \end{bmatrix}.
+$$
+Using the same `scipy.linalg.cholesky` style as the chapter, compute the lower-triangular Cholesky factor $L$ with $\Sigma = LL^\top$. Draw $10^4$ samples $x = Lz$ where $z \sim \mathcal{N}(0, I_2)$, and confirm that the empirical covariance of the sampled $x$ vectors is close to $\Sigma$. Briefly explain why $x = Lz$ produces the target covariance.
