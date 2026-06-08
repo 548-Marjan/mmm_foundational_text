@@ -2,13 +2,29 @@
 
 *Canonical anchors: Nocedal & Wright (background); Boyd appendix.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapter 1 found the least-squares coefficients $\hat\beta$ by projecting the
+sales vector $y$ onto the column space of the design matrix $X$ — a geometric
+move. But suppose you could not see the whole geometry at once. Suppose you
+could only stand at some guess $\beta$ and *feel the slope of the error under
+your feet*. Two questions decide whether you can still find $\hat\beta$:
+
+1. **Which way is downhill, and how steep?** That is the **gradient**.
+2. **If you reach a flat spot, is it the bottom — and is it the *only*
+   bottom?** That is **convexity**.
+
+This chapter builds the multivariable-calculus answer to both, on one recurring
+object: the sum-of-squares loss surface
+$$
+L(\beta) = \lVert y - X\beta \rVert^2 .
+$$
+By the end we will have re-derived the normal equations $X^\top X\hat\beta =
+X^\top y$ a second time — by calculus rather than projection — and shown that
+the matrix $X^\top X$ that diagnosed collinearity in Chapter 1 is, exactly, the
+*curvature* of $L$. The tools (gradient, Jacobian, Hessian, Taylor expansion,
+the optimality and convexity conditions) are the same ones every model in this
+book is fit with [@nocedal2006; @boyd2004].
 
 ## Theory & Proofs
 
