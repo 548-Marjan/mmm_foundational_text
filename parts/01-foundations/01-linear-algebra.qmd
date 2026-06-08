@@ -164,7 +164,89 @@ This dual role — solving the normal equations and manufacturing correlated Gau
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+### Example: solving the normal equations by hand
+
+Take the smallest design that still has something to say — an intercept and a single channel measured over three weeks:
+
+$$
+X = \begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \end{bmatrix}, \qquad y = \begin{bmatrix} 1 \\ 2 \\ 2 \end{bmatrix}.
+$$
+
+The normal equations of rung 3 read $X^\top X \hat\beta = X^\top y$, so we first assemble the Gram matrix and the right-hand side. The Gram matrix collects the inner products of the columns,
+
+$$
+X^\top X = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 3 \end{bmatrix}\begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \end{bmatrix} = \begin{bmatrix} 3 & 6 \\ 6 & 14 \end{bmatrix}, \qquad X^\top y = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 3 \end{bmatrix}\begin{bmatrix} 1 \\ 2 \\ 2 \end{bmatrix} = \begin{bmatrix} 5 \\ 11 \end{bmatrix}.
+$$
+
+The top-left entry $3$ is just $n$ (the number of weeks), and the off-diagonal $6$ is the sum of the channel values — the familiar bookkeeping of a simple regression. The determinant is
+
+$$
+\det(X^\top X) = 3\cdot 14 - 6\cdot 6 = 42 - 36 = 6 > 0,
+$$
+
+confirming $X^\top X$ is invertible (full column rank, as rung 5 guarantees). Using the $2\times 2$ inverse formula $\begin{bmatrix} a & b \\ c & d\end{bmatrix}^{-1} = \tfrac{1}{ad-bc}\begin{bmatrix} d & -b \\ -c & a\end{bmatrix}$,
+
+$$
+\hat\beta = (X^\top X)^{-1} X^\top y = \frac{1}{6}\begin{bmatrix} 14 & -6 \\ -6 & 3 \end{bmatrix}\begin{bmatrix} 5 \\ 11 \end{bmatrix} = \frac{1}{6}\begin{bmatrix} 70 - 66 \\ -30 + 33 \end{bmatrix} = \frac{1}{6}\begin{bmatrix} 4 \\ 3 \end{bmatrix} = \begin{bmatrix} 2/3 \\ 1/2 \end{bmatrix}.
+$$
+
+So the fitted intercept is $\hat\beta_0 = \tfrac{2}{3}$ and the channel slope is $\hat\beta_1 = \tfrac{1}{2}$. The fit and residual follow immediately:
+
+$$
+\hat y = X\hat\beta = \begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \end{bmatrix}\begin{bmatrix} 2/3 \\ 1/2 \end{bmatrix} = \begin{bmatrix} 7/6 \\ 5/3 \\ 13/6 \end{bmatrix}, \qquad r = y - \hat y = \begin{bmatrix} 1 - 7/6 \\ 2 - 5/3 \\ 2 - 13/6 \end{bmatrix} = \begin{bmatrix} -1/6 \\ 1/3 \\ -1/6 \end{bmatrix}.
+$$
+
+Finally we check the geometric content of rung 3 — the residual must be orthogonal to every column of $X$:
+
+$$
+X^\top r = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 3 \end{bmatrix}\begin{bmatrix} -1/6 \\ 1/3 \\ -1/6 \end{bmatrix} = \begin{bmatrix} -\tfrac16 + \tfrac13 - \tfrac16 \\[2pt] -\tfrac16 + \tfrac23 - \tfrac36 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}.
+$$
+
+The first equation says the residuals sum to zero (orthogonality to the intercept column); the second says they are uncorrelated with the channel. Both hold exactly, so $\hat y$ is precisely the foot of the perpendicular dropped from $y$ onto $\mathcal{C}(X)$ — the projection picture made arithmetic.
+
+### Example: near-collinearity and instability
+
+Now we make the pathology of rung 2 concrete. Consider four weeks of data with an intercept and *two* channels that are almost duplicates of one another — imagine two media variables that move together week to week:
+
+$$
+X = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 2.01 \\ 1 & 3 & 3 \\ 1 & 4 & 4 \end{bmatrix}.
+$$
+
+The second and third columns differ by a single $0.01$ in week 2; they are linearly independent, so $X$ has full column rank and $\hat\beta$ is unique — but only barely. The Gram matrix is
+
+$$
+X^\top X = \begin{bmatrix} 4 & 10 & 10.01 \\ 10 & 30 & 30.02 \\ 10.01 & 30.02 & 30.0401 \end{bmatrix},
+$$
+
+whose two near-duplicate rows announce the trouble. Diagonalizing it numerically (rung 4) gives eigenvalues
+
+$$
+\lambda \approx \{\, 3.5\times 10^{-5}, \;\; 0.630, \;\; 63.41 \,\},
+$$
+
+one of them a whisker above zero. By the rung-6 identity $\lambda_i = \sigma_i^2$, the condition number of the design is
+
+$$
+\kappa(X) = \frac{\sigma_{\max}}{\sigma_{\min}} = \sqrt{\frac{63.41}{3.5\times 10^{-5}}} \approx 1.35\times 10^{3},
+$$
+
+a value of roughly $1345$ (computed directly in NumPy). Compared with a well-separated design, where $\kappa$ sits near $1$, this is severely ill-conditioned: rung 6's severity meter is pinned.
+
+To see what that costs, fit the response $y = (2,\,3,\,5,\,4)^\top$ and then refit after nudging a *single* sales figure by $0.01$ — changing $y_3$ from $5$ to $5.01$, a perturbation of size $\lVert \delta y\rVert = 0.01$:
+
+$$
+\hat\beta \approx \begin{bmatrix} 1.571 \\ 15.071 \\ -14.286 \end{bmatrix} \quad\longrightarrow\quad \hat\beta_{\text{pert}} \approx \begin{bmatrix} 1.573 \\ 15.358 \\ -14.571 \end{bmatrix}.
+$$
+
+The two channel coefficients are already a warning sign on their own: $+15$ and $-14$ are enormous and nearly cancel, the classic fingerprint of collinearity — the model props one channel up only to subtract almost all of it back through the other. The tiny perturbation then moves them by
+
+$$
+\delta\hat\beta \approx (0.001,\; 0.286,\; -0.286)^\top, \qquad \lVert \delta\hat\beta\rVert \approx 0.405.
+$$
+
+A $0.01$ wobble in one data point produced a $0.40$ swing in the estimate — an amplification of roughly $40\times$. (All figures rounded to three decimals; reproduce them with the verification snippet.) Had the two channels been genuinely distinct, the same data nudge would have barely registered.
+
+This is rungs 2 and 6 in a single picture: near-collinearity makes the channel columns point in almost the same direction, which drives one eigenvalue of $X^\top X$ toward zero and makes the Gram matrix nearly singular (rung 2); the condition number $\kappa(X) \approx 1345$ then quantifies *how badly* that ill-conditioning amplifies noise into the coefficient estimates (rung 6). Rank alone would have called this design "fine" — full column rank, unique solution — and missed the instability entirely.
 
 ## Code Tie-in
 
