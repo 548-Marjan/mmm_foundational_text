@@ -64,6 +64,32 @@ tangent direction of the level set. $\qquad\blacksquare$
 So the negative gradient is the locally steepest *downhill* direction — the
 fact every gradient-based fitting method in this book exploits.
 
+### Jacobian and the chain rule
+
+A vector-valued map $r:\mathbb{R}^p\to\mathbb{R}^n$ has **Jacobian**
+$J(\beta)\in\mathbb{R}^{n\times p}$ with entries $J_{ij}=\partial r_i/\partial
+\beta_j$. The **multivariate chain rule** says that for a composition
+$g\circ r$ with $g:\mathbb{R}^n\to\mathbb{R}$,
+$$
+\nabla_\beta\,(g\circ r)(\beta) = J(\beta)^\top\,\nabla g\big(r(\beta)\big).
+$$
+
+Apply it to least squares. The **residual map** is $r(\beta)=y-X\beta$, a linear
+(hence affine) map with constant Jacobian
+$$
+J=\frac{\partial r}{\partial\beta} = -X,
+$$
+and $L(\beta)=g(r(\beta))$ with $g(r)=\lVert r\rVert^2$, $\nabla g(r)=2r$.
+The chain rule gives the gradient of the loss directly:
+$$
+\nabla L(\beta) = J^\top\nabla g(r) = (-X)^\top\,2\,(y-X\beta)
+               = -2X^\top(y-X\beta).
+$$
+The form $\nabla L = 2J^\top r$ is the **Gauss–Newton** shape. Here $J=-X$ is
+constant because the model is linear; when we later fit the *saturating* media
+curves of Part V, $J$ will depend on $\beta$, but this same expression is what
+those nonlinear least-squares fits descend.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
