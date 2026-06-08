@@ -48,8 +48,8 @@ genuinely illuminating we prove it; where a proof is mechanical we cite it.
 ## How to use this book
 
 Each chapter follows the same rhythm: **intuition → theory and proofs → worked
-examples → a runnable code tie-in → exercises**. The exercises come in four
-escalating tiers:
+examples → a runnable code tie-in → exercises → a summary**. The exercises come
+in four escalating tiers:
 
 - **C — Conceptual / reading comprehension.**
 - **B — By hand** (compute or derive manually).
@@ -60,6 +60,10 @@ Worked solutions live in a single appendix at the very back of the book, with no
 inline links from the exercises. This is deliberate: reach for them only after a
 real attempt. (Instructor builds can render the full solutions; reader builds can
 omit them entirely.)
+
+Every chapter closes with a **Summary**: the handful of concepts you must be able
+to state and the key identities you should be able to reproduce from memory before
+moving on. Treat it as a self-check and a quick reference to come back to.
 
 ## Reproducibility
 
