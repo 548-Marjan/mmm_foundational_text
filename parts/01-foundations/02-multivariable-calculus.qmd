@@ -90,6 +90,51 @@ constant because the model is linear; when we later fit the *saturating* media
 curves of Part V, $J$ will depend on $\beta$, but this same expression is what
 those nonlinear least-squares fits descend.
 
+### Hessian, Taylor expansion, and optimality
+
+The **Hessian** $\nabla^2 f(\beta)\in\mathbb{R}^{p\times p}$ collects the second
+partials $\big[\nabla^2 f\big]_{ij}=\partial^2 f/\partial\beta_i\partial\beta_j$;
+for $C^2$ functions it is symmetric (Clairaut). The **second-order Taylor
+expansion** about $\beta$ is
+$$
+f(\beta+\delta) = f(\beta) + \nabla f(\beta)^\top\delta
+  + \tfrac12\,\delta^\top\nabla^2 f(\beta)\,\delta + o(\lVert\delta\rVert^2),
+$$
+with the exact (Lagrange/integral) remainder cited to [@nocedal2006, Thm. 2.1].
+For the loss, differentiating $\nabla L(\beta)=-2X^\top(y-X\beta)$ once more,
+$$
+\nabla^2 L(\beta) = 2X^\top X,
+$$
+constant in $\beta$ — and *exactly* the symmetric PSD matrix Chapter 1 used to
+diagnose collinearity. Its eigenvalues are the curvatures of the bowl $L$.
+
+::: {.callout-note appearance="simple"}
+**Theorem (first-order necessary condition).** If $\beta^\star$ is an interior
+local minimizer of a differentiable $f$, then $\nabla f(\beta^\star)=0$.
+
+**Proof.** Fix any direction $u$. The scalar $\phi(t)=f(\beta^\star+tu)$ has a
+local minimum at $t=0$, so $\phi'(0)=\nabla f(\beta^\star)^\top u=0$. As $u$ was
+arbitrary, every component of $\nabla f(\beta^\star)$ vanishes. $\qquad\blacksquare$
+:::
+
+::: {.callout-note appearance="simple"}
+**Theorem (second-order sufficient condition).** If $\nabla f(\beta^\star)=0$
+and $\nabla^2 f(\beta^\star)$ is positive definite, then $\beta^\star$ is a
+strict local minimizer.
+
+**Proof.** Let $\lambda_{\min}>0$ be the smallest eigenvalue of
+$H=\nabla^2 f(\beta^\star)$ (real and positive by the spectral theorem and PD,
+from Chapter 1). With $\nabla f(\beta^\star)=0$, Taylor gives
+$$
+f(\beta^\star+\delta)-f(\beta^\star)
+ = \tfrac12\,\delta^\top H\,\delta + o(\lVert\delta\rVert^2)
+ \ge \tfrac12\lambda_{\min}\lVert\delta\rVert^2 + o(\lVert\delta\rVert^2).
+$$
+For $\lVert\delta\rVert$ small enough the right side is positive, so
+$f(\beta^\star+\delta)>f(\beta^\star)$ for all small $\delta\neq 0$.
+$\qquad\blacksquare$
+:::
+
 ## Worked Examples
 
 _Worked numerical example(s)._
