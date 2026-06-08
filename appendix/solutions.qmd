@@ -105,7 +105,7 @@ A reference sketch:
 import numpy as np
 
 corrs = [0.0, 0.5, 0.9, 0.99, 0.999]
-beta_true = np.array([2.0, 1.0])
+beta_true = np.array([1.0, 2.0, -0.5])   # intercept, TV, search (matches make_X)
 rng = np.random.default_rng(0)
 variances, kappas = [], []
 for c in corrs:
@@ -115,7 +115,7 @@ for c in corrs:
     for _ in range(100):
         y = X @ beta_true + rng.standard_normal(X.shape[0])
         beta_hat = np.linalg.lstsq(X, y, rcond=None)[0]
-        fits.append(beta_hat[1])       # the "search" coefficient
+        fits.append(beta_hat[2])       # the "search" coefficient (index 2)
     variances.append(np.var(fits))
 # plot variances vs kappas (log scale) -> steeply increasing curve
 ```
