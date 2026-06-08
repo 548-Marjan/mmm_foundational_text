@@ -174,7 +174,41 @@ probability/statistics chapter, where they are needed.
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+**(a) Gradient, Hessian, and recovering $\hat\beta$ by calculus.** Take three
+weeks, two channels (no intercept, to keep arithmetic light):
+$$
+X=\begin{bmatrix}1&0\\1&1\\0&1\end{bmatrix},\qquad
+y=\begin{bmatrix}1\\3\\2\end{bmatrix}.
+$$
+Then
+$$
+X^\top X=\begin{bmatrix}2&1\\1&2\end{bmatrix},\qquad
+X^\top y=\begin{bmatrix}4\\5\end{bmatrix}.
+$$
+The gradient is $\nabla L(\beta)=-2X^\top(y-X\beta)=2\big(X^\top X\beta-X^\top
+y\big)$. Setting $\nabla L=0$ is the normal equations $X^\top X\beta=X^\top y$:
+$$
+\begin{aligned}
+2\beta_1+\beta_2 &= 4\\
+\beta_1+2\beta_2 &= 5
+\end{aligned}
+\quad\Rightarrow\quad
+\hat\beta=\begin{bmatrix}1\\2\end{bmatrix}.
+$$
+The Hessian $\nabla^2 L=2X^\top X=\begin{bmatrix}4&2\\2&4\end{bmatrix}$ has
+eigenvalues $2$ and $6$ (both positive), so by the second-order sufficient
+condition $\hat\beta$ is a strict — and, by convexity, global and unique —
+minimizer. This is the same $\hat\beta$ the projection of Chapter 1 would
+return.
+
+**(b) A saddle: why $\nabla f=0$ is not enough.** Let
+$f(\beta)=\beta_1^2-\beta_2^2$. Then $\nabla f=(2\beta_1,-2\beta_2)^\top$, which
+vanishes at the origin, yet
+$\nabla^2 f=\begin{bmatrix}2&0\\0&-2\end{bmatrix}$ is **indefinite**
+(eigenvalues $+2,-2$). Along $\beta_2=0$ the origin looks like a minimum; along
+$\beta_1=0$ it looks like a maximum. The first-order condition flags it as a
+candidate; only the Hessian reveals it is neither — exactly the gap the
+second-order test closes.
 
 ## Code Tie-in
 
