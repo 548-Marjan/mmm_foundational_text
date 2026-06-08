@@ -2,13 +2,15 @@
 
 *Canonical anchors: Strang; Axler; Trefethen & Bau.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Every media-mix model begins with a matrix. Take $n$ weeks of campaign data and arrange them into a design matrix $X \in \mathbb{R}^{n \times p}$: each row is one week, each column is a feature — an intercept, TV spend, search spend, price index, and a seasonality indicator. Stack the corresponding weekly sales figures into $y \in \mathbb{R}^n$. The task is to find a coefficient vector $\hat\beta \in \mathbb{R}^p$ such that $X\hat\beta$ approximates $y$ as closely as possible.
+
+That sounds straightforward until you notice the trap: *"You ran TV and search together every week. How much did each drive sales — and when can you even tell them apart?"* If TV spend and search spend move in lockstep — both rise in Q4, both fall in January — then the columns of $X$ are nearly proportional, and no amount of data resolves how much of the sales lift to assign to each channel. The question is not about the regression algorithm; it is about the geometry of the matrix itself.
+
+This chapter equips you with three tools for answering it. First, the **column space** $\mathcal{C}(X)$ — the set of all sales patterns that the media variables can explain — determines what $y$ you could ever fit, regardless of which solver you use [@strang2016]. Second, **least squares** is the orthogonal projection of $y$ onto $\mathcal{C}(X)$; the residual $y - \hat{y}$ is perpendicular to every column of $X$ by construction. Third, the **eigenvalues of $X^\top X$** tell you whether that projection is stable: a near-zero eigenvalue signals that two or more channels are so collinear that small changes in $y$ swing $\hat\beta$ wildly.
+
+These three ideas unfold along a single theory ladder: subspaces and rank → projection and least squares → eigenvalues and the spectral theorem → positive-definiteness → the singular value decomposition → Cholesky factorization. Each rung reappears in Part II when we fit and diagnose regression models, and again in Part III when sampling algorithms navigate the posterior geometry of $\beta$.
 
 ## Theory & Proofs
 
