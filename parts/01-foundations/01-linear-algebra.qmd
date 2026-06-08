@@ -342,3 +342,28 @@ $$
 \Sigma = \begin{bmatrix} 1 & 0.8 \\ 0.8 & 1 \end{bmatrix}.
 $$
 Using the same `scipy.linalg.cholesky` style as the chapter, compute the lower-triangular Cholesky factor $L$ with $\Sigma = LL^\top$. Draw $10^4$ samples $x = Lz$ where $z \sim \mathcal{N}(0, I_2)$, and confirm that the empirical covariance of the sampled $x$ vectors is close to $\Sigma$. Briefly explain why $x = Lz$ produces the target covariance.
+
+## Summary
+
+The ideas below are the ones every later chapter leans on. If you can state each concept in a sentence and reproduce each identity from memory, you are ready to move on.
+
+**Key concepts**
+
+- **The column picture.** A matrix–vector product $X\beta$ is a *linear combination of the columns* of $X$. Everything the model can predict lives in the column space $\mathcal{C}(X)$ — the span of the channel columns.
+- **Rank is identification.** Linearly dependent columns (perfectly collinear channels) drop the rank, make $X^\top X$ singular, and leave $\beta$ unidentified. *Near*-collinearity keeps full rank but leaves $X^\top X$ ill-conditioned.
+- **Least squares is projection.** Fitting minimizes $\lVert y - X\beta\rVert^2$ by projecting $y$ orthogonally onto $\mathcal{C}(X)$; the residual is perpendicular to every column. This is the **normal equations**.
+- **Symmetric matrices are well-behaved.** A real symmetric matrix (above all $X^\top X$) has real eigenvalues and an orthonormal eigenbasis — the **spectral theorem**.
+- **Positive definiteness = stability.** $X^\top X \succeq 0$ always; it is $\succ 0$ (invertible, $\beta$ identifiable) exactly when $X$ has full column rank. PD $\iff$ all eigenvalues positive.
+- **SVD and conditioning.** The SVD generalizes the eigen-picture to any $X$; the **condition number** $\kappa(X)=\sigma_1/\sigma_r$ grades *how badly* collinearity amplifies noise — the quantitative answer that rank could not give.
+- **Cholesky is the workhorse.** Every SPD matrix factors as $LL^\top$, giving stable solves of the normal equations and a one-line recipe for correlated Gaussian draws — reused throughout Parts II–III.
+
+**Key identities**
+
+- Column picture: $X\beta = \sum_{j=1}^{p}\beta_j\,x_j$.
+- Normal equations: $X^\top X\,\hat\beta = X^\top y \;\Rightarrow\; \hat\beta = (X^\top X)^{-1}X^\top y$ (full column rank).
+- Residual orthogonality: $X^\top(y - X\hat\beta) = 0$.
+- Gram quadratic form: $z^\top X^\top X z = \lVert Xz\rVert^2 \ge 0$, with equality iff $z\in\mathcal{N}(X)$.
+- Spectral theorem: $A = Q\Lambda Q^\top$ for symmetric $A$, orthogonal $Q$, diagonal $\Lambda$.
+- Positive definiteness: $A \succ 0 \iff \lambda_i > 0$ for all $i \;\Rightarrow\; A$ invertible.
+- SVD: $X = U\Sigma V^\top$, with $X^\top X = V\Sigma^2 V^\top$ and $\kappa(X)=\sigma_1/\sigma_r$.
+- Cholesky / correlated draws: $\Sigma = LL^\top$ and $z\sim\mathcal{N}(0,I) \Rightarrow Lz\sim\mathcal{N}(0,\Sigma)$.
