@@ -26,4 +26,110 @@ Each chapter's solutions appear under a heading matching the chapter title, with
 answers labeled by exercise tier (C / B / P / A) to match the problem numbering
 in that chapter.
 
+## Chapter 1 — Linear Algebra
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** The column space $\mathcal{C}(X)$ is the span of $X$'s columns: every sales pattern the model can produce by some linear combination of channel spends. When $y \notin \mathcal{C}(X)$, the observed sales vector lies *off* that subspace, so no choice of $\beta$ reproduces $y$ exactly. This is normal rather than a failure: real sales carry noise and the effects of factors outside the recorded channels, so $y$ almost never lands in the low-dimensional span of a handful of channel columns. Least squares responds by projecting $y$ onto $\mathcal{C}(X)$ and fitting the closest reachable pattern.
+
+**C2.** *Columns:* if channel $j$'s column is a scalar multiple of channel $k$'s, the two columns point in the same direction, so any sales contribution attributed to $j$ can be traded off against $k$ with no change in the fit. Infinitely many $(\beta_j, \beta_k)$ pairs give identical predictions, so the coefficients are unidentifiable. *Gram matrix:* the duplicated direction makes $X$ rank-deficient, hence $X^\top X$ is singular (rank drops below the number of columns). One eigenvalue of $X^\top X$ becomes exactly $0$, so $(X^\top X)^{-1}$ does not exist and the normal equations have no unique solution.
+
+**C3.** Large-magnitude coefficients of opposite sign on two channels that both help sales are the signature of near-collinearity: the design is ill-conditioned, so $X^\top X$ has a tiny smallest eigenvalue and the fit can finance a huge positive coefficient on one channel by an offsetting negative one on its near-twin. The individual point estimates are unstable — tiny changes in the data move them a lot — even though their *sum* (the joint effect) is well determined. To confirm, I would compute $\kappa(X)$ and expect a large value (hundreds or more), indicating that the smallest singular value is far smaller than the largest.
+
+### B — By Hand
+
+**B1.** With
+$$
+X = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix},
+\qquad
+y = \begin{bmatrix} 1 \\ 0 \\ 2 \end{bmatrix},
+$$
+the Gram matrix and right-hand side are
+$$
+X^\top X = \begin{bmatrix} 3 & 3 \\ 3 & 5 \end{bmatrix},
+\qquad
+X^\top y = \begin{bmatrix} 3 \\ 4 \end{bmatrix}.
+$$
+Solving $X^\top X\,\hat\beta = X^\top y$: from the first equation $3\hat\beta_0 + 3\hat\beta_1 = 3$, i.e. $\hat\beta_0 + \hat\beta_1 = 1$. Substituting into the second, $3(1-\hat\beta_1) + 5\hat\beta_1 = 4$, so $2\hat\beta_1 = 1$ and $\hat\beta_1 = \tfrac12$, giving $\hat\beta_0 = \tfrac12$. Hence
+$$
+\hat\beta = \begin{bmatrix} 1/2 \\ 1/2 \end{bmatrix}.
+$$
+
+**B2.** For $A = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}$ the characteristic polynomial is $\det(A - \lambda I) = (2-\lambda)^2 - 1 = \lambda^2 - 4\lambda + 3 = (\lambda-1)(\lambda-3)$, so the eigenvalues are $\lambda_1 = 3$ and $\lambda_2 = 1$. For $\lambda = 3$, $(A - 3I)v = \begin{bmatrix} -1 & 1 \\ 1 & -1 \end{bmatrix}v = 0$ gives $v \propto (1,1)$, with unit vector $\tfrac{1}{\sqrt2}(1,1)$. For $\lambda = 1$, $(A - I)v = \begin{bmatrix} 1 & 1 \\ 1 & 1 \end{bmatrix}v = 0$ gives $v \propto (1,-1)$, with unit vector $\tfrac{1}{\sqrt2}(1,-1)$. Their inner product is $\tfrac{1}{2}\big(1\cdot 1 + 1\cdot(-1)\big) = 0$, so the eigenvectors are orthogonal.
+
+**B3.** *Eigenvalue criterion:* from B2 the eigenvalues of $A$ are $1$ and $3$, both strictly positive, so $A \succ 0$. *Completing the square:* for $z = (z_1, z_2)^\top$,
+$$
+z^\top A z = 2z_1^2 + 2z_1 z_2 + 2z_2^2
+= 2\Big(z_1 + \tfrac{z_2}{2}\Big)^2 + \tfrac{3}{2}\,z_2^2 .
+$$
+(Check: $2(z_1 + z_2/2)^2 = 2z_1^2 + 2z_1 z_2 + \tfrac12 z_2^2$, and adding $\tfrac32 z_2^2$ restores $2z_2^2$.) Both terms are nonnegative; they vanish simultaneously only when $z_2 = 0$ and $z_1 + z_2/2 = 0$, i.e. $z_1 = z_2 = 0$. Hence $z^\top A z > 0$ for all $z \neq 0$, so $A \succ 0$.
+
+### P — Prove It
+
+**P1.** *Claim.* If $X$ has full column rank, then $\hat\beta = (X^\top X)^{-1} X^\top y$ minimizes $f(\beta) = \lVert y - X\beta \rVert^2$.
+
+*Proof.* Full column rank implies $X^\top X \succ 0$, hence invertible, so $\hat\beta$ is well defined. Write any $\beta = \hat\beta + d$. The residual at $\hat\beta$ is $r = y - X\hat\beta$, and by construction $X^\top r = X^\top y - X^\top X (X^\top X)^{-1} X^\top y = 0$. Then
+$$
+f(\beta) = \lVert y - X\hat\beta - Xd \rVert^2 = \lVert r - Xd \rVert^2
+= \lVert r \rVert^2 - 2 d^\top X^\top r + \lVert Xd \rVert^2 .
+$$
+The cross term $d^\top X^\top r = 0$ because $X^\top r = 0$, so
+$$
+f(\beta) = \lVert r \rVert^2 + \lVert Xd \rVert^2 \geq \lVert r \rVert^2 = f(\hat\beta).
+$$
+Equality holds iff $\lVert Xd \rVert^2 = 0$, i.e. $Xd = 0$; full column rank forces $d = 0$, so $\hat\beta$ is the unique minimizer. $\blacksquare$
+
+**P2.** *Claim.* If $A = A^\top$, $Av_1 = \lambda_1 v_1$, $Av_2 = \lambda_2 v_2$, and $\lambda_1 \neq \lambda_2$, then $v_1^\top v_2 = 0$.
+
+*Proof.* Consider $v_1^\top A v_2$. On one hand $v_1^\top A v_2 = v_1^\top (\lambda_2 v_2) = \lambda_2\, v_1^\top v_2$. On the other hand, using $A = A^\top$,
+$$
+v_1^\top A v_2 = (A v_1)^\top v_2 = (\lambda_1 v_1)^\top v_2 = \lambda_1\, v_1^\top v_2 .
+$$
+Subtracting, $(\lambda_1 - \lambda_2)\, v_1^\top v_2 = 0$. Since $\lambda_1 \neq \lambda_2$, the factor $\lambda_1 - \lambda_2 \neq 0$, so $v_1^\top v_2 = 0$. $\blacksquare$
+
+**P3.** *Claim.* A symmetric positive-definite matrix $A \succ 0$ is invertible.
+
+*Proof.* Because $A$ is real symmetric, the spectral theorem gives an orthonormal eigenbasis with real eigenvalues $\lambda_1, \dots, \lambda_n$. Positive definiteness means $v^\top A v > 0$ for every $v \neq 0$; applying this to a unit eigenvector $v_i$ gives $\lambda_i = v_i^\top A v_i > 0$. Thus every eigenvalue is strictly positive. The determinant equals the product of the eigenvalues,
+$$
+\det A = \prod_{i=1}^n \lambda_i > 0,
+$$
+which is nonzero. A matrix with nonzero determinant is invertible, so $A$ is invertible. $\blacksquare$
+
+### A — Applied / Code
+
+**A1.** Holding $X$ fixed and resampling $y = X\beta_{\text{true}} + \varepsilon$ with fresh Gaussian noise, the OLS estimator has covariance $\sigma^2 (X^\top X)^{-1}$. As `corr` rises toward $1$, the two channel columns become nearly parallel, the smallest eigenvalue $\lambda_{\min}$ of $X^\top X$ collapses toward $0$, and the corresponding diagonal entries of $(X^\top X)^{-1} \sim 1/\lambda_{\min}$ blow up. The empirical variance of the `search` coefficient across the $100$ refits therefore grows sharply — roughly in step with $1/\lambda_{\min}$, which itself scales like $\kappa(X)^2$ for a fixed largest eigenvalue. Plotted against $\kappa(X)$, the variance climbs steeply (close to quadratically), exploding for `corr` $= 0.99, 0.999$.
+
+A reference sketch:
+
+```python
+import numpy as np
+
+corrs = [0.0, 0.5, 0.9, 0.99, 0.999]
+beta_true = np.array([2.0, 1.0])
+rng = np.random.default_rng(0)
+variances, kappas = [], []
+for c in corrs:
+    X = make_X(corr=c)                 # fixed design for this corr
+    kappas.append(np.linalg.cond(X))
+    fits = []
+    for _ in range(100):
+        y = X @ beta_true + rng.standard_normal(X.shape[0])
+        beta_hat = np.linalg.lstsq(X, y, rcond=None)[0]
+        fits.append(beta_hat[1])       # the "search" coefficient
+    variances.append(np.var(fits))
+# plot variances vs kappas (log scale) -> steeply increasing curve
+```
+
+The qualitative trend is monotone and convex: variance is small and flat for low correlation, then rises sharply as $\kappa(X)$ enters the hundreds and beyond.
+
+**A2.** For $\Sigma = \begin{bmatrix} 1 & 0.8 \\ 0.8 & 1 \end{bmatrix}$ the lower-triangular Cholesky factor solves $\Sigma = LL^\top$. Writing $L = \begin{bmatrix} \ell_{11} & 0 \\ \ell_{21} & \ell_{22} \end{bmatrix}$: $\ell_{11}^2 = 1 \Rightarrow \ell_{11} = 1$; $\ell_{21}\ell_{11} = 0.8 \Rightarrow \ell_{21} = 0.8$; and $\ell_{21}^2 + \ell_{22}^2 = 1 \Rightarrow \ell_{22} = \sqrt{1 - 0.64} = 0.6$ (indeed $0.8^2 + 0.6^2 = 1$). Thus
+$$
+L = \begin{bmatrix} 1 & 0 \\ 0.8 & 0.6 \end{bmatrix}.
+$$
+Drawing $z \sim \mathcal{N}(0, I_2)$ and setting $x = Lz$, the covariance is $\operatorname{Cov}(x) = L\,\operatorname{Cov}(z)\,L^\top = L I L^\top = LL^\top = \Sigma$, which is why the construction hits the target covariance. Empirically, $10^4$ draws give
+$$
+\widehat{\operatorname{Cov}}(x) \approx \begin{bmatrix} 1.00 & 0.79 \\ 0.79 & 0.98 \end{bmatrix} \approx \Sigma,
+$$
+matching $\Sigma$ up to sampling error.
+
 :::
