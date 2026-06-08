@@ -1,0 +1,72 @@
+project:
+  type: book
+
+# Build with solutions:  quarto render --metadata show-solutions:true
+show-solutions: false
+
+book:
+  title: "The Mathematics and Engineering of Marketing Mix Modeling"
+  subtitle: "A self-contained path from Calculus 2, linear algebra, and calculus-based statistics to advanced MMM practice."
+  author: "548 / Marjan"
+  date: today
+  search: true
+  repo-url: https://github.com/jlhf80/mmm_foundational_text
+  repo-actions: [issue]
+  page-footer:
+    left: "Built with Quarto."
+  chapters:
+    - index.qmd
+    - part: "Part I — Mathematical Foundations"
+      chapters:
+        - parts/01-foundations/01-linear-algebra.qmd
+        - parts/01-foundations/02-multivariable-calculus.qmd
+        - parts/01-foundations/03-probability-statistics.qmd
+    - part: "Part II — Regression & Bayesian Inference"
+      chapters:
+        - parts/02-regression-bayes/01-linear-regression.qmd
+        - parts/02-regression-bayes/02-bayesian-inference.qmd
+        - parts/02-regression-bayes/03-hierarchical-regression.qmd
+    - part: "Part III — Computation: Sampling"
+      chapters:
+        - parts/03-sampling/01-markov-chains.qmd
+        - parts/03-sampling/02-mcmc.qmd
+        - parts/03-sampling/03-hmc-nuts.qmd
+        - parts/03-sampling/04-model-checking.qmd
+    - part: "Part IV — Optimization"
+      chapters:
+        - parts/04-optimization/01-convexity.qmd
+        - parts/04-optimization/02-linear-programming.qmd
+        - parts/04-optimization/03-slsqp.qmd
+    - part: "Part V — Marketing Mix Modeling: Synthesis"
+      chapters:
+        - parts/05-mmm-synthesis/01-mmm-dgp.qmd
+        - parts/05-mmm-synthesis/02-building-fitting.qmd
+        - parts/05-mmm-synthesis/03-budget-optimization.qmd
+    - part: "Part VI — Software Engineering & Computer Science"
+      chapters:
+        - parts/06-swe-cs/01-cs-foundations.qmd
+        - parts/06-swe-cs/02-software-architecture.qmd
+        - parts/06-swe-cs/03-data-engineering.qmd
+        - parts/06-swe-cs/04-testing-reliability.qmd
+    - part: "Part VII — Capstone"
+      chapters:
+        - parts/07-capstone/01-putting-it-together.qmd
+  appendices:
+    - appendix/solutions.qmd
+
+bibliography: references.bib
+
+# Reuse computed results so heavy PyMC/MCMC cells don't re-run on every render.
+execute:
+  freeze: auto
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    number-sections: true
+    html-math-method: katex
+  pdf:
+    documentclass: scrreprt
+    number-sections: true
+    keep-tex: true

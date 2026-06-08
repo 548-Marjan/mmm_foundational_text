@@ -1,0 +1,10 @@
+# Pinned dependencies for reproducible code cells.
+# Mirrors the relevant scientific stack used by a production MMM.
+numpy>=2.0,<3.0
+scipy>=1.13,<2.0
+pandas>=2.0,<3.0
+matplotlib>=3.7,<4.0
+pymc>=5.0,<6.0
+pymc-marketing>=0.19.0,<0.20
+arviz>=0.18,<1.0
+jupyter>=1.0

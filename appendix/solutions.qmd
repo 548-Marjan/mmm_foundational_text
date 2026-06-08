@@ -1,0 +1,29 @@
+# Solutions {#sec-solutions .unnumbered}
+
+::: {.content-hidden when-meta="show-solutions"}
+Solutions are intentionally not included in the reader edition of this book.
+
+To build the edition that contains worked solutions, render with the flag:
+
+```bash
+quarto render --metadata show-solutions:true
+```
+
+Try each exercise fully before consulting the answer key.
+:::
+
+::: {.content-visible when-meta="show-solutions"}
+
+Worked solutions are grouped here, at the very back of the book, deliberately
+separated from the exercises (there are no inline links from a problem to its
+answer). Use them only after a genuine attempt.
+
+<!-- Per-chapter solution sections are appended here as chapters are written. -->
+
+### How solutions are organized
+
+Each chapter's solutions appear under a heading matching the chapter title, with
+answers labeled by exercise tier (C / B / P / A) to match the problem numbering
+in that chapter.
+
+:::

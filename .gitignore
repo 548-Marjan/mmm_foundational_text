@@ -1,0 +1,16 @@
+# Quarto
+/.quarto/
+/_book/
+# Note: _freeze/ is intentionally committed so cached computation results
+# (e.g. MCMC sampling) are reused on render and in CI.
+*.tex
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store

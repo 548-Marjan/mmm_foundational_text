@@ -1,0 +1,79 @@
+# Preface {.unnumbered}
+
+This is a self-contained textbook on the mathematics and the software engineering
+that underlie modern **Marketing Mix Modeling (MMM)**. It is built to take a
+reader from standard quantitative prerequisites all the way to advanced practice,
+without hand-waving and without assuming you already know Bayesian modeling,
+MCMC, or constrained optimization.
+
+## Who this book is for
+
+You will get the most out of this book if you arrive with:
+
+- **Calculus 2** — limits, derivatives, integrals, sequences and series.
+- **Linear algebra** — vectors, matrices, solving linear systems.
+- **Calculus-based statistics** — random variables, expectation, common
+  distributions, the idea of a likelihood.
+
+You will leave able to reason about — and build — a full Bayesian MMM: from the
+data-generating process, through prior elicitation and MCMC inference, to budget
+optimization with a correct economic interpretation, and the software
+engineering that makes such a system reproducible and trustworthy.
+
+## How the book is organized
+
+The book runs **foundations → applications**. Each part builds strictly on the
+ones before it.
+
+- **Part I — Mathematical Foundations.** Linear algebra, multivariable calculus
+  (gradient, Jacobian, Hessian), and probability/statistics, pitched to be
+  reactivated quickly and then extended.
+- **Part II — Regression & Bayesian Inference.** From ordinary least squares to
+  Bayesian and hierarchical regression.
+- **Part III — Computation: Sampling.** Markov chains, MCMC, and Hamiltonian
+  Monte Carlo / NUTS — the engine that actually fits the models.
+- **Part IV — Optimization.** Convexity, linear programming (with duality and
+  shadow prices), and constrained nonlinear optimization via SLSQP.
+- **Part V — Marketing Mix Modeling: Synthesis.** Adstock, saturation, fitting,
+  and budget optimization, tying the prior parts together.
+- **Part VI — Software Engineering & Computer Science.** The engineering — from
+  CS first principles to architecture, data engineering, and testing — that
+  turns the math into a reliable system.
+- **Part VII — Capstone.** A worked, end-to-end engagement on synthetic data.
+
+The mathematics starts at the undergraduate level and ramps up toward advanced
+master's / first-year-PhD rigor as the book progresses. Where a result is
+genuinely illuminating we prove it; where a proof is mechanical we cite it.
+
+## How to use this book
+
+Each chapter follows the same rhythm: **intuition → theory and proofs → worked
+examples → a runnable code tie-in → exercises**. The exercises come in four
+escalating tiers:
+
+- **C — Conceptual / reading comprehension.**
+- **B — By hand** (compute or derive manually).
+- **P — Prove it** (short, useful proofs).
+- **A — Applied / code.**
+
+Worked solutions live in a single appendix at the very back of the book, with no
+inline links from the exercises. This is deliberate: reach for them only after a
+real attempt. (Instructor builds can render the full solutions; reader builds can
+omit them entirely.)
+
+## Reproducibility
+
+Code in this book is original and self-contained — minimal PyMC / SciPy snippets
+that teach the same patterns a production MMM uses, with no proprietary source,
+firm priors, or client data. Pinned dependencies live in `_environment/`. Heavy
+sampling cells are cached via Quarto's `freeze`, so the book renders quickly and
+reproducibly.
+
+## Canonical sources
+
+Every field in this book is anchored to its canonical references — Strang and
+Axler for linear algebra; Casella & Berger for statistics; Gelman et al. (BDA3),
+Gelman & Hill, and McElreath for Bayesian modeling; Robert & Casella, Neal, and
+Betancourt for MCMC/HMC; Boyd & Vandenberghe, Bertsimas & Tsitsiklis, and
+Nocedal & Wright for optimization; and the published MMM literature (Jin et al.)
+for the application. Full citations are in the bibliography.
