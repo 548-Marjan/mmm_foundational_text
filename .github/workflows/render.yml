@@ -40,3 +40,23 @@ jobs:
         with:
           name: book
           path: _book/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _book/
+
+  # Publish the rendered book to GitHub Pages — only for pushes to main, so PRs
+  # still get a render check without deploying. Live site:
+  # https://jlhf80.github.io/mmm_foundational_text/
+  deploy:
+    needs: render
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
