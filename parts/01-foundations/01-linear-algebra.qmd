@@ -2,32 +2,343 @@
 
 *Canonical anchors: Strang; Axler; Trefethen & Bau.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Every media-mix model begins with a matrix. Take $n$ weeks of campaign data and arrange them into a design matrix $X \in \mathbb{R}^{n \times p}$: each row is one week, each column is a feature — an intercept, TV spend, search spend, price index, and a seasonality indicator. Stack the corresponding weekly sales figures into $y \in \mathbb{R}^n$. The task is to find a coefficient vector $\hat\beta \in \mathbb{R}^p$ such that $X\hat\beta$ approximates $y$ as closely as possible.
+
+That sounds straightforward until you notice the trap: *"You ran TV and search together every week. How much did each drive sales — and when can you even tell them apart?"* If TV spend and search spend move in lockstep — both rise in Q4, both fall in January — then the columns of $X$ are nearly proportional, and no amount of data resolves how much of the sales lift to assign to each channel. The question is not about the regression algorithm; it is about the geometry of the matrix itself.
+
+This chapter equips you with three tools for answering it. First, the **column space** $\mathcal{C}(X)$ — the set of all sales patterns that the media variables can explain — determines what $y$ you could ever fit, regardless of which solver you use [@strang2016]. Second, **least squares** is the orthogonal projection of $y$ onto $\mathcal{C}(X)$; the residual $y - \hat{y}$ is perpendicular to every column of $X$ by construction. Third, the **eigenvalues of $X^\top X$** tell you whether that projection is stable: a near-zero eigenvalue signals that two or more channels are so collinear that small changes in $y$ swing $\hat\beta$ wildly.
+
+These three ideas unfold along a single theory ladder: subspaces and rank → projection and least squares → eigenvalues and the spectral theorem → positive-definiteness → the singular value decomposition → Cholesky factorization. Each rung reappears in Part II when we fit and diagnose regression models, and again in Part III when sampling algorithms navigate the posterior geometry of $\beta$.
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+### Vectors, matrices, and the column picture
+
+A **vector** $v \in \mathbb{R}^n$ is an ordered list of $n$ real numbers; in our setting the response $y \in \mathbb{R}^n$ is the vector of weekly sales, one entry per week. A **matrix** $X \in \mathbb{R}^{n \times p}$ is a rectangular array of reals with $n$ rows and $p$ columns; here each row records one week and each column records one feature — intercept, TV spend, search spend, price, seasonality. Write $x_j \in \mathbb{R}^n$ for the $j$-th column of $X$, so that $X = [\,x_1 \;\; x_2 \;\; \cdots \;\; x_p\,]$, and let $\beta \in \mathbb{R}^p$ collect the coefficients.
+
+The matrix–vector product is, by definition, a **linear combination of the columns** of $X$ weighted by the entries of $\beta$:
+
+$$
+X\beta = \sum_{j=1}^{p} \beta_j\, x_j, \qquad x_j = \text{the } j\text{-th column of } X.
+$$
+
+This is Strang's *column picture* [@strang2016], and it is the right way to read $\hat y = X\hat\beta$. The fitted sales curve is not produced "row by row"; it is a single point in $\mathbb{R}^n$ assembled by blending the channel columns. Doubling $\hat\beta_{\text{TV}}$ doubles the contribution of the TV column to that blend; setting a coefficient to zero removes its column entirely. Every prediction the model can make is therefore some weighted mixture of the feature columns — a fact that immediately raises the question of *which* vectors in $\mathbb{R}^n$ are reachable this way.
+
+### Column space, null space, and rank
+
+The set of reachable fits is the **column space**
+
+$$
+\mathcal{C}(X) = \Bigl\{ X\beta : \beta \in \mathbb{R}^p \Bigr\} = \operatorname{span}\{x_1, \dots, x_p\} \subseteq \mathbb{R}^n,
+$$
+
+the span of the feature columns. Its companion is the **null space**
+
+$$
+\mathcal{N}(X) = \{\, z \in \mathbb{R}^p : Xz = 0 \,\},
+$$
+
+the set of coefficient vectors that produce the zero fit. The **rank** $r = \dim \mathcal{C}(X)$ counts the independent columns and satisfies $r \le \min(n,p)$. We say $X$ has *full column rank* when $r = p$, equivalently $\mathcal{N}(X) = \{0\}$.
+
+Collinearity is exactly the failure of this condition. The following are equivalent and form the identification chain at the heart of media-mix modeling:
+
+> Two channels are perfectly collinear $\iff$ their columns are linearly dependent $\iff$ $\operatorname{rank}(X) < p$ $\iff$ $X^\top X$ is singular $\iff$ $\beta$ is not identified.
+
+If $x_{\text{TV}} = c\, x_{\text{search}}$ for some scalar $c$, then any move $\beta_{\text{TV}} \to \beta_{\text{TV}} + t$, $\beta_{\text{search}} \to \beta_{\text{search}} - tc$ leaves $X\beta$ unchanged: infinitely many coefficient vectors give the identical fit, so the data cannot tell the channels apart [@strang2016].
+
+The realistic case is *near*-collinearity. When TV and search are highly but imperfectly correlated, the columns are still linearly independent, so $\operatorname{rank}(X) = p$ and $X^\top X$ is genuinely invertible — $\hat\beta$ exists and is unique. But the columns point in nearly the same direction, and $X^\top X$ is *ill-conditioned*: small perturbations in $y$ swing $\hat\beta$ by large amounts. Rank is a yes/no diagnostic and cannot grade severity. To measure *how bad* the problem is, we need the eigenvalues of $X^\top X$ and its condition number, which we develop in later rungs.
+
+### Orthogonality, projection, and the normal equations {#sec-normal-equations}
+
+Equip $\mathbb{R}^n$ with the standard inner product $\langle u, v\rangle = u^\top v$ and norm $\lVert v\rVert = \sqrt{\langle v, v\rangle}$; vectors are **orthogonal** when $\langle u, v\rangle = 0$. Since $y$ rarely lies in $\mathcal{C}(X)$, least squares seeks the point of $\mathcal{C}(X)$ closest to $y$ — the **orthogonal projection** of $y$ onto the column space, $\hat y = X\hat\beta$. Geometrically, the projection is the unique fit whose residual $y - \hat y$ is perpendicular to the subspace.
+
+> **Theorem (Normal equations).** If $X$ has full column rank, the unique minimizer of $\lVert y - X\beta\rVert^2$ is $\hat\beta = (X^\top X)^{-1} X^\top y$, equivalently the solution of $X^\top X \hat\beta = X^\top y$; the residual $y - X\hat\beta$ is orthogonal to every column of $X$.
+
+*Proof.* Define the objective
+
+$$
+f(\beta) = \lVert y - X\beta \rVert^2 = (y - X\beta)^\top (y - X\beta) = y^\top y - 2\beta^\top X^\top y + \beta^\top X^\top X \beta.
+$$
+
+Differentiating with respect to $\beta$ gives the gradient
+
+$$
+\nabla f(\beta) = -2 X^\top y + 2 X^\top X \beta = -2\, X^\top (y - X\beta).
+$$
+
+Setting $\nabla f(\beta) = 0$ yields the **normal equations** $X^\top X \beta = X^\top y$. Because $X$ has full column rank, $X^\top X$ is invertible — we prove that full column rank forces $X^\top X \succ 0$, hence nonsingular, in the positive-definiteness section — so the system has the unique solution
+
+$$
+\hat\beta = (X^\top X)^{-1} X^\top y,
+$$
+
+the only stationary point of $f$.
+
+It remains to show this stationary point is a global minimizer. The Hessian of $f$ is $\nabla^2 f(\beta) = 2 X^\top X \succeq 0$, since $z^\top (X^\top X) z = \lVert Xz\rVert^2 \ge 0$ for all $z$. A twice-differentiable function with everywhere positive-semidefinite Hessian is convex, so any stationary point is a global minimum; with $X^\top X$ invertible the minimizer is unique.
+
+Finally, evaluate the residual against the columns of $X$:
+
+$$
+X^\top (y - X\hat\beta) = X^\top y - X^\top X \hat\beta = X^\top y - X^\top y = 0.
+$$
+
+Thus $\langle x_j, \, y - X\hat\beta\rangle = 0$ for every column $x_j$, i.e. the residual is orthogonal to all of $\mathcal{C}(X)$. This is the geometric content of "projection": $\hat y = X\hat\beta$ is the foot of the perpendicular dropped from $y$ onto the column space. $\qquad\blacksquare$
+
+### Eigenvalues and the spectral theorem
+
+A scalar $\lambda$ and nonzero vector $v$ form an **eigenpair** $(\lambda, v)$ of a square matrix $A$ when $Av = \lambda v$: the matrix merely rescales $v$ rather than rotating it. Eigenvalues expose the intrinsic axes of a transformation, and for the symmetric matrices we care about — above all the Gram matrix $X^\top X$ — these axes are exceptionally well behaved.
+
+> **Theorem (Spectral theorem, symmetric case).** A real symmetric matrix $A = A^\top$ has only real eigenvalues, eigenvectors for distinct eigenvalues are orthogonal, and $A$ admits an orthonormal eigenbasis; equivalently $A = Q \Lambda Q^\top$ for an orthogonal $Q$ and diagonal $\Lambda$.
+
+*Proof.* **Real eigenvalues.** Let $Av = \lambda v$ with $v \ne 0$, allowing $\lambda \in \mathbb{C}$ and $v \in \mathbb{C}^n$, and write $\bar v$ for the entrywise conjugate. Consider the scalar $\bar v^\top A v$. On one hand $\bar v^\top A v = \bar v^\top (\lambda v) = \lambda\, \bar v^\top v = \lambda \lVert v\rVert^2$. On the other, because $A$ is real and symmetric, taking the conjugate transpose of the $1\times 1$ quantity gives
+$$
+\overline{(\bar v^\top A v)} = v^\top A^\top \bar v = v^\top A \bar v = \bar v^\top A v,
+$$
+so $\bar v^\top A v$ equals its own conjugate and is therefore real. Since $\lVert v\rVert^2 > 0$, $\lambda = \bar v^\top A v / \lVert v\rVert^2 \in \mathbb{R}$.
+
+**Orthogonality for distinct eigenvalues.** Suppose $Av_1 = \lambda_1 v_1$ and $Av_2 = \lambda_2 v_2$ with $\lambda_1 \ne \lambda_2$ (now real vectors). Using $A = A^\top$,
+$$
+\lambda_1\, v_1^\top v_2 = (Av_1)^\top v_2 = v_1^\top A v_2 = \lambda_2\, v_1^\top v_2,
+$$
+hence $(\lambda_1 - \lambda_2)\, v_1^\top v_2 = 0$, and since $\lambda_1 \ne \lambda_2$ we conclude $v_1^\top v_2 = 0$.
+
+The full statement — that even with repeated eigenvalues one can choose an orthonormal eigenbasis, so $A = Q\Lambda Q^\top$ with $Q^\top Q = I$ and $\Lambda = \operatorname{diag}(\lambda_1, \dots, \lambda_n)$ — follows by induction on invariant subspaces; we refer to Axler for the complete argument [@axler2015]. $\qquad\blacksquare$
+
+The Gram matrix $X^\top X$ is symmetric by construction, so it always diagonalizes this way. The eigenvalues we will use to diagnose collinearity are therefore guaranteed real, and they come with an orthonormal eigenbasis $Q$ — the orthogonal axes along which $X^\top X$ acts by pure scaling.
+
+### Positive definiteness and the Gram matrix
+
+A symmetric matrix $A$ is **positive semidefinite**, written $A \succeq 0$, when $z^\top A z \ge 0$ for all $z$, and **positive definite**, written $A \succ 0$, when $z^\top A z > 0$ for all $z \ne 0$. The quadratic form $z \mapsto z^\top A z$ thus measures how the matrix bends space; for the Gram matrix it measures squared lengths of fitted vectors.
+
+> **Proposition.** A symmetric matrix $A$ is positive definite if and only if all its eigenvalues are positive. Consequently $A \succ 0 \Rightarrow A$ is invertible.
+
+*Proof.* Use the spectral decomposition $A = Q\Lambda Q^\top$ from the previous rung, with $Q$ orthogonal and $\Lambda = \operatorname{diag}(\lambda_1, \dots, \lambda_n)$. Substitute $w = Q^\top z$; since $Q$ is orthogonal, $w$ ranges over all of $\mathbb{R}^n$ as $z$ does and $\lVert w\rVert = \lVert z\rVert$. Then
+$$
+z^\top A z = z^\top Q \Lambda Q^\top z = w^\top \Lambda w = \sum_i \lambda_i w_i^2.
+$$
+If every $\lambda_i > 0$, this sum is strictly positive whenever $w \ne 0$, i.e. whenever $z \ne 0$, so $A \succ 0$. Conversely, taking $z = Q e_i$ (so $w = e_i$) gives $z^\top A z = \lambda_i$; if $A \succ 0$ then each such value is positive, forcing $\lambda_i > 0$. Finally, positive eigenvalues give $\det A = \prod_i \lambda_i > 0$, so $A$ is invertible. $\qquad\blacksquare$
+
+This closes the loop with rungs 2–3. For any design matrix $X$ and any $z$,
+$$
+z^\top X^\top X z = (Xz)^\top (Xz) = \lVert Xz\rVert^2 \ge 0,
+$$
+so $X^\top X \succeq 0$ unconditionally. Moreover $\lVert Xz\rVert^2 > 0$ for every $z \ne 0$ exactly when $Xz = 0$ has only the trivial solution, i.e. when $\mathcal{N}(X) = \{0\}$ — full column rank. Hence full column rank $\Rightarrow X^\top X \succ 0 \Rightarrow X^\top X$ is invertible. This discharges the forward reference left open in the normal-equations proof (rung 3) and completes the identification chain (rung 2): the same condition that makes $\beta$ identifiable is precisely the positive definiteness of the Gram matrix.
+
+### The singular value decomposition
+
+The spectral theorem diagonalizes the *symmetric* matrix $X^\top X$; the **singular value decomposition** (SVD) does the analogous job for the *rectangular* design matrix $X$ itself. Every real matrix $X \in \mathbb{R}^{n\times p}$ factors as
+$$
+X = U\Sigma V^\top,
+$$
+where $U \in \mathbb{R}^{n\times n}$ and $V \in \mathbb{R}^{p\times p}$ are orthogonal ($U^\top U = I_n$, $V^\top V = I_p$) and $\Sigma \in \mathbb{R}^{n\times p}$ is diagonal, carrying the **singular values** $\sigma_1 \ge \sigma_2 \ge \cdots \ge \sigma_r > 0$ on its diagonal, with $r = \operatorname{rank}(X)$ and the remaining diagonal entries zero.
+
+Geometrically the factorization says that *any* linear map decomposes into three elementary moves: a rotation or reflection of the input ($V^\top$), an axiswise scaling that stretches the $i$-th axis by $\sigma_i$ ($\Sigma$), and a final rotation or reflection of the output ($U$). A linear map is never more complicated than "rotate, stretch, rotate."
+
+Two links make the SVD the keystone of this chapter. First, substituting the factorization into the Gram matrix,
+$$
+X^\top X = V\Sigma^\top U^\top U \Sigma V^\top = V\Sigma^\top\Sigma V^\top = V\Sigma^2 V^\top,
+$$
+which is exactly the spectral decomposition $Q\Lambda Q^\top$ of rung 4: the eigenvalues of $X^\top X$ are the squared singular values $\sigma_i^2$, and the eigenvectors are the columns of $V$. The spectral analysis of $X^\top X$ and the SVD of $X$ are the same fact viewed from two sides. Second, the **condition number**
+$$
+\kappa(X) = \frac{\sigma_1}{\sigma_r}
+$$
+quantifies collinearity. When two channels nearly align, the smallest singular value $\sigma_r \to 0$, so $\kappa(X) \to \infty$ and least squares becomes acutely sensitive to perturbations in $y$. This is the graded "how bad" measure promised in rung 2, where rank could only answer yes or no. That every real matrix possesses such a decomposition is a theorem we take as given; see [@trefethen1997] for the proof.
+
+### Cholesky factorization
+
+The last rung specializes to the matrices we actually solve with. Every symmetric positive-definite matrix $A$ admits a unique factorization
+$$
+A = LL^\top,
+$$
+where $L$ is lower-triangular with strictly positive diagonal entries. We state this without proof: existence and uniqueness follow directly from positive-definiteness, which rung 5 established for $X^\top X$ under full column rank. The Gram matrix therefore always has a Cholesky factor.
+
+Two payoffs justify the attention. First, Cholesky is the stable, efficient route to the normal equations $X^\top X\hat\beta = X^\top y$: factor $X^\top X = LL^\top$ once, then recover $\hat\beta$ by a forward solve $Lw = X^\top y$ followed by a back solve $L^\top\hat\beta = w$. This is both cheaper and numerically safer than forming $(X^\top X)^{-1}$ explicitly, which one should essentially never do. Second, Cholesky *generates correlated draws*. If $\Sigma = LL^\top$ is a covariance matrix and $z \sim \mathcal{N}(0, I)$, then $Lz \sim \mathcal{N}(0, \Sigma)$, because
+$$
+\operatorname{Cov}(Lz) = L\,\operatorname{Cov}(z)\,L^\top = L I L^\top = LL^\top = \Sigma.
+$$
+A single matrix multiply turns independent standard-normal noise into draws with the desired correlation structure.
+
+This dual role — solving the normal equations and manufacturing correlated Gaussians — makes Cholesky the computational workhorse behind sampling from Gaussian posteriors in Part II and setting the mass matrix of Hamiltonian Monte Carlo in Part III.
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+### Example: solving the normal equations by hand
+
+Take the smallest design that still has something to say — an intercept and a single channel measured over three weeks:
+
+$$
+X = \begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \end{bmatrix}, \qquad y = \begin{bmatrix} 1 \\ 2 \\ 2 \end{bmatrix}.
+$$
+
+The normal equations of rung 3 read $X^\top X \hat\beta = X^\top y$, so we first assemble the Gram matrix and the right-hand side. The Gram matrix collects the inner products of the columns,
+
+$$
+X^\top X = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 3 \end{bmatrix}\begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \end{bmatrix} = \begin{bmatrix} 3 & 6 \\ 6 & 14 \end{bmatrix}, \qquad X^\top y = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 3 \end{bmatrix}\begin{bmatrix} 1 \\ 2 \\ 2 \end{bmatrix} = \begin{bmatrix} 5 \\ 11 \end{bmatrix}.
+$$
+
+The top-left entry $3$ is just $n$ (the number of weeks), and the off-diagonal $6$ is the sum of the channel values — the familiar bookkeeping of a simple regression. The determinant is
+
+$$
+\det(X^\top X) = 3\cdot 14 - 6\cdot 6 = 42 - 36 = 6 > 0,
+$$
+
+confirming $X^\top X$ is invertible (full column rank, as rung 5 guarantees). Using the $2\times 2$ inverse formula $\begin{bmatrix} a & b \\ c & d\end{bmatrix}^{-1} = \tfrac{1}{ad-bc}\begin{bmatrix} d & -b \\ -c & a\end{bmatrix}$,
+
+$$
+\hat\beta = (X^\top X)^{-1} X^\top y = \frac{1}{6}\begin{bmatrix} 14 & -6 \\ -6 & 3 \end{bmatrix}\begin{bmatrix} 5 \\ 11 \end{bmatrix} = \frac{1}{6}\begin{bmatrix} 70 - 66 \\ -30 + 33 \end{bmatrix} = \frac{1}{6}\begin{bmatrix} 4 \\ 3 \end{bmatrix} = \begin{bmatrix} 2/3 \\ 1/2 \end{bmatrix}.
+$$
+
+So the fitted intercept is $\hat\beta_0 = \tfrac{2}{3}$ and the channel slope is $\hat\beta_1 = \tfrac{1}{2}$. The fit and residual follow immediately:
+
+$$
+\hat y = X\hat\beta = \begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \end{bmatrix}\begin{bmatrix} 2/3 \\ 1/2 \end{bmatrix} = \begin{bmatrix} 7/6 \\ 5/3 \\ 13/6 \end{bmatrix}, \qquad r = y - \hat y = \begin{bmatrix} 1 - 7/6 \\ 2 - 5/3 \\ 2 - 13/6 \end{bmatrix} = \begin{bmatrix} -1/6 \\ 1/3 \\ -1/6 \end{bmatrix}.
+$$
+
+Finally we check the geometric content of rung 3 — the residual must be orthogonal to every column of $X$:
+
+$$
+X^\top r = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 3 \end{bmatrix}\begin{bmatrix} -1/6 \\ 1/3 \\ -1/6 \end{bmatrix} = \begin{bmatrix} -\tfrac16 + \tfrac13 - \tfrac16 \\[2pt] -\tfrac16 + \tfrac23 - \tfrac36 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}.
+$$
+
+The first equation says the residuals sum to zero (orthogonality to the intercept column); the second says they are uncorrelated with the channel. Both hold exactly, so $\hat y$ is precisely the foot of the perpendicular dropped from $y$ onto $\mathcal{C}(X)$ — the projection picture made arithmetic.
+
+### Example: near-collinearity and instability
+
+Now we make the pathology of rung 2 concrete. Consider four weeks of data with an intercept and *two* channels that are almost duplicates of one another — imagine two media variables that move together week to week:
+
+$$
+X = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 2.01 \\ 1 & 3 & 3 \\ 1 & 4 & 4 \end{bmatrix}.
+$$
+
+The second and third columns differ by a single $0.01$ in week 2; they are linearly independent, so $X$ has full column rank and $\hat\beta$ is unique — but only barely. The Gram matrix is
+
+$$
+X^\top X = \begin{bmatrix} 4 & 10 & 10.01 \\ 10 & 30 & 30.02 \\ 10.01 & 30.02 & 30.0401 \end{bmatrix},
+$$
+
+whose two near-duplicate rows announce the trouble. Diagonalizing it numerically (rung 4) gives eigenvalues
+
+$$
+\lambda \approx \{\, 3.5\times 10^{-5}, \;\; 0.630, \;\; 63.41 \,\},
+$$
+
+one of them a whisker above zero. By the rung-6 identity $\lambda_i = \sigma_i^2$, the condition number of the design is
+
+$$
+\kappa(X) = \frac{\sigma_{\max}}{\sigma_{\min}} = \sqrt{\frac{63.41}{3.5\times 10^{-5}}} \approx 1.35\times 10^{3},
+$$
+
+a value of roughly $1345$ (computed directly in NumPy). Compared with a well-separated design, where $\kappa$ sits near $1$, this is severely ill-conditioned: rung 6's severity meter is pinned.
+
+To see what that costs, fit the response $y = (2,\,3,\,5,\,4)^\top$ and then refit after nudging a *single* sales figure by $0.01$ — changing $y_3$ from $5$ to $5.01$, a perturbation of size $\lVert \delta y\rVert = 0.01$:
+
+$$
+\hat\beta \approx \begin{bmatrix} 1.571 \\ 15.071 \\ -14.286 \end{bmatrix} \quad\longrightarrow\quad \hat\beta_{\text{pert}} \approx \begin{bmatrix} 1.573 \\ 15.358 \\ -14.571 \end{bmatrix}.
+$$
+
+The two channel coefficients are already a warning sign on their own: $+15$ and $-14$ are enormous and nearly cancel, the classic fingerprint of collinearity — the model props one channel up only to subtract almost all of it back through the other. The tiny perturbation then moves them by
+
+$$
+\delta\hat\beta \approx (0.001,\; 0.286,\; -0.286)^\top, \qquad \lVert \delta\hat\beta\rVert \approx 0.405.
+$$
+
+A $0.01$ wobble in one data point produced a $0.40$ swing in the estimate — an amplification of roughly $40\times$. (All figures rounded to three decimals; reproduce them with the verification snippet.) Had the two channels been genuinely distinct, the same data nudge would have barely registered.
+
+This is rungs 2 and 6 in a single picture: near-collinearity makes the channel columns point in almost the same direction, which drives one eigenvalue of $X^\top X$ toward zero and makes the Gram matrix nearly singular (rung 2); the condition number $\kappa(X) \approx 1345$ then quantifies *how badly* that ill-conditioning amplifies noise into the coefficient estimates (rung 6). Rank alone would have called this design "fine" — full column rank, unique solution — and missed the instability entirely.
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The theory above is not just bookkeeping: it is the difference between a model that estimates cleanly and one that quietly amplifies noise. The cell below builds a small marketing design matrix — an intercept, a `TV` channel, and a `search` channel that we deliberately make more or less collinear with `TV` — and solves the least-squares problem three ways (normal equations, QR via `lstsq`, and SVD). It then reports the condition number and the smallest eigenvalue of the Gram matrix $X^\top X$, and finishes with a Cholesky factorization of that matrix.
+
+```{python}
+import numpy as np
+from scipy.linalg import cholesky
+
+rng = np.random.default_rng(0)
+n = 200
+
+def make_X(corr):
+    """Design matrix: intercept, TV, and a search column 'corr'-correlated with TV."""
+    tv = rng.normal(size=n)
+    search = corr * tv + np.sqrt(1 - corr**2) * rng.normal(size=n)
+    return np.column_stack([np.ones(n), tv, search])
+
+beta_true = np.array([1.0, 2.0, -0.5])
+
+def solve_three_ways(X, y):
+    normal = np.linalg.solve(X.T @ X, X.T @ y)          # normal equations
+    lstsq  = np.linalg.lstsq(X, y, rcond=None)[0]        # QR-based
+    U, s, Vt = np.linalg.svd(X, full_matrices=False)     # SVD
+    svd = Vt.T @ ((U.T @ y) / s)
+    return normal, lstsq, svd
+
+for corr in [0.3, 0.999]:
+    X = make_X(corr)
+    y = X @ beta_true + 0.1 * rng.normal(size=n)
+    normal, lstsq, svd = solve_three_ways(X, y)
+    G = X.T @ X
+    eig = np.linalg.eigvalsh(G)
+    print(f"corr={corr}: cond(X)={np.linalg.cond(X):.1f}, "
+          f"min eig(XtX)={eig.min():.3g}")
+    print(f"  normal vs lstsq max|diff| = {np.max(np.abs(normal - lstsq)):.2e}")
+    print(f"  lstsq  vs svd   max|diff| = {np.max(np.abs(lstsq  - svd)):.2e}")
+
+# Cholesky of an SPD Gram matrix: the factorization behind correlated sampling.
+X = make_X(0.3)
+L = cholesky(X.T @ X, lower=True)
+print("Cholesky reconstructs XtX:", np.allclose(L @ L.T, X.T @ X))
+```
+
+At `corr=0.3` the design is well-conditioned (`cond(X)≈1.3`, smallest eigenvalue of $X^\top X$ around 147), and all three solvers agree to machine precision — their pairwise differences sit at the `1e-16` floor. Push the channels to `corr=0.999` and the geometry degrades: `cond(X)` jumps to roughly 52 while the smallest eigenvalue collapses toward zero (about 0.15), and now the normal-equations route loses the most precision — its disagreement with `lstsq` grows to `1.45e-13`, two orders of magnitude larger than the SVD route's `4e-16`. That gap is exactly why production code prefers the QR-based `lstsq` or the SVD over forming $X^\top X$ directly: squaring the matrix squares the condition number and burns precision (the payoff of rungs 3, 5, and 6). The closing line confirms the Cholesky factor $L$ reconstructs the symmetric positive-definite Gram matrix exactly — rung 7 made concrete, and the same factorization that later lets us draw correlated samples from a covariance matrix.
 
 ## Exercises
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** In words, what is the column space $\mathcal{C}(X)$ of a media design matrix $X$, and what does it represent? The columns of $X$ hold the spend (or transformed spend) for each channel, so $\mathcal{C}(X)$ is the set of all sales patterns the model can possibly reproduce by mixing channels. Explain, in plain terms, what it means *practically* when the observed sales vector satisfies $y \notin \mathcal{C}(X)$ — and why this is the normal situation rather than a failure.
+
+**C2.** Explain why perfect collinearity between two channels makes $\beta$ unidentifiable. Give the explanation twice: once in terms of the *columns of $X$* (what happens geometrically when one channel's column is a scalar multiple of another), and once in terms of the *Gram matrix $X^\top X$* (what happens to its rank and its eigenvalues).
+
+**C3.** A colleague reports a fitted media model in which two channel coefficients come out as $+15$ and $-14$, even though both channels are known to drive sales upward. Using the condition number $\kappa(X)$, explain what is likely going on, why these particular point estimates should not be trusted, and what you would expect to see in $\kappa(X)$ to confirm your diagnosis.
+
 ### B -- By Hand
+
+**B1.** For
+$$
+X = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix},
+\qquad
+y = \begin{bmatrix} 1 \\ 0 \\ 2 \end{bmatrix},
+$$
+form the Gram matrix $X^\top X$ and the vector $X^\top y$, then solve the normal equations $X^\top X\,\hat\beta = X^\top y$ for $\hat\beta$ by hand.
+
+**B2.** Find the eigenvalues and corresponding *unit* eigenvectors of
+$$
+A = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix},
+$$
+and verify directly that the two eigenvectors are orthogonal.
+
+**B3.** Show that the matrix $A = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}$ is positive definite ($A \succ 0$) in two independent ways: first using the eigenvalue criterion (all eigenvalues positive), and separately by completing the square in the quadratic form $z^\top A z$ for $z = (z_1, z_2)^\top$ to show it is strictly positive whenever $z \neq 0$.
 
 ### P -- Prove It
 
+**P1.** Suppose $X$ has full column rank. Prove that
+$$
+\hat\beta = (X^\top X)^{-1} X^\top y
+$$
+minimizes $\lVert y - X\beta \rVert^2$ over all $\beta$. You may cite the fact that full column rank implies $X^\top X \succ 0$ (hence invertible), and you may use either the normal-equations/orthogonality argument or a direct expansion of the objective.
+
+**P2.** Prove that eigenvectors of a real symmetric matrix corresponding to distinct eigenvalues are orthogonal. That is, if $A = A^\top$, $Av_1 = \lambda_1 v_1$, $Av_2 = \lambda_2 v_2$, and $\lambda_1 \neq \lambda_2$, then $v_1^\top v_2 = 0$.
+
+**P3.** Prove that a symmetric positive-definite matrix $A \succ 0$ is invertible. (Hint: what does positive definiteness say about the eigenvalues of $A$, and what does the product of the eigenvalues say about $\det A$?)
+
 ### A -- Applied / Code
+
+**A1.** Extend the chapter's `make_X` / `solve_three_ways` code into a variance experiment. Sweep `corr` over `[0, 0.5, 0.9, 0.99, 0.999]`. For each value, hold the design matrix $X$ fixed and draw $100$ resampled responses $y = X\beta_{\text{true}} + \text{noise}$ (fresh Gaussian noise each draw), refitting $\hat\beta$ every time. Record the empirical variance of one coefficient — say the `search` coefficient — across the $100$ fits, and plot that variance against the condition number $\kappa(X)$ of the corresponding design. Describe the trend you expect to see and relate it to the collapse of the smallest eigenvalue of $X^\top X$.
+
+**A2.** Let
+$$
+\Sigma = \begin{bmatrix} 1 & 0.8 \\ 0.8 & 1 \end{bmatrix}.
+$$
+Using the same `scipy.linalg.cholesky` style as the chapter, compute the lower-triangular Cholesky factor $L$ with $\Sigma = LL^\top$. Draw $10^4$ samples $x = Lz$ where $z \sim \mathcal{N}(0, I_2)$, and confirm that the empirical covariance of the sampled $x$ vectors is close to $\Sigma$. Briefly explain why $x = Lz$ produces the target covariance.
