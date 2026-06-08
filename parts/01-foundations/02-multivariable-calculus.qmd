@@ -212,7 +212,61 @@ second-order test closes.
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+We form the analytic gradient and Hessian of $L$, check the gradient against
+finite differences (the habit that catches a hundred modeling bugs later), and
+read the Hessian's eigenvalues as curvature — tying the smallest one back to
+Chapter 1's collinearity story.
+
+```{python}
+import numpy as np
+
+rng = np.random.default_rng(0)
+
+# Synthetic media design matrix: 40 weeks, intercept + 2 channels.
+n = 40
+intercept = np.ones(n)
+tv = rng.normal(size=n)
+search = rng.normal(size=n)
+X = np.column_stack([intercept, tv, search])
+beta_true = np.array([2.0, 1.5, -0.5])
+y = X @ beta_true + rng.normal(scale=0.5, size=n)
+
+def loss(beta):
+    r = y - X @ beta
+    return r @ r
+
+def grad_analytic(beta):
+    return -2.0 * X.T @ (y - X @ beta)
+
+def grad_numeric(beta, eps=1e-6):
+    g = np.zeros_like(beta)
+    for j in range(len(beta)):
+        e = np.zeros_like(beta); e[j] = eps
+        g[j] = (loss(beta + e) - loss(beta - e)) / (2 * eps)
+    return g
+
+beta0 = np.zeros(3)
+print("max |analytic - numeric| gradient:",
+      np.max(np.abs(grad_analytic(beta0) - grad_numeric(beta0))))
+
+# Hessian is constant: 2 X^T X. Its eigenvalues are the curvatures of the bowl.
+H = 2.0 * X.T @ X
+eig = np.linalg.eigvalsh(H)
+print("Hessian eigenvalues:", np.round(eig, 3))
+print("all positive (=> strictly convex, unique minimizer):", bool(np.all(eig > 0)))
+
+# Solve the normal equations (the calculus critical point) and confirm.
+beta_hat = np.linalg.solve(X.T @ X, X.T @ y)
+print("||gradient at beta_hat||:", np.linalg.norm(grad_analytic(beta_hat)))
+print("condition number of X^T X:", np.linalg.cond(X.T @ X))
+```
+
+> The numeric and analytic gradients agree to roughly $10^{-5}$; every Hessian
+> eigenvalue is positive, so $L$ is a strictly convex bowl with a unique bottom;
+> and $\nabla L(\hat\beta)\approx 0$ confirms the normal-equation solution is that
+> bottom. If the two channels were made nearly collinear, the smallest eigenvalue
+> — and the condition number — would blow up: a flat valley in $L$, which is what
+> makes $\hat\beta$ unstable, exactly as in Chapter 1.
 
 ## Exercises
 
