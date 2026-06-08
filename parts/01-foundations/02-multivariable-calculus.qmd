@@ -135,6 +135,43 @@ $f(\beta^\star+\delta)>f(\beta^\star)$ for all small $\delta\neq 0$.
 $\qquad\blacksquare$
 :::
 
+### Convexity and the global guarantee
+
+A function $f$ is **convex** if for all $x,z$ and $t\in[0,1]$,
+$f(tx+(1-t)z)\le t f(x)+(1-t)f(z)$.
+
+::: {.callout-note appearance="simple"}
+**Theorem (second-order characterization).** A $C^2$ function $f$ on an open
+convex domain is convex if and only if $\nabla^2 f(x)\succeq 0$ (positive
+semidefinite) for every $x$.
+
+**Proof.** ($\Leftarrow$) For any $x,z$ let $\delta=z-x$ and
+$\psi(t)=f(x+t\delta)$ on $[0,1]$. Then $\psi''(t)=\delta^\top\nabla^2
+f(x+t\delta)\,\delta\ge 0$, so $\psi$ is a convex scalar function, which is
+exactly the convexity inequality for $f$ along the segment.
+($\Rightarrow$) If some $\nabla^2 f(x_0)$ had a negative eigenvalue with
+eigenvector $v$, then $\psi(t)=f(x_0+tv)$ would satisfy $\psi''(0)=v^\top
+\nabla^2 f(x_0)v<0$, making $\psi$ strictly concave near $0$ and violating
+convexity along that segment. $\qquad\blacksquare$
+:::
+
+Apply this to the loss. Since $\nabla^2 L(\beta)=2X^\top X$ and
+$v^\top X^\top X v=\lVert Xv\rVert^2\ge 0$ for all $v$, the Hessian is PSD
+everywhere, so **$L$ is convex**. Therefore any $\beta$ with $\nabla L(\beta)=0$
+— any solution of the normal equations — is a *global* minimizer, not merely a
+local one. When $X$ has full column rank, $X^\top X$ is positive definite, $L$
+is strictly convex, and $\hat\beta$ is the *unique* global minimizer; rank
+deficiency (collinearity) is precisely when that guarantee weakens.
+
+### What this chapter does not cover
+
+Descending $L$ in practice — **gradient descent**, Newton's method, line
+search — and **constrained** optimization via **Lagrange multipliers** and the
+**KKT conditions** are the subject of Part IV [@nocedal2006; @boyd2004]; we name
+them here only to mark where this calculus leads. Integration and
+change-of-variables for probability densities arrive in the
+probability/statistics chapter, where they are needed.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
