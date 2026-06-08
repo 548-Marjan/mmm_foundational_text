@@ -5,6 +5,8 @@ and calculus-based statistics** to **advanced Marketing Mix Modeling (MMM)
 practice** — covering both the mathematics and the software engineering /
 computer science that a production MMM relies on.
 
+📖 **Read it online:** <https://jlhf80.github.io/mmm_foundational_text/>
+
 The book is built with [Quarto](https://quarto.org) and runs **foundations →
 applications**: linear algebra and calculus, regression and Bayesian inference,
 MCMC / HMC / NUTS, convex and constrained optimization (with duality and shadow
@@ -47,8 +49,10 @@ Output is written to `_book/` (HTML site + PDF).
 
 ## Status
 
-Scaffolded. Chapters are stubs being authored part-by-part. See the chapter
-template in any `parts/**/**.qmd` file for the standard structure.
+In progress, authored part-by-part. **Part I:** Chapter 1 (Linear Algebra) and
+Chapter 2 (Multivariable Calculus & the Optimization Toolkit) are written; the
+remaining chapters are stubs following the same template (see any
+`parts/**/**.qmd` for the standard structure).
 
 ## A note on code and data
 
