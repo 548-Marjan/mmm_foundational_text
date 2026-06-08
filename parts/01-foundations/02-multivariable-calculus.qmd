@@ -28,7 +28,41 @@ book is fit with [@nocedal2006; @boyd2004].
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+We climb a ladder of tools, each rung paying off on $L$. Four results are
+proved in full; mechanical results are stated and cited.
+
+### Gradient and directional derivative
+
+For $f:\mathbb{R}^p\to\mathbb{R}$ differentiable at $\beta$, the **gradient**
+$\nabla f(\beta)$ is the vector of partial derivatives
+$\big(\partial f/\partial\beta_1,\dots,\partial f/\partial\beta_p\big)^\top$.
+The **directional derivative** in a unit direction $u$ ($\lVert u\rVert=1$) is
+the rate of change of $f$ along $u$:
+$$
+D_u f(\beta) = \lim_{h\to 0}\frac{f(\beta+hu)-f(\beta)}{h}
+             = \nabla f(\beta)^\top u .
+$$
+
+::: {.callout-note appearance="simple"}
+**Theorem (steepest ascent).** Among all unit directions $u$, the directional
+derivative $D_u f(\beta)=\nabla f(\beta)^\top u$ is largest when $u$ points
+along $\nabla f(\beta)$, and the level set of $f$ through $\beta$ is orthogonal
+to $\nabla f(\beta)$.
+
+**Proof.** By Cauchy–Schwarz, $\nabla f(\beta)^\top u \le
+\lVert\nabla f(\beta)\rVert\,\lVert u\rVert = \lVert\nabla f(\beta)\rVert$, with
+equality iff $u$ is a nonnegative multiple of $\nabla f(\beta)$; the unit
+maximizer is therefore $u^\star=\nabla f(\beta)/\lVert\nabla f(\beta)\rVert$
+(assuming $\nabla f(\beta)\neq 0$). For the orthogonality claim, let
+$\gamma(t)$ be any curve lying in the level set $\{x:f(x)=f(\beta)\}$ with
+$\gamma(0)=\beta$. Then $f(\gamma(t))$ is constant, so differentiating and
+using the chain rule, $0=\tfrac{d}{dt}f(\gamma(t))\big|_{0}
+=\nabla f(\beta)^\top\gamma'(0)$. Hence $\nabla f(\beta)$ is orthogonal to every
+tangent direction of the level set. $\qquad\blacksquare$
+:::
+
+So the negative gradient is the locally steepest *downhill* direction — the
+fact every gradient-based fitting method in this book exploits.
 
 ## Worked Examples
 
