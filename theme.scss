@@ -21,11 +21,13 @@ $line-height-base: 1.7;
   overflow-y: hidden;
 }
 
-// Inline math: nudge the size up very slightly so symbols match the weight of
-// the surrounding text, and keep paragraphs/list items at the roomy
+// Math sizing: KaTeX renders noticeably larger than body text by default
+// (~1.21em). Scale it down so notation reads smaller and sits more quietly
+// alongside the prose. Applies to both inline math and display equations
+// (which inherit this size). Keep paragraphs/list items at the roomy
 // line-height even where Bootstrap would otherwise tighten them.
 .katex {
-  font-size: 1.05em;
+  font-size: 0.9em;
 }
 
 p,
