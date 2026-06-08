@@ -14,7 +14,77 @@ These three ideas unfold along a single theory ladder: subspaces and rank → pr
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+### Vectors, matrices, and the column picture
+
+A **vector** $v \in \mathbb{R}^n$ is an ordered list of $n$ real numbers; in our setting the response $y \in \mathbb{R}^n$ is the vector of weekly sales, one entry per week. A **matrix** $X \in \mathbb{R}^{n \times p}$ is a rectangular array of reals with $n$ rows and $p$ columns; here each row records one week and each column records one feature — intercept, TV spend, search spend, price, seasonality. Write $x_j \in \mathbb{R}^n$ for the $j$-th column of $X$, so that $X = [\,x_1 \;\; x_2 \;\; \cdots \;\; x_p\,]$, and let $\beta \in \mathbb{R}^p$ collect the coefficients.
+
+The matrix–vector product is, by definition, a **linear combination of the columns** of $X$ weighted by the entries of $\beta$:
+
+$$
+X\beta = \sum_{j=1}^{p} \beta_j\, x_j, \qquad x_j = \text{the } j\text{-th column of } X.
+$$
+
+This is Strang's *column picture* [@strang2016], and it is the right way to read $\hat y = X\hat\beta$. The fitted sales curve is not produced "row by row"; it is a single point in $\mathbb{R}^n$ assembled by blending the channel columns. Doubling $\hat\beta_{\text{TV}}$ doubles the contribution of the TV column to that blend; setting a coefficient to zero removes its column entirely. Every prediction the model can make is therefore some weighted mixture of the feature columns — a fact that immediately raises the question of *which* vectors in $\mathbb{R}^n$ are reachable this way.
+
+### Column space, null space, and rank
+
+The set of reachable fits is the **column space**
+
+$$
+\mathcal{C}(X) = \Bigl\{ X\beta : \beta \in \mathbb{R}^p \Bigr\} = \operatorname{span}\{x_1, \dots, x_p\} \subseteq \mathbb{R}^n,
+$$
+
+the span of the feature columns. Its companion is the **null space**
+
+$$
+\mathcal{N}(X) = \{\, z \in \mathbb{R}^p : Xz = 0 \,\},
+$$
+
+the set of coefficient vectors that produce the zero fit. The **rank** $r = \dim \mathcal{C}(X)$ counts the independent columns and satisfies $r \le \min(n,p)$. We say $X$ has *full column rank* when $r = p$, equivalently $\mathcal{N}(X) = \{0\}$.
+
+Collinearity is exactly the failure of this condition. The following are equivalent and form the identification chain at the heart of media-mix modeling:
+
+> Two channels are perfectly collinear $\iff$ their columns are linearly dependent $\iff$ $\operatorname{rank}(X) < p$ $\iff$ $X^\top X$ is singular $\iff$ $\beta$ is not identified.
+
+If $x_{\text{TV}} = c\, x_{\text{search}}$ for some scalar $c$, then any move $\beta_{\text{TV}} \to \beta_{\text{TV}} + t$, $\beta_{\text{search}} \to \beta_{\text{search}} - tc$ leaves $X\beta$ unchanged: infinitely many coefficient vectors give the identical fit, so the data cannot tell the channels apart [@strang2016].
+
+The realistic case is *near*-collinearity. When TV and search are highly but imperfectly correlated, the columns are still linearly independent, so $\operatorname{rank}(X) = p$ and $X^\top X$ is genuinely invertible — $\hat\beta$ exists and is unique. But the columns point in nearly the same direction, and $X^\top X$ is *ill-conditioned*: small perturbations in $y$ swing $\hat\beta$ by large amounts. Rank is a yes/no diagnostic and cannot grade severity. To measure *how bad* the problem is, we need the eigenvalues of $X^\top X$ and its condition number, which we develop in later rungs.
+
+### Orthogonality, projection, and the normal equations {#sec-normal-equations}
+
+Equip $\mathbb{R}^n$ with the standard inner product $\langle u, v\rangle = u^\top v$ and norm $\lVert v\rVert = \sqrt{\langle v, v\rangle}$; vectors are **orthogonal** when $\langle u, v\rangle = 0$. Since $y$ rarely lies in $\mathcal{C}(X)$, least squares seeks the point of $\mathcal{C}(X)$ closest to $y$ — the **orthogonal projection** of $y$ onto the column space, $\hat y = X\hat\beta$. Geometrically, the projection is the unique fit whose residual $y - \hat y$ is perpendicular to the subspace.
+
+> **Theorem (Normal equations).** If $X$ has full column rank, the unique minimizer of $\lVert y - X\beta\rVert^2$ is $\hat\beta = (X^\top X)^{-1} X^\top y$, equivalently the solution of $X^\top X \hat\beta = X^\top y$; the residual $y - X\hat\beta$ is orthogonal to every column of $X$.
+
+*Proof.* Define the objective
+
+$$
+f(\beta) = \lVert y - X\beta \rVert^2 = (y - X\beta)^\top (y - X\beta) = y^\top y - 2\beta^\top X^\top y + \beta^\top X^\top X \beta.
+$$
+
+Differentiating with respect to $\beta$ gives the gradient
+
+$$
+\nabla f(\beta) = -2 X^\top y + 2 X^\top X \beta = -2\, X^\top (y - X\beta).
+$$
+
+Setting $\nabla f(\beta) = 0$ yields the **normal equations** $X^\top X \beta = X^\top y$. Because $X$ has full column rank, $X^\top X$ is invertible — we prove that full column rank forces $X^\top X \succ 0$, hence nonsingular, in the positive-definiteness section — so the system has the unique solution
+
+$$
+\hat\beta = (X^\top X)^{-1} X^\top y,
+$$
+
+the only stationary point of $f$.
+
+It remains to show this stationary point is a global minimizer. The Hessian of $f$ is $\nabla^2 f(\beta) = 2 X^\top X \succeq 0$, since $z^\top (X^\top X) z = \lVert Xz\rVert^2 \ge 0$ for all $z$. A twice-differentiable function with everywhere positive-semidefinite Hessian is convex, so any stationary point is a global minimum; with $X^\top X$ invertible the minimizer is unique.
+
+Finally, evaluate the residual against the columns of $X$:
+
+$$
+X^\top (y - X\hat\beta) = X^\top y - X^\top X \hat\beta = X^\top y - X^\top y = 0.
+$$
+
+Thus $\langle x_j, \, y - X\hat\beta\rangle = 0$ for every column $x_j$, i.e. the residual is orthogonal to all of $\mathcal{C}(X)$. This is the geometric content of "projection": $\hat y = X\hat\beta$ is the foot of the perpendicular dropped from $y$ onto the column space. $\qquad\blacksquare$
 
 ## Worked Examples
 
