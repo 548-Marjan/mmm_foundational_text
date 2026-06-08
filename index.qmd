@@ -65,7 +65,7 @@ omit them entirely.)
 
 Code in this book is original and self-contained — minimal PyMC / SciPy snippets
 that teach the same patterns a production MMM uses, with no proprietary source,
-firm priors, or client data. Pinned dependencies live in `_environment/`. Heavy
+firm priors, or client data. Pinned dependencies live in `requirements.txt`. Heavy
 sampling cells are cached via Quarto's `freeze`, so the book renders quickly and
 reproducibly.
 

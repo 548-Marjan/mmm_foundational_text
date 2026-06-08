@@ -31,7 +31,7 @@ it, Applied/code). Solutions live in a single appendix at the back.
 Requires [Quarto](https://quarto.org/docs/get-started/) and Python 3.11+.
 
 ```bash
-pip install -r _environment/requirements.txt
+pip install -r requirements.txt
 
 # Reader edition (no solutions)
 quarto render

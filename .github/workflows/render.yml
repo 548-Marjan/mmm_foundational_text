@@ -30,7 +30,7 @@ jobs:
           cache: pip
 
       - name: Install Python dependencies
-        run: pip install -r _environment/requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Render (HTML + PDF)
         run: quarto render
