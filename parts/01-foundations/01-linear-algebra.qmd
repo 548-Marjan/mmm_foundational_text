@@ -126,6 +126,42 @@ z^\top X^\top X z = (Xz)^\top (Xz) = \lVert Xz\rVert^2 \ge 0,
 $$
 so $X^\top X \succeq 0$ unconditionally. Moreover $\lVert Xz\rVert^2 > 0$ for every $z \ne 0$ exactly when $Xz = 0$ has only the trivial solution, i.e. when $\mathcal{N}(X) = \{0\}$ — full column rank. Hence full column rank $\Rightarrow X^\top X \succ 0 \Rightarrow X^\top X$ is invertible. This discharges the forward reference left open in the normal-equations proof (rung 3) and completes the identification chain (rung 2): the same condition that makes $\beta$ identifiable is precisely the positive definiteness of the Gram matrix.
 
+### The singular value decomposition
+
+The spectral theorem diagonalizes the *symmetric* matrix $X^\top X$; the **singular value decomposition** (SVD) does the analogous job for the *rectangular* design matrix $X$ itself. Every real matrix $X \in \mathbb{R}^{n\times p}$ factors as
+$$
+X = U\Sigma V^\top,
+$$
+where $U \in \mathbb{R}^{n\times n}$ and $V \in \mathbb{R}^{p\times p}$ are orthogonal ($U^\top U = I_n$, $V^\top V = I_p$) and $\Sigma \in \mathbb{R}^{n\times p}$ is diagonal, carrying the **singular values** $\sigma_1 \ge \sigma_2 \ge \cdots \ge \sigma_r > 0$ on its diagonal, with $r = \operatorname{rank}(X)$ and the remaining diagonal entries zero.
+
+Geometrically the factorization says that *any* linear map decomposes into three elementary moves: a rotation or reflection of the input ($V^\top$), an axiswise scaling that stretches the $i$-th axis by $\sigma_i$ ($\Sigma$), and a final rotation or reflection of the output ($U$). A linear map is never more complicated than "rotate, stretch, rotate."
+
+Two links make the SVD the keystone of this chapter. First, substituting the factorization into the Gram matrix,
+$$
+X^\top X = V\Sigma^\top U^\top U \Sigma V^\top = V\Sigma^\top\Sigma V^\top = V\Sigma^2 V^\top,
+$$
+which is exactly the spectral decomposition $Q\Lambda Q^\top$ of rung 4: the eigenvalues of $X^\top X$ are the squared singular values $\sigma_i^2$, and the eigenvectors are the columns of $V$. The spectral analysis of $X^\top X$ and the SVD of $X$ are the same fact viewed from two sides. Second, the **condition number**
+$$
+\kappa(X) = \frac{\sigma_1}{\sigma_r}
+$$
+quantifies collinearity. When two channels nearly align, the smallest singular value $\sigma_r \to 0$, so $\kappa(X) \to \infty$ and least squares becomes acutely sensitive to perturbations in $y$. This is the graded "how bad" measure promised in rung 2, where rank could only answer yes or no. That every real matrix possesses such a decomposition is a theorem we take as given; see [@trefethen1997] for the proof.
+
+### Cholesky factorization
+
+The last rung specializes to the matrices we actually solve with. Every symmetric positive-definite matrix $A$ admits a unique factorization
+$$
+A = LL^\top,
+$$
+where $L$ is lower-triangular with strictly positive diagonal entries. We state this without proof: existence and uniqueness follow directly from positive-definiteness, which rung 5 established for $X^\top X$ under full column rank. The Gram matrix therefore always has a Cholesky factor.
+
+Two payoffs justify the attention. First, Cholesky is the stable, efficient route to the normal equations $X^\top X\hat\beta = X^\top y$: factor $X^\top X = LL^\top$ once, then recover $\hat\beta$ by a forward solve $Lw = X^\top y$ followed by a back solve $L^\top\hat\beta = w$. This is both cheaper and numerically safer than forming $(X^\top X)^{-1}$ explicitly, which one should essentially never do. Second, Cholesky *generates correlated draws*. If $\Sigma = LL^\top$ is a covariance matrix and $z \sim \mathcal{N}(0, I)$, then $Lz \sim \mathcal{N}(0, \Sigma)$, because
+$$
+\operatorname{Cov}(Lz) = L\,\operatorname{Cov}(z)\,L^\top = L I L^\top = LL^\top = \Sigma.
+$$
+A single matrix multiply turns independent standard-normal noise into draws with the desired correlation structure.
+
+This dual role — solving the normal equations and manufacturing correlated Gaussians — makes Cholesky the computational workhorse behind sampling from Gaussian posteriors in Part II and setting the mass matrix of Hamiltonian Monte Carlo in Part III.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
