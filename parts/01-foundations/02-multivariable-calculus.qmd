@@ -323,3 +323,40 @@ These extend the chapter's proofs rather than repeat them.
    number, and take ten fixed-step gradient-descent steps on $L$ from
    $\beta=0$; report how the loss after ten steps degrades as $\rho\to1$. Relate
    the slow-down to the flat valley the small eigenvalue describes.
+
+## Summary
+
+The calculus below is the language every fitting method in this book speaks. If
+you can state each concept in a sentence and reproduce each identity from memory,
+you are ready to move on.
+
+**Key concepts**
+
+- **The gradient is the slope.** $\nabla f(\beta)$ points in the direction of
+  steepest *ascent* and is orthogonal to the level sets; $-\nabla f$ is the
+  steepest *descent* direction every gradient-based fit follows.
+- **The chain rule assembles loss gradients.** For a composition $g\circ r$, the
+  gradient is $J^\top \nabla g$. For least squares the residual map $r=y-X\beta$
+  has constant Jacobian $J=-X$, giving the **Gauss–Newton shape** $\nabla L=2J^\top r$.
+- **The Hessian is the curvature.** Second partials measure how the surface bends;
+  for the loss $L$ the Hessian is the *constant* matrix $2X^\top X$ — the very
+  matrix that diagnosed collinearity in Chapter 1. Its eigenvalues are curvatures.
+- **Optimality is two conditions.** A stationary point ($\nabla f=0$) is *necessary*;
+  a positive-definite Hessian there is *sufficient* for a strict local minimum.
+  $\nabla f=0$ alone cannot tell a minimum from a saddle.
+- **Convexity globalizes.** A $C^2$ function is convex iff its Hessian is PSD
+  everywhere. For convex $f$, any stationary point is a *global* minimizer; strict
+  convexity makes it unique.
+- **Why $\hat\beta$ is trustworthy.** Since $\nabla^2 L = 2X^\top X \succeq 0$, the
+  loss $L$ is convex, so the normal-equation solution is a global minimum; under
+  full column rank $L$ is *strictly* convex and $\hat\beta$ is the unique minimizer.
+
+**Key identities**
+
+- Directional derivative: $D_u f(\beta) = \nabla f(\beta)^\top u$; steepest ascent at $u^\star = \nabla f(\beta)/\lVert\nabla f(\beta)\rVert$.
+- Chain rule: $\nabla_\beta\,(g\circ r)(\beta) = J(\beta)^\top \nabla g\big(r(\beta)\big)$.
+- Loss gradient: $\nabla L(\beta) = -2X^\top(y - X\beta) = 2\big(X^\top X\beta - X^\top y\big)$.
+- Loss Hessian: $\nabla^2 L(\beta) = 2X^\top X$ (constant, symmetric, PSD).
+- Second-order Taylor: $f(\beta+\delta) = f(\beta) + \nabla f(\beta)^\top\delta + \tfrac12\,\delta^\top\nabla^2 f(\beta)\,\delta + o(\lVert\delta\rVert^2)$.
+- Optimality: $\nabla f(\beta^\star)=0$ (necessary); additionally $\nabla^2 f(\beta^\star)\succ 0$ (sufficient for a strict local min).
+- Convexity: $f$ convex $\iff \nabla^2 f \succeq 0$; equivalently $f(z) \ge f(\beta) + \nabla f(\beta)^\top(z-\beta)$ for all $\beta,z$.
