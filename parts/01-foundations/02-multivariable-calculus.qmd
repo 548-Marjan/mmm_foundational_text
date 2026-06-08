@@ -270,10 +270,56 @@ print("condition number of X^T X:", np.linalg.cond(X.T @ X))
 
 ## Exercises
 
-### C -- Conceptual / Reading Comprehension
+### C — Conceptual / Reading Comprehension
 
-### B -- By Hand
+1. In one sentence each, say what $\nabla L(\beta)$ and $\nabla^2 L(\beta)$ tell
+   you geometrically about the loss surface.
+2. Why does convexity of $L$ let you trust a *single* fitted $\hat\beta$, rather
+   than worrying you have found one of many local minima?
+3. What is a saddle point, and why is $\nabla f=0$ alone not enough to certify a
+   minimum? Refer to Worked Example (b).
 
-### P -- Prove It
+### B — By Hand
 
-### A -- Applied / Code
+1. For $f(\beta)=3\beta_1^2+\beta_2^2-\beta_1\beta_2$, compute $\nabla f$ and
+   $\nabla^2 f$, find the unique critical point, and classify it via the Hessian.
+2. For the design matrix $X=\begin{bmatrix}1&2\\1&0\\1&1\end{bmatrix}$ and
+   $y=(2,1,2)^\top$, write $\nabla L(\beta)=0$ explicitly and solve for
+   $\hat\beta$.
+3. Give a $2\times2$ symmetric matrix that is PSD but not PD, and exhibit the
+   direction $v$ with $v^\top H v=0$. Relate this to a perfectly collinear pair
+   of channels.
+
+### P — Prove It
+
+These extend the chapter's proofs rather than repeat them.
+
+1. **(Second-order necessary condition.)** Prove that if $\beta^\star$ is an
+   interior local minimizer of a $C^2$ function $f$, then $\nabla^2
+   f(\beta^\star)\succeq 0$. (Hint: apply the scalar restriction $\phi(t)=
+   f(\beta^\star+tu)$ and use $\phi''(0)\ge 0$.) Explain why this gives only
+   PSD, while the sufficient condition in the text needed PD.
+2. **(First-order characterization of convexity.)** Prove that a $C^1$ function
+   $f$ is convex if and only if $f(z)\ge f(\beta)+\nabla f(\beta)^\top(z-\beta)$
+   for all $\beta,z$ — i.e. the graph lies above each tangent plane.
+3. **(Global, unique minimizer.)** Prove that for a convex $f$ every local
+   minimizer is global, and that if $f$ is *strictly* convex the minimizer is
+   unique. Then state precisely the condition on $X$ under which $\hat\beta$ is
+   the unique global minimizer of $L$, and justify it.
+4. **(Convexity under affine precomposition.)** Prove that if $g:\mathbb{R}^n\to
+   \mathbb{R}$ is convex and $A,c$ are a fixed matrix and vector, then
+   $\beta\mapsto g(A\beta+c)$ is convex. Use this — together with the convexity
+   of $r\mapsto\lVert r\rVert^2$ — to show $L(\beta)=\lVert y-X\beta\rVert^2$ is
+   convex *without computing any derivatives*.
+
+### A — Applied / Code
+
+1. Write a finite-difference gradient checker `grad_numeric(f, beta)` and use it
+   to verify the analytic gradient of $L$ at three random points; report the
+   maximum discrepancy.
+2. Build an $X$ whose two channels are increasingly correlated (e.g.
+   `search = rho*tv + sqrt(1-rho**2)*noise` for $\rho\in\{0,0.9,0.99,0.999\}$).
+   For each $\rho$, print the smallest eigenvalue of $X^\top X$ and the condition
+   number, and take ten fixed-step gradient-descent steps on $L$ from
+   $\beta=0$; report how the loss after ten steps degrades as $\rho\to1$. Relate
+   the slow-down to the flat valley the small eigenvalue describes.
