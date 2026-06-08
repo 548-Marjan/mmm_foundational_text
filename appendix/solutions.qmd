@@ -20,6 +20,64 @@ answer). Use them only after a genuine attempt.
 
 <!-- Per-chapter solution sections are appended here as chapters are written. -->
 
+## Chapter 2 — Multivariable Calculus & the Optimization Toolkit {.unnumbered}
+
+**C.1** $\nabla L$ points in the steepest-uphill direction and is zero only at
+the minimizer; $\nabla^2 L=2X^\top X$ is the (constant) curvature of the bowl —
+its eigenvalues say how sharply $L$ rises in each principal direction.
+**C.2** Convexity makes every critical point a global minimum, so a single
+$\nabla L=0$ solution is *the* answer; there are no other valleys to miss.
+**C.3** A saddle has $\nabla f=0$ but the Hessian is indefinite, so the point is
+a minimum along some directions and a maximum along others (Worked Example (b));
+$\nabla f=0$ only marks candidates.
+
+**B.1** $\nabla f=(6\beta_1-\beta_2,\;2\beta_2-\beta_1)^\top$,
+$\nabla^2 f=\begin{bmatrix}6&-1\\-1&2\end{bmatrix}$. Setting $\nabla f=0$ gives
+$\beta=(0,0)$; the Hessian has positive eigenvalues (trace $8>0$, determinant
+$11>0$), so the origin is a strict local — and, since $f$ is a PD quadratic,
+global — minimum.
+**B.2** $X^\top X=\begin{bmatrix}3&3\\3&5\end{bmatrix}$,
+$X^\top y=\begin{bmatrix}5&6\end{bmatrix}^\top$; solving
+$3\beta_1+3\beta_2=5,\;3\beta_1+5\beta_2=6$ gives
+$\hat\beta=(\tfrac{7}{6},\tfrac12)^\top$.
+**B.3** $H=\begin{bmatrix}1&1\\1&1\end{bmatrix}$ is PSD (eigenvalues $0,2$) but
+not PD; $v=(1,-1)^\top$ gives $v^\top H v=0$. This is two channels that are
+identical columns — a perfectly collinear pair, along which $L$ is flat.
+
+**P.1** Restrict to $\phi(t)=f(\beta^\star+tu)$. As $t=0$ is a local min,
+$\phi''(0)=u^\top\nabla^2 f(\beta^\star)u\ge 0$ for every $u$, i.e.
+$\nabla^2 f(\beta^\star)\succeq 0$. We get only "$\ge 0$": a flat direction
+($u^\top Hu=0$) is consistent with a minimum, so PSD is necessary but PD is what
+*guarantees* one.
+**P.2** ($\Rightarrow$) Convexity gives, for $t\in(0,1]$, $f(\beta+t(z-\beta))
+\le f(\beta)+t\,[f(z)-f(\beta)]$; rearranging and letting $t\to0^+$ yields
+$\nabla f(\beta)^\top(z-\beta)\le f(z)-f(\beta)$. ($\Leftarrow$) Given the
+tangent inequality, take any $x,z$ and $w=tx+(1-t)z$; apply the inequality at
+$\beta=w$ to both $x$ and $z$, multiply by $t$ and $1-t$ and add; the gradient
+terms cancel and convexity of $f$ follows.
+**P.3** If $\beta^\star$ is a local but not global min, some $z$ has $f(z)<
+f(\beta^\star)$; convexity along the segment gives $f(\beta^\star+t(z-\beta^\star))
+\le f(\beta^\star)+t[f(z)-f(\beta^\star)]<f(\beta^\star)$ for small $t>0$,
+contradicting locality. For uniqueness under strict convexity, two distinct
+minimizers $a\neq b$ with equal value give $f(\tfrac{a+b}2)<\tfrac12 f(a)+\tfrac12
+f(b)=f(a)$, a contradiction. For $L$: $\hat\beta$ is the unique global minimizer
+iff $X^\top X$ is PD, i.e. iff $X$ has full column rank (no collinearity), since
+then $L$ is strictly convex.
+**P.4** For $t\in[0,1]$, $A(t\beta_1+(1-t)\beta_2)+c=t(A\beta_1+c)+(1-t)(A\beta_2
++c)$, so $g(A\cdot+c)$ evaluated at the convex combination equals $g$ of the
+convex combination of $A\beta_i+c$; convexity of $g$ then bounds it by the convex
+combination of values, proving $\beta\mapsto g(A\beta+c)$ convex. Taking
+$g(r)=\lVert r\rVert^2$ (convex), $A=-X$, $c=y$ gives $L(\beta)=g(-X\beta+y)$
+convex with no derivatives.
+
+**A.1** A central-difference checker matches the analytic gradient
+$-2X^\top(y-X\beta)$ to $\approx10^{-5}$–$10^{-6}$ at random points (see the
+chapter code cell for the pattern).
+**A.2** As $\rho\to1$ the smallest eigenvalue of $X^\top X\to0$ and the
+condition number $\to\infty$; fixed-step gradient descent makes almost no
+progress along the flat valley, so the loss after ten steps stays far above its
+minimum — the numerical face of collinearity from Chapter 1.
+
 ### How solutions are organized
 
 Each chapter's solutions appear under a heading matching the chapter title, with

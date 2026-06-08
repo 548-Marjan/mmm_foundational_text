@@ -2,32 +2,324 @@
 
 *Canonical anchors: Nocedal & Wright (background); Boyd appendix.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapter 1 found the least-squares coefficients $\hat\beta$ by projecting the
+sales vector $y$ onto the column space of the design matrix $X$ — a geometric
+move. But suppose you could not see the whole geometry at once. Suppose you
+could only stand at some guess $\beta$ and *feel the slope of the error under
+your feet*. Two questions decide whether you can still find $\hat\beta$:
+
+1. **Which way is downhill, and how steep?** That is the **gradient**.
+2. **If you reach a flat spot, is it the bottom — and is it the *only*
+   bottom?** That is **convexity**.
+
+This chapter builds the multivariable-calculus answer to both, on one recurring
+object: the sum-of-squares loss surface
+$$
+L(\beta) = \lVert y - X\beta \rVert^2 .
+$$
+By the end we will have re-derived the normal equations $X^\top X\hat\beta =
+X^\top y$ a second time — by calculus rather than projection — and shown that
+the matrix $X^\top X$ that diagnosed collinearity in Chapter 1 is, exactly, the
+*curvature* of $L$. The tools (gradient, Jacobian, Hessian, Taylor expansion,
+the optimality and convexity conditions) are the same ones every model in this
+book is fit with [@nocedal2006; @boyd2004].
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+We climb a ladder of tools, each rung paying off on $L$. Four results are
+proved in full; mechanical results are stated and cited.
+
+### Gradient and directional derivative
+
+For $f:\mathbb{R}^p\to\mathbb{R}$ differentiable at $\beta$, the **gradient**
+$\nabla f(\beta)$ is the vector of partial derivatives
+$\big(\partial f/\partial\beta_1,\dots,\partial f/\partial\beta_p\big)^\top$.
+The **directional derivative** in a unit direction $u$ ($\lVert u\rVert=1$) is
+the rate of change of $f$ along $u$:
+$$
+D_u f(\beta) = \lim_{h\to 0}\frac{f(\beta+hu)-f(\beta)}{h}
+             = \nabla f(\beta)^\top u .
+$$
+
+::: {.callout-note appearance="simple"}
+**Theorem (steepest ascent).** Among all unit directions $u$, the directional
+derivative $D_u f(\beta)=\nabla f(\beta)^\top u$ is largest when $u$ points
+along $\nabla f(\beta)$, and the level set of $f$ through $\beta$ is orthogonal
+to $\nabla f(\beta)$.
+
+**Proof.** By Cauchy–Schwarz, $\nabla f(\beta)^\top u \le
+\lVert\nabla f(\beta)\rVert\,\lVert u\rVert = \lVert\nabla f(\beta)\rVert$, with
+equality iff $u$ is a nonnegative multiple of $\nabla f(\beta)$; the unit
+maximizer is therefore $u^\star=\nabla f(\beta)/\lVert\nabla f(\beta)\rVert$
+(assuming $\nabla f(\beta)\neq 0$). For the orthogonality claim, let
+$\gamma(t)$ be any curve lying in the level set $\{x:f(x)=f(\beta)\}$ with
+$\gamma(0)=\beta$. Then $f(\gamma(t))$ is constant, so differentiating and
+using the chain rule, $0=\tfrac{d}{dt}f(\gamma(t))\big|_{0}
+=\nabla f(\beta)^\top\gamma'(0)$. Hence $\nabla f(\beta)$ is orthogonal to every
+tangent direction of the level set. $\qquad\blacksquare$
+:::
+
+So the negative gradient is the locally steepest *downhill* direction — the
+fact every gradient-based fitting method in this book exploits.
+
+### Jacobian and the chain rule
+
+A vector-valued map $r:\mathbb{R}^p\to\mathbb{R}^n$ has **Jacobian**
+$J(\beta)\in\mathbb{R}^{n\times p}$ with entries $J_{ij}=\partial r_i/\partial
+\beta_j$. The **multivariate chain rule** says that for a composition
+$g\circ r$ with $g:\mathbb{R}^n\to\mathbb{R}$,
+$$
+\nabla_\beta\,(g\circ r)(\beta) = J(\beta)^\top\,\nabla g\big(r(\beta)\big).
+$$
+
+Apply it to least squares. The **residual map** is $r(\beta)=y-X\beta$, a linear
+(hence affine) map with constant Jacobian
+$$
+J=\frac{\partial r}{\partial\beta} = -X,
+$$
+and $L(\beta)=g(r(\beta))$ with $g(r)=\lVert r\rVert^2$, $\nabla g(r)=2r$.
+The chain rule gives the gradient of the loss directly:
+$$
+\nabla L(\beta) = J^\top\nabla g(r) = (-X)^\top\,2\,(y-X\beta)
+               = -2X^\top(y-X\beta).
+$$
+The form $\nabla L = 2J^\top r$ is the **Gauss–Newton** shape. Here $J=-X$ is
+constant because the model is linear; when we later fit the *saturating* media
+curves of Part V, $J$ will depend on $\beta$, but this same expression is what
+those nonlinear least-squares fits descend.
+
+### Hessian, Taylor expansion, and optimality
+
+The **Hessian** $\nabla^2 f(\beta)\in\mathbb{R}^{p\times p}$ collects the second
+partials $\big[\nabla^2 f\big]_{ij}=\partial^2 f/\partial\beta_i\partial\beta_j$;
+for $C^2$ functions it is symmetric (Clairaut). The **second-order Taylor
+expansion** about $\beta$ is
+$$
+f(\beta+\delta) = f(\beta) + \nabla f(\beta)^\top\delta
+  + \tfrac12\,\delta^\top\nabla^2 f(\beta)\,\delta + o(\lVert\delta\rVert^2),
+$$
+with the exact (Lagrange/integral) remainder cited to [@nocedal2006, Thm. 2.1].
+For the loss, differentiating $\nabla L(\beta)=-2X^\top(y-X\beta)$ once more,
+$$
+\nabla^2 L(\beta) = 2X^\top X,
+$$
+constant in $\beta$ — and *exactly* the symmetric PSD matrix Chapter 1 used to
+diagnose collinearity. Its eigenvalues are the curvatures of the bowl $L$.
+
+::: {.callout-note appearance="simple"}
+**Theorem (first-order necessary condition).** If $\beta^\star$ is an interior
+local minimizer of a differentiable $f$, then $\nabla f(\beta^\star)=0$.
+
+**Proof.** Fix any direction $u$. The scalar $\phi(t)=f(\beta^\star+tu)$ has a
+local minimum at $t=0$, so $\phi'(0)=\nabla f(\beta^\star)^\top u=0$. As $u$ was
+arbitrary, every component of $\nabla f(\beta^\star)$ vanishes. $\qquad\blacksquare$
+:::
+
+::: {.callout-note appearance="simple"}
+**Theorem (second-order sufficient condition).** If $\nabla f(\beta^\star)=0$
+and $\nabla^2 f(\beta^\star)$ is positive definite, then $\beta^\star$ is a
+strict local minimizer.
+
+**Proof.** Let $\lambda_{\min}>0$ be the smallest eigenvalue of
+$H=\nabla^2 f(\beta^\star)$ (real and positive by the spectral theorem and PD,
+from Chapter 1). With $\nabla f(\beta^\star)=0$, Taylor gives
+$$
+f(\beta^\star+\delta)-f(\beta^\star)
+ = \tfrac12\,\delta^\top H\,\delta + o(\lVert\delta\rVert^2)
+ \ge \tfrac12\lambda_{\min}\lVert\delta\rVert^2 + o(\lVert\delta\rVert^2).
+$$
+For $\lVert\delta\rVert$ small enough the right side is positive, so
+$f(\beta^\star+\delta)>f(\beta^\star)$ for all small $\delta\neq 0$.
+$\qquad\blacksquare$
+:::
+
+### Convexity and the global guarantee
+
+A function $f$ is **convex** if for all $x,z$ and $t\in[0,1]$,
+$f(tx+(1-t)z)\le t f(x)+(1-t)f(z)$.
+
+::: {.callout-note appearance="simple"}
+**Theorem (second-order characterization).** A $C^2$ function $f$ on an open
+convex domain is convex if and only if $\nabla^2 f(x)\succeq 0$ (positive
+semidefinite) for every $x$.
+
+**Proof.** ($\Leftarrow$) For any $x,z$ let $\delta=z-x$ and
+$\psi(t)=f(x+t\delta)$ on $[0,1]$. Then $\psi''(t)=\delta^\top\nabla^2
+f(x+t\delta)\,\delta\ge 0$, so $\psi$ is a convex scalar function, which is
+exactly the convexity inequality for $f$ along the segment.
+($\Rightarrow$) If some $\nabla^2 f(x_0)$ had a negative eigenvalue with
+eigenvector $v$, then $\psi(t)=f(x_0+tv)$ would satisfy $\psi''(0)=v^\top
+\nabla^2 f(x_0)v<0$, making $\psi$ strictly concave near $0$ and violating
+convexity along that segment. $\qquad\blacksquare$
+:::
+
+Apply this to the loss. Since $\nabla^2 L(\beta)=2X^\top X$ and
+$v^\top X^\top X v=\lVert Xv\rVert^2\ge 0$ for all $v$, the Hessian is PSD
+everywhere, so **$L$ is convex**. Therefore any $\beta$ with $\nabla L(\beta)=0$
+— any solution of the normal equations — is a *global* minimizer, not merely a
+local one. When $X$ has full column rank, $X^\top X$ is positive definite, $L$
+is strictly convex, and $\hat\beta$ is the *unique* global minimizer; rank
+deficiency (collinearity) is precisely when that guarantee weakens.
+
+### What this chapter does not cover
+
+Descending $L$ in practice — **gradient descent**, Newton's method, line
+search — and **constrained** optimization via **Lagrange multipliers** and the
+**KKT conditions** are the subject of Part IV [@nocedal2006; @boyd2004]; we name
+them here only to mark where this calculus leads. Integration and
+change-of-variables for probability densities arrive in the
+probability/statistics chapter, where they are needed.
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+**(a) Gradient, Hessian, and recovering $\hat\beta$ by calculus.** Take three
+weeks, two channels (no intercept, to keep arithmetic light):
+$$
+X=\begin{bmatrix}1&0\\1&1\\0&1\end{bmatrix},\qquad
+y=\begin{bmatrix}1\\3\\2\end{bmatrix}.
+$$
+Then
+$$
+X^\top X=\begin{bmatrix}2&1\\1&2\end{bmatrix},\qquad
+X^\top y=\begin{bmatrix}4\\5\end{bmatrix}.
+$$
+The gradient is $\nabla L(\beta)=-2X^\top(y-X\beta)=2\big(X^\top X\beta-X^\top
+y\big)$. Setting $\nabla L=0$ is the normal equations $X^\top X\beta=X^\top y$:
+$$
+\begin{aligned}
+2\beta_1+\beta_2 &= 4\\
+\beta_1+2\beta_2 &= 5
+\end{aligned}
+\quad\Rightarrow\quad
+\hat\beta=\begin{bmatrix}1\\2\end{bmatrix}.
+$$
+The Hessian $\nabla^2 L=2X^\top X=\begin{bmatrix}4&2\\2&4\end{bmatrix}$ has
+eigenvalues $2$ and $6$ (both positive), so by the second-order sufficient
+condition $\hat\beta$ is a strict — and, by convexity, global and unique —
+minimizer. This is the same $\hat\beta$ the projection of Chapter 1 would
+return.
+
+**(b) A saddle: why $\nabla f=0$ is not enough.** Let
+$f(\beta)=\beta_1^2-\beta_2^2$. Then $\nabla f=(2\beta_1,-2\beta_2)^\top$, which
+vanishes at the origin, yet
+$\nabla^2 f=\begin{bmatrix}2&0\\0&-2\end{bmatrix}$ is **indefinite**
+(eigenvalues $+2,-2$). Along $\beta_2=0$ the origin looks like a minimum; along
+$\beta_1=0$ it looks like a maximum. The first-order condition flags it as a
+candidate; only the Hessian reveals it is neither — exactly the gap the
+second-order test closes.
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+We form the analytic gradient and Hessian of $L$, check the gradient against
+finite differences (the habit that catches a hundred modeling bugs later), and
+read the Hessian's eigenvalues as curvature — tying the smallest one back to
+Chapter 1's collinearity story.
+
+```{python}
+import numpy as np
+
+rng = np.random.default_rng(0)
+
+# Synthetic media design matrix: 40 weeks, intercept + 2 channels.
+n = 40
+intercept = np.ones(n)
+tv = rng.normal(size=n)
+search = rng.normal(size=n)
+X = np.column_stack([intercept, tv, search])
+beta_true = np.array([2.0, 1.5, -0.5])
+y = X @ beta_true + rng.normal(scale=0.5, size=n)
+
+def loss(beta):
+    r = y - X @ beta
+    return r @ r
+
+def grad_analytic(beta):
+    return -2.0 * X.T @ (y - X @ beta)
+
+def grad_numeric(beta, eps=1e-6):
+    g = np.zeros_like(beta)
+    for j in range(len(beta)):
+        e = np.zeros_like(beta); e[j] = eps
+        g[j] = (loss(beta + e) - loss(beta - e)) / (2 * eps)
+    return g
+
+beta0 = np.zeros(3)
+print("max |analytic - numeric| gradient:",
+      np.max(np.abs(grad_analytic(beta0) - grad_numeric(beta0))))
+
+# Hessian is constant: 2 X^T X. Its eigenvalues are the curvatures of the bowl.
+H = 2.0 * X.T @ X
+eig = np.linalg.eigvalsh(H)
+print("Hessian eigenvalues:", np.round(eig, 3))
+print("all positive (=> strictly convex, unique minimizer):", bool(np.all(eig > 0)))
+
+# Solve the normal equations (the calculus critical point) and confirm.
+beta_hat = np.linalg.solve(X.T @ X, X.T @ y)
+print("||gradient at beta_hat||:", np.linalg.norm(grad_analytic(beta_hat)))
+print("condition number of X^T X:", np.linalg.cond(X.T @ X))
+```
+
+> The numeric and analytic gradients agree to roughly $10^{-5}$; every Hessian
+> eigenvalue is positive, so $L$ is a strictly convex bowl with a unique bottom;
+> and $\nabla L(\hat\beta)\approx 0$ confirms the normal-equation solution is that
+> bottom. If the two channels were made nearly collinear, the smallest eigenvalue
+> — and the condition number — would blow up: a flat valley in $L$, which is what
+> makes $\hat\beta$ unstable, exactly as in Chapter 1.
 
 ## Exercises
 
-### C -- Conceptual / Reading Comprehension
+### C — Conceptual / Reading Comprehension
 
-### B -- By Hand
+1. In one sentence each, say what $\nabla L(\beta)$ and $\nabla^2 L(\beta)$ tell
+   you geometrically about the loss surface.
+2. Why does convexity of $L$ let you trust a *single* fitted $\hat\beta$, rather
+   than worrying you have found one of many local minima?
+3. What is a saddle point, and why is $\nabla f=0$ alone not enough to certify a
+   minimum? Refer to Worked Example (b).
 
-### P -- Prove It
+### B — By Hand
 
-### A -- Applied / Code
+1. For $f(\beta)=3\beta_1^2+\beta_2^2-\beta_1\beta_2$, compute $\nabla f$ and
+   $\nabla^2 f$, find the unique critical point, and classify it via the Hessian.
+2. For the design matrix $X=\begin{bmatrix}1&2\\1&0\\1&1\end{bmatrix}$ and
+   $y=(2,1,2)^\top$, write $\nabla L(\beta)=0$ explicitly and solve for
+   $\hat\beta$.
+3. Give a $2\times2$ symmetric matrix that is PSD but not PD, and exhibit the
+   direction $v$ with $v^\top H v=0$. Relate this to a perfectly collinear pair
+   of channels.
+
+### P — Prove It
+
+These extend the chapter's proofs rather than repeat them.
+
+1. **(Second-order necessary condition.)** Prove that if $\beta^\star$ is an
+   interior local minimizer of a $C^2$ function $f$, then $\nabla^2
+   f(\beta^\star)\succeq 0$. (Hint: apply the scalar restriction $\phi(t)=
+   f(\beta^\star+tu)$ and use $\phi''(0)\ge 0$.) Explain why this gives only
+   PSD, while the sufficient condition in the text needed PD.
+2. **(First-order characterization of convexity.)** Prove that a $C^1$ function
+   $f$ is convex if and only if $f(z)\ge f(\beta)+\nabla f(\beta)^\top(z-\beta)$
+   for all $\beta,z$ — i.e. the graph lies above each tangent plane.
+3. **(Global, unique minimizer.)** Prove that for a convex $f$ every local
+   minimizer is global, and that if $f$ is *strictly* convex the minimizer is
+   unique. Then state precisely the condition on $X$ under which $\hat\beta$ is
+   the unique global minimizer of $L$, and justify it.
+4. **(Convexity under affine precomposition.)** Prove that if $g:\mathbb{R}^n\to
+   \mathbb{R}$ is convex and $A,c$ are a fixed matrix and vector, then
+   $\beta\mapsto g(A\beta+c)$ is convex. Use this — together with the convexity
+   of $r\mapsto\lVert r\rVert^2$ — to show $L(\beta)=\lVert y-X\beta\rVert^2$ is
+   convex *without computing any derivatives*.
+
+### A — Applied / Code
+
+1. Write a finite-difference gradient checker `grad_numeric(f, beta)` and use it
+   to verify the analytic gradient of $L$ at three random points; report the
+   maximum discrepancy.
+2. Build an $X$ whose two channels are increasingly correlated (e.g.
+   `search = rho*tv + sqrt(1-rho**2)*noise` for $\rho\in\{0,0.9,0.99,0.999\}$).
+   For each $\rho$, print the smallest eigenvalue of $X^\top X$ and the condition
+   number, and take ten fixed-step gradient-descent steps on $L$ from
+   $\beta=0$; report how the loss after ten steps degrades as $\rho\to1$. Relate
+   the slow-down to the flat valley the small eigenvalue describes.
