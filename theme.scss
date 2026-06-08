@@ -1,0 +1,40 @@
+/*-- scss:defaults --*/
+
+// Roomier base typography for math-heavy prose. Lines that contain inline
+// math are taller than plain text, so a generous line-height keeps them from
+// crowding the lines above and below.
+$font-size-root: 17px;
+$line-height-base: 1.7;
+
+
+/*-- scss:rules --*/
+
+// Display equations ($$...$$ -> .katex-display): the default KaTeX margin
+// (1em) sits too close to the surrounding paragraphs. Give them real vertical
+// breathing room, a little internal padding, and let unusually wide equations
+// scroll horizontally instead of overflowing the column.
+.katex-display {
+  margin-top: 1.6rem;
+  margin-bottom: 1.6rem;
+  padding: 0.4rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+// Inline math: nudge the size up very slightly so symbols match the weight of
+// the surrounding text, and keep paragraphs/list items at the roomy
+// line-height even where Bootstrap would otherwise tighten them.
+.katex {
+  font-size: 1.05em;
+}
+
+p,
+li {
+  line-height: 1.7;
+}
+
+// Numbered theorem/proof callouts carry a lot of stacked math; give their
+// inner content the same roomy spacing and a touch more padding.
+.callout .callout-body-container {
+  line-height: 1.7;
+}
