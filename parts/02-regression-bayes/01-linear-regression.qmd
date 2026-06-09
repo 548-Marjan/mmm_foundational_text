@@ -412,8 +412,42 @@ At mild correlation ($\text{corr}=0.3$) the channels are well separated and ever
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** Suppose you fit the media-mix model and report a 95% confidence interval $[1.514,\,2.048]$ for the TV coefficient $\beta_{\text{TV}}$. State carefully what this interval *claims* and what it *does not* claim. In particular, address the common misreading that "there is a 95% probability that the true $\beta_{\text{TV}}$ lies in $[1.514,\,2.048]$." Why is that statement wrong under the frequentist sampling-distribution $\hat\beta\sim\mathcal N(\beta,\sigma^2(X^\top X)^{-1})$, and what is the correct probabilistic object the $95\%$ actually refers to?
+
+**C2.** Two media channels (say TV and a near-duplicate "search" spend that tracks it closely) are strongly collinear, yet the model's overall fit $R^2$ is excellent. Explain why the individual coefficient standard errors can nonetheless be enormous. Tie your explanation explicitly to the matrix $(X^\top X)^{-1}$: which quantity in $\operatorname{se}(\hat\beta_j)=\hat\sigma\sqrt{[(X^\top X)^{-1}]_{jj}}$ blows up, what near-singularity of $X^\top X$ does to its inverse, and why a great *joint* fit is fully compatible with terrible *individual* coefficient precision.
+
+**C3.** Ridge regression replaces $\hat\beta=(X^\top X)^{-1}X^\top y$ with $(X^\top X+\lambda I)^{-1}X^\top y$, which is a *biased* estimator of $\beta$. What does this deliberate bias buy in return, and how should one think about the resulting bias–variance tradeoff as $\lambda$ grows? Then explain in what precise sense choosing the penalty $\lambda$ is the same thing as choosing a Gaussian prior $\beta\sim\mathcal N(0,\tau^2 I)$, including the identification $\lambda=\sigma^2/\tau^2$ and what $\lambda\to 0$ and $\lambda\to\infty$ correspond to in prior terms.
+
 ### B -- By Hand
+
+**B1.** Let
+$$
+X=\begin{bmatrix}1&1\\1&2\\1&3\\1&4\end{bmatrix},
+\qquad
+y=\begin{bmatrix}2\\2\\4\\5\end{bmatrix}.
+$$
+Compute the OLS estimate $\hat\beta=(X^\top X)^{-1}X^\top y$ (intercept and slope). Then compute the residual sum of squares $\text{RSS}=\lVert y-X\hat\beta\rVert^2$, the noise estimate $\hat\sigma^2=\text{RSS}/(n-p)$ with $n=4$ and $p=2$, and the standard error of the slope $\operatorname{se}(\hat\beta_1)=\hat\sigma\sqrt{[(X^\top X)^{-1}]_{11}}$ (index the slope as $j=1$). Show your intermediate matrices.
+
+**B2.** Two predictors enter a regression and have sample correlation $r=0.95$. Using the two-predictor identity $R_j^2=r^2$, compute the variance inflation factor $\text{VIF}_j=1/(1-R_j^2)$ for each predictor. By what factor does the collinearity inflate the variance of each coefficient relative to an orthogonal design, and what does that imply for the standard errors (which scale as $\sqrt{\text{VIF}_j}$)?
+
+**B3.** Given
+$$
+X^\top X=\begin{bmatrix}4&2\\2&4\end{bmatrix},
+\qquad
+X^\top y=\begin{bmatrix}6\\4\end{bmatrix},
+$$
+compute the ridge estimate $\hat\beta_{\text{ridge}}=(X^\top X+\lambda I)^{-1}X^\top y$ at $\lambda=2$. Form $X^\top X+\lambda I$, invert it explicitly, and report $\hat\beta_{\text{ridge}}$. For comparison, also compute the OLS estimate ($\lambda=0$) and comment on how the penalty has shrunk the coefficients.
 
 ### P -- Prove It
 
+**P1.** Assume the linear model $y=X\beta+\varepsilon$ with fixed (non-random) design $X$ of full column rank and $\mathbb{E}[\varepsilon]=0$. Prove that the OLS estimator $\hat\beta=(X^\top X)^{-1}X^\top y$ is unbiased, i.e. $\mathbb{E}[\hat\beta]=\beta$. State clearly where you use linearity of expectation and the assumption $\mathbb{E}[\varepsilon]=0$.
+
+**P2.** Adopt the Gauss–Markov assumptions: $\mathbb{E}[\varepsilon]=0$ and $\operatorname{Cov}(\varepsilon)=\sigma^2 I$, with $X$ fixed and full column rank. Consider any *linear* estimator $\tilde\beta=Cy$ that is *unbiased* for every $\beta$. Prove the Gauss–Markov theorem: the OLS estimator $\hat\beta=(X^\top X)^{-1}X^\top y$ has the smallest covariance among all such $\tilde\beta$, in the sense that $\operatorname{Cov}(\tilde\beta)-\operatorname{Cov}(\hat\beta)$ is positive semidefinite. (Hint: write $C=(X^\top X)^{-1}X^\top+D$, show unbiasedness forces $DX=0$, and expand the covariance.)
+
+**P3.** Suppose $y\mid\beta\sim\mathcal N(X\beta,\sigma^2 I)$ with the Gaussian prior $\beta\sim\mathcal N(0,\tau^2 I)$. Prove that the maximum a posteriori (MAP) estimate of $\beta$ — the maximizer of the posterior $p(\beta\mid y)$ — equals the ridge estimator $(X^\top X+\lambda I)^{-1}X^\top y$, and show that the penalty is identified as $\lambda=\sigma^2/\tau^2$. (Hint: maximize the log-posterior, i.e. minimize $\tfrac{1}{\sigma^2}\lVert y-X\beta\rVert^2+\tfrac{1}{\tau^2}\lVert\beta\rVert^2$, by setting the gradient to zero.)
+
 ### A -- Applied / Code
+
+**A1.** *Sampling variability of OLS.* Build a fixed two-channel design matrix $X$ (an intercept plus two media channels) whose two channel columns have a target correlation $\rho$, and pick a true coefficient vector $\beta_{\text{true}}$. For each $\rho\in\{0,\,0.9,\,0.99\}$, hold $X$ fixed and draw many response vectors $y=X\beta_{\text{true}}+\varepsilon$ with $\varepsilon\sim\mathcal N(0,\sigma^2 I)$; refit OLS on each draw and collect the estimated coefficient $\hat\beta_{\text{search}}$ for the second channel across the draws. Plot (e.g. histograms or overlaid densities) showing the empirical spread of $\hat\beta_{\text{search}}$ widening as $\rho$ increases. For each $\rho$, overlay the theoretical standard deviation $\sigma\sqrt{[(X^\top X)^{-1}]_{jj}}$ (where $j$ indexes the search coefficient) and confirm that the empirical standard deviation of your $\hat\beta_{\text{search}}$ samples matches it.
+
+**A2.** *Bias–variance experiment, OLS vs. ridge.* Fix a strongly collinear design $X$ and a true coefficient vector $\beta_{\text{true}}$. Simulate many datasets $y=X\beta_{\text{true}}+\varepsilon$; on each, compute the OLS estimate and the ridge estimate $(X^\top X+\lambda I)^{-1}X^\top y$ over a grid of $\lambda$ values. For each estimator, average the squared recovery error $\lVert\hat\beta-\beta_{\text{true}}\rVert^2$ across datasets to estimate its mean-squared error. Plot MSE versus $\lambda$ (with the OLS MSE shown as the $\lambda=0$ reference), and identify a value $\lambda>0$ at which ridge achieves lower MSE than OLS. Comment on how the curve illustrates the bias–variance tradeoff.
