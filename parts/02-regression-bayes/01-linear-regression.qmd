@@ -2,13 +2,17 @@
 
 *Canonical anchors: Hastie, Tibshirani & Friedman (ESL).*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapter 3 established the probabilistic scaffold: given $y = X\beta + \varepsilon$ with $\varepsilon \sim \mathcal{N}(0, \sigma^2 I)$, the OLS estimator $\hat\beta = (X^\top X)^{-1} X^\top y$ is the maximum likelihood estimator, and its sampling covariance is $\sigma^2 (X^\top X)^{-1}$. That is a clean theoretical result, but it is not yet a tool. An analyst must act — report a coefficient with defensible error bars, decide whether a media channel produced a measurable lift, and explain why adding a correlated predictor sent a previously stable estimate into free fall.
+
+*"You fit the model and TV's coefficient is 2.3. Is that real, how sure are you, and why did the number swing wildly when you added search?"*
+
+This chapter converts the estimator into applied methodology. The first stop is optimality: the Gauss–Markov theorem guarantees that OLS achieves the smallest variance among all linear unbiased estimators, which gives the error bars their authority. From the sampling covariance we derive standard errors, $t$-statistics, and confidence intervals — the machinery that turns 2.3 into "2.3 ± 0.6, $p = 0.001$" or into "2.3, but the 95% interval spans –1 to 6, so we cannot distinguish signal from noise."
+
+The second stop is multicollinearity. When TV spend and search spend move together across weeks, $X^\top X$ approaches singularity, $\kappa(X)$ grows large, and $\sigma^2 (X^\top X)^{-1}$ inflates without bound. The coefficient estimates remain unbiased in expectation, but their variance is so large that they are operationally useless — and sensitive to small data perturbations, which is exactly what practitioners observe when adding or removing a correlated channel reshapes all the other coefficients.
+
+The fix introduces a deliberate bias to achieve a large reduction in variance: ridge regression. By penalizing $\|\beta\|^2$, ridge shrinks the estimates toward zero and stabilizes the inversion. This is the bias–variance tradeoff made concrete. Ridge regression is not merely a numerical patch, however. Interpreted through Bayes' theorem — which Chapter 3 introduced — the ridge penalty is exactly the log-prior under a Gaussian prior $\beta \sim \mathcal{N}(0, \tau^2 I)$. The penalized least-squares solution is the posterior mode. That equivalence is the bridge to the next chapter on Bayesian inference, where the full posterior replaces point estimates with distributions, and prior specification becomes an explicit modeling choice rather than a regularization hyperparameter [@hastie2009].
 
 ## Theory & Proofs
 
