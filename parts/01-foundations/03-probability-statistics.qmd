@@ -288,8 +288,51 @@ Reading the output: the empirical mean of $\hat\beta$ lands on $\beta_{\text{tru
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** The model assumes $\operatorname{Cov}(y) = \sigma^2 I$. In plain words, explain what this asserts about the weeks of data. Address both pieces separately: (a) what the equal diagonal entries $\sigma^2$ say about the noise across different weeks, and (b) what the zero off-diagonal entries say about the relationship between the errors in any two distinct weeks.
+
+**C2.** The chapter shows that the OLS estimator $\hat\beta = (X^\top X)^{-1} X^\top y$ is exactly the maximum-likelihood estimator under the Gaussian model $\varepsilon \sim \mathcal N(0, \sigma^2 I)$. Chapter 1 already derived $\hat\beta$ as an orthogonal projection of $y$ onto the column space of $X$. What does the MLE equivalence let you say about $\hat\beta$ — for instance about its sampling distribution, uncertainty, or optimality — that the projection geometry alone could not?
+
+**C3.** Suppose you have computed both a single MLE point estimate $\hat\beta$ and a full posterior distribution $p(\beta \mid y)$. What does the posterior give a decision-maker that the point estimate does not? Frame your answer in terms of what a media-mix manager could do with the posterior when deciding how much to trust a channel's estimated effect.
+
 ### B -- By Hand
+
+**B1.** Let $w$ be a random vector with
+$$
+\operatorname{Cov}(w) = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix},
+\qquad
+A = \begin{bmatrix} 1 & 1 \\ 1 & -1 \end{bmatrix}.
+$$
+Compute $\operatorname{Cov}(Aw)$ explicitly, showing the matrix product $A \operatorname{Cov}(w) A^\top$.
+
+**B2.** Write down the bivariate-normal density $p(x)$ for $x \in \mathbb{R}^2$ with mean $\mu = 0$ and covariance
+$$
+\Sigma = \begin{bmatrix} 1 & 0.5 \\ 0.5 & 1 \end{bmatrix}.
+$$
+Give $\det \Sigma$ and $\Sigma^{-1}$ explicitly, then substitute them into the general form $p(x) = (2\pi)^{-1} (\det\Sigma)^{-1/2} \exp\!\big(-\tfrac12 x^\top \Sigma^{-1} x\big)$.
+
+**B3.** A given week is "high season" with prior probability $\Pr(H) = 0.3$. A sales spike occurs with probability $0.8$ in a high-season week and probability $0.2$ otherwise. You observe a spike. Use Bayes' rule to compute the posterior probability $\Pr(H \mid \text{spike})$.
 
 ### P -- Prove It
 
+**P1.** Let $w$ be a random vector with covariance $\operatorname{Cov}(w) = \Sigma$, let $A$ be a fixed (non-random) matrix, and let $b$ be a fixed vector. Prove that
+$$
+\operatorname{Cov}(Aw + b) = A\,\operatorname{Cov}(w)\,A^\top.
+$$
+Start from the definition $\operatorname{Cov}(z) = \mathbb{E}\big[(z - \mathbb{E}[z])(z - \mathbb{E}[z])^\top\big]$.
+
+**P2.** Let $y \sim \mathcal N(X\beta, \sigma^2 I)$ with $X$ of full column rank. Write the log-likelihood $\ell(\beta)$, and prove that the maximum-likelihood estimate $\hat\beta$ satisfies the normal equations
+$$
+X^\top X \hat\beta = X^\top y.
+$$
+Comment on why full column rank guarantees a unique solution.
+
+**P3.** Let $X_1, \dots, X_n$ be i.i.d. with mean $\mu$ and finite variance $\sigma^2$, and let $\bar X_n = \tfrac1n \sum_{i=1}^n X_i$. Using Chebyshev's inequality, prove the weak law of large numbers: for every $\epsilon > 0$,
+$$
+\Pr\!\big(|\bar X_n - \mu| \ge \epsilon\big) \to 0 \quad \text{as } n \to \infty.
+$$
+
 ### A -- Applied / Code
+
+**A1.** Monte-Carlo the sampling distribution of OLS. Fix a design matrix $X$ (say $n = 50$ rows, $p = 3$ columns) and true coefficients $\beta_{\text{true}}$. For $B$ replications (e.g. $B = 10{,}000$), simulate $y = X\beta_{\text{true}} + \varepsilon$ with $\varepsilon \sim \mathcal N(0, \sigma^2 I)$, compute $\hat\beta = (X^\top X)^{-1} X^\top y$, and store it. Then compare the empirical covariance of the stored $\hat\beta$ vectors against the theoretical $\sigma^2 (X^\top X)^{-1}$. Report the largest absolute entrywise discrepancy between the two matrices and confirm that it shrinks as $B$ grows.
+
+**A2.** A CLT experiment. For each sample size $n \in \{1, 5, 30, 200\}$, repeatedly (e.g. $10{,}000$ times) draw a sample of size $n$ from a strongly non-normal distribution — for instance an Exponential — and record the sample mean $\bar X_n$. Standardize each recorded mean by subtracting the true mean and dividing by $\sigma/\sqrt{n}$, then histogram the standardized means for each $n$ on a common axis. Describe how the histograms change shape as $n$ grows and how they approach a standard Gaussian $\mathcal N(0, 1)$.
