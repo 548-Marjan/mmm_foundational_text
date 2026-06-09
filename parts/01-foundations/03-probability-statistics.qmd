@@ -238,7 +238,7 @@ $$
 n = 4:\ \operatorname{SE} = 1, \qquad n = 16:\ \operatorname{SE} = 0.5, \qquad n = 64:\ \operatorname{SE} = 0.25 .
 $$
 
-Each entry is a quarter of the variance of its predecessor's source data folded into a factor-of-four more weeks: quadrupling $n$ halves the standard error, which is the $\sqrt{n}$ law in numbers. The CLT of rung 6 adds the shape — $\bar X_n$ is approximately $\mathcal{N}(\mu, \sigma^2/n)$ for large $n$, so these standard errors translate directly into confidence statements about $\mu$. The same $\sqrt{n}$ shrinkage governs the regression estimate: with sampling covariance $\sigma^2(X^\top X)^{-1}$ and roughly $X^\top X \propto n$ as weeks accrue, $\hat\beta$ sharpens at the identical rate, so doubling our precision on a media effect costs four times the data.
+Each step quadruples $n$, which quarters the variance and so halves the standard error — the $\sqrt{n}$ law in numbers. The CLT of rung 6 adds the shape — $\bar X_n$ is approximately $\mathcal{N}(\mu, \sigma^2/n)$ for large $n$, so these standard errors translate directly into confidence statements about $\mu$. The same $\sqrt{n}$ shrinkage governs the regression estimate: with sampling covariance $\sigma^2(X^\top X)^{-1}$ and roughly $X^\top X \propto n$ as weeks accrue, $\hat\beta$ sharpens at the identical rate, so doubling our precision on a media effect costs four times the data.
 
 ## Code Tie-in
 
