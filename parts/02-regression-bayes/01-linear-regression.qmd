@@ -206,6 +206,44 @@ $\blacksquare$
 
 Gauss–Markov (rung 2) makes OLS the minimum-variance estimator among the *unbiased* ones, but the proposition shows that a *biased* estimator with much smaller variance can have lower MSE. Under severe collinearity OLS variance is enormous, so accepting a little bias to buy a large variance reduction is a highly favorable trade — exactly the bargain ridge regression (rung 7) walks through next.
 
+### Ridge regression: a penalty that is a prior
+
+Ridge regression replaces OLS with **penalized least squares**, adding a quadratic penalty on the coefficients:
+
+$$
+\hat\beta_{\text{ridge}} = \arg\min_\beta\ \lVert y - X\beta\rVert^2 + \lambda\lVert\beta\rVert^2, \qquad \lambda > 0 .
+$$
+
+The closed form follows by setting the gradient to zero. The fit term contributes $-2X^\top(y - X\beta)$ (Chapter 2) and the penalty $\lambda\lVert\beta\rVert^2$ contributes $2\lambda\beta$, so
+
+$$
+-2X^\top(y - X\beta) + 2\lambda\beta = 0 \ \Longrightarrow\ (X^\top X + \lambda I)\beta = X^\top y \ \Longrightarrow\ \hat\beta_{\text{ridge}} = (X^\top X + \lambda I)^{-1} X^\top y .
+$$
+
+This is precisely the conditioning fix for rung 6. Adding $\lambda I$ shifts every eigenvalue of the symmetric PSD matrix $X^\top X$ (Chapter 1) from $\lambda_i$ to $\lambda_i + \lambda$. Even when some $\lambda_i \approx 0$ — severe collinearity, a huge condition number $\kappa(X)$ — the shifted matrix is comfortably invertible and its inverse is well-behaved, so the exploding variances are tamed. The cure has a price: the coefficients are deliberately shrunk toward zero, trading the unbiasedness of OLS for bias. As $\lambda$ grows the estimator's variance shrinks while that bias grows — the bias–variance trade of rung 6 made into a tunable dial.
+
+Why a squared-error penalty, of all choices? Because it is secretly a Gaussian prior.
+
+> **Theorem (ridge = Gaussian-prior MAP).** Under the model $y\sim\mathcal N(X\beta,\sigma^2 I)$ with prior $\beta\sim\mathcal N(0,\tau^2 I)$, the posterior mode (MAP estimate) of $\beta$ is exactly the ridge estimator with $\lambda = \sigma^2/\tau^2$.
+
+**Proof.** By Bayes' theorem (Chapter 3), $p(\beta\mid y)\propto p(y\mid\beta)\,p(\beta)$. Both factors are Gaussian densities, so taking logs turns each into a negative quadratic:
+
+$$
+\log p(\beta\mid y) = -\frac{1}{2\sigma^2}\lVert y - X\beta\rVert^2 \;-\; \frac{1}{2\tau^2}\lVert\beta\rVert^2 \;+\; \text{const},
+$$
+
+where the constant collects all terms free of $\beta$. The MAP estimate maximizes this; multiplying by $-2\sigma^2$ flips the maximization into a minimization,
+
+$$
+\hat\beta_{\text{MAP}} = \arg\min_\beta\ \lVert y - X\beta\rVert^2 + \frac{\sigma^2}{\tau^2}\lVert\beta\rVert^2 ,
+$$
+
+which is exactly the ridge objective with $\lambda = \sigma^2/\tau^2$, whose minimizer we computed above as $(X^\top X + \lambda I)^{-1}X^\top y$.
+
+$\blacksquare$
+
+So a penalty *is* a prior. A tighter prior — small $\tau^2$, expressing strong belief that coefficients are near zero — yields a larger $\lambda$ and heavier shrinkage, while a vague prior $\tau^2\to\infty$ sends $\lambda\to0$ and recovers OLS. Changing the penalty changes the prior: an $\ell_1$ penalty $\lambda\lVert\beta\rVert_1$ is a Laplace prior, giving **lasso** and its sparse, variable-selecting solutions, and combining the two penalties gives the **elastic-net**. The next chapter takes this view to its conclusion: Bayesian inference keeps the *entire* posterior $p(\beta\mid y)$ rather than just its mode, turning regularization strength from a tuning knob into an explicit modeling choice.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
