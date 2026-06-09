@@ -16,7 +16,91 @@ The fix introduces a deliberate bias to achieve a large reduction in variance: r
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+### The OLS estimator and its sampling distribution
+
+Recall the OLS estimator $\hat\beta = (X^\top X)^{-1} X^\top y$. To understand its behavior as a random quantity, substitute the data-generating model $y = X\beta + \varepsilon$ directly into this formula. This yields the single most useful decomposition in the chapter:
+
+$$
+\hat\beta = (X^\top X)^{-1} X^\top (X\beta + \varepsilon) = \beta + (X^\top X)^{-1} X^\top \varepsilon .
+$$
+
+The estimator equals the truth $\beta$ plus a linear image of the noise. Everything that follows reads off this line.
+
+**Unbiasedness.** Take expectations and use linearity together with the assumption $\mathbb{E}[\varepsilon] = 0$:
+
+$$
+\mathbb{E}[\hat\beta] = \beta + (X^\top X)^{-1} X^\top \mathbb{E}[\varepsilon] = \beta .
+$$
+
+So OLS is correct on average: across repeated samples it neither systematically overshoots nor undershoots the true coefficients.
+
+**Covariance.** The deviation $\hat\beta - \beta = (X^\top X)^{-1} X^\top \varepsilon$ is precisely a linear map $A\varepsilon$ of the noise, with $A = (X^\top X)^{-1} X^\top$. Applying the transformation identity from Chapter 3, $\operatorname{Cov}(Aw) = A \operatorname{Cov}(w) A^\top$, with $\operatorname{Cov}(\varepsilon) = \sigma^2 I$:
+
+$$
+\operatorname{Cov}(\hat\beta) = (X^\top X)^{-1} X^\top (\sigma^2 I) X (X^\top X)^{-1} = \sigma^2 (X^\top X)^{-1},
+$$
+
+where the collapse uses $X^\top X (X^\top X)^{-1} = I$ and the symmetry of $(X^\top X)^{-1}$.
+
+**Distributional form.** Finally, $\hat\beta$ is an affine function of $\varepsilon$, and an affine function of a Gaussian vector is Gaussian. Combining the mean and covariance just computed:
+
+$$
+\hat\beta \sim \mathcal{N}\big(\beta,\ \sigma^2 (X^\top X)^{-1}\big).
+$$
+
+$\blacksquare$
+
+This finite-sample sampling distribution — exact, not asymptotic — is the foundation on which every standard error, $t$-statistic, and confidence interval in this chapter rests.
+
+### Gauss–Markov: OLS is BLUE
+
+The previous result assumed normality. Remarkably, the optimality of OLS does not.
+
+> **Theorem (Gauss–Markov).** Assume only $\mathbb{E}[\varepsilon] = 0$ and $\operatorname{Cov}(\varepsilon) = \sigma^2 I$ (no normality required). Among all linear unbiased estimators $\tilde\beta = Cy$, the OLS estimator $\hat\beta$ has the smallest covariance: $\operatorname{Cov}(\tilde\beta) - \operatorname{Cov}(\hat\beta) \succeq 0$.
+
+**Proof.** Consider any *linear* estimator, i.e. $\tilde\beta = Cy$ for some fixed matrix $C \in \mathbb{R}^{p \times n}$ not depending on $y$. For it to be *unbiased* for every possible $\beta$ we need
+
+$$
+\mathbb{E}[Cy] = \mathbb{E}[C(X\beta + \varepsilon)] = CX\beta = \beta \quad \text{for all } \beta,
+$$
+
+which forces the constraint $CX = I$.
+
+Now decompose $C$ around the OLS operator by writing
+
+$$
+C = (X^\top X)^{-1} X^\top + D,
+$$
+
+which simply *defines* $D$ as the difference. Substituting into $CX = I$ and using $(X^\top X)^{-1} X^\top X = I$ gives $I + DX = I$, hence the orthogonality condition $DX = 0$.
+
+Next compute the covariance. Since $\operatorname{Cov}(y) = \sigma^2 I$, the transformation identity gives $\operatorname{Cov}(\tilde\beta) = \sigma^2 C C^\top$. Expanding $C C^\top$:
+
+$$
+\begin{aligned}
+\operatorname{Cov}(\tilde\beta) &= \sigma^2 C C^\top \\
+&= \sigma^2 \big[(X^\top X)^{-1} X^\top + D\big]\big[X (X^\top X)^{-1} + D^\top\big] \\
+&= \sigma^2 \big[(X^\top X)^{-1} + (X^\top X)^{-1} X^\top D^\top + D X (X^\top X)^{-1} + D D^\top\big].
+\end{aligned}
+$$
+
+The two cross terms vanish: $DX = 0$ implies $X^\top D^\top = (DX)^\top = 0$, killing both. What remains is
+
+$$
+\operatorname{Cov}(\tilde\beta) = \sigma^2 \big[(X^\top X)^{-1} + D D^\top\big].
+$$
+
+Since $\operatorname{Cov}(\hat\beta) = \sigma^2 (X^\top X)^{-1}$, subtracting gives
+
+$$
+\operatorname{Cov}(\tilde\beta) - \operatorname{Cov}(\hat\beta) = \sigma^2 D D^\top \succeq 0,
+$$
+
+because any matrix of the form $D D^\top$ is positive semidefinite. Equality holds iff $D D^\top = 0$, i.e. $D = 0$, which means $\tilde\beta = \hat\beta$.
+
+$\blacksquare$
+
+Gauss–Markov is why OLS is the default estimator: no linear unbiased competitor can do better. But read the theorem's scope carefully — it certifies OLS as best among *unbiased* estimators only. That leaves a door open: by tolerating a little bias we may be able to shrink the variance below the Gauss–Markov floor, the maneuver that rungs 6–7 develop into ridge regression.
 
 ## Worked Examples
 
