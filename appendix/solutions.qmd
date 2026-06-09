@@ -190,4 +190,128 @@ $$
 $$
 matching $\Sigma$ up to sampling error.
 
+## Chapter 3 — Probability & Statistics
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** (a) The equal diagonal entries $\sigma^2$ say that every week's error has the *same* variance: the noise around the model's prediction is no larger in one week than in another (homoscedasticity). The model trusts each week's observation equally. (b) The zero off-diagonal entries say that the errors in any two distinct weeks are *uncorrelated*: knowing that one week ran above its predicted sales tells you nothing about whether a different week ran above or below. There is no carry-over or shared shock linking the weeks' deviations.
+
+**C2.** The projection geometry alone delivers a point — the best linear fit — but says nothing about randomness. The MLE equivalence embeds $\hat\beta$ in the Gaussian model $y\sim\mathcal N(X\beta,\sigma^2 I)$, from which $\hat\beta=(X^\top X)^{-1}X^\top y$ is a *linear* function of a Gaussian vector, hence itself Gaussian: $\hat\beta\sim\mathcal N\big(\beta,\;\sigma^2(X^\top X)^{-1}\big)$. That gives the full sampling distribution — standard errors, confidence intervals, and hypothesis tests — and, via the Gauss–Markov/Cramér–Rao optimality of the Gaussian MLE, certifies $\hat\beta$ as efficient (minimum-variance unbiased). None of this uncertainty quantification is visible from the projection picture, which only locates the estimate.
+
+**C3.** The point estimate $\hat\beta$ gives a single number per channel; the posterior $p(\beta\mid y)$ gives the whole *distribution* of plausible effects, hence a calibrated sense of uncertainty. A media-mix manager can read off credible intervals for each channel's effect, compute $\Pr(\beta_j>0\mid y)$ to gauge how confident the data are that a channel truly helps, and propagate that uncertainty into budget decisions — leaning hard on a channel whose effect is large *and* tightly estimated, while hedging on one whose posterior is wide even if its point estimate is favorable. The posterior supports risk-aware choices that a lone point estimate cannot.
+
+### B — By Hand
+
+**B1.** With $\operatorname{Cov}(w)=\begin{bmatrix}2&1\\1&2\end{bmatrix}$ and $A=\begin{bmatrix}1&1\\1&-1\end{bmatrix}$ (which is symmetric, so $A^\top=A$), the covariance transforms as $\operatorname{Cov}(Aw)=A\operatorname{Cov}(w)A^\top$. First,
+$$
+A\operatorname{Cov}(w) = \begin{bmatrix}1&1\\1&-1\end{bmatrix}\begin{bmatrix}2&1\\1&2\end{bmatrix} = \begin{bmatrix}3&3\\1&-1\end{bmatrix}.
+$$
+Then
+$$
+\operatorname{Cov}(Aw) = \begin{bmatrix}3&3\\1&-1\end{bmatrix}\begin{bmatrix}1&1\\1&-1\end{bmatrix} = \begin{bmatrix}6&0\\0&2\end{bmatrix}.
+$$
+The off-diagonals vanish: the rotated-and-rescaled components $w_1+w_2$ and $w_1-w_2$ are uncorrelated, with variances $6$ and $2$.
+
+**B2.** For $\mu=0$ and $\Sigma=\begin{bmatrix}1&0.5\\0.5&1\end{bmatrix}$, the determinant is $\det\Sigma = 1\cdot1 - 0.5\cdot0.5 = 0.75$. The inverse of a $2\times2$ matrix is $\Sigma^{-1}=\tfrac{1}{\det\Sigma}\begin{bmatrix}1&-0.5\\-0.5&1\end{bmatrix}$, so
+$$
+\Sigma^{-1} = \frac{1}{0.75}\begin{bmatrix}1&-0.5\\-0.5&1\end{bmatrix} = \begin{bmatrix}4/3&-2/3\\-2/3&4/3\end{bmatrix}.
+$$
+Substituting into $p(x)=(2\pi)^{-1}(\det\Sigma)^{-1/2}\exp\!\big(-\tfrac12 x^\top\Sigma^{-1}x\big)$ with $(\det\Sigma)^{-1/2}=1/\sqrt{0.75}$,
+$$
+p(x) = \frac{1}{2\pi\sqrt{0.75}}\exp\!\left(-\frac12\, x^\top\begin{bmatrix}4/3&-2/3\\-2/3&4/3\end{bmatrix}x\right),
+$$
+where the normalizing constant $\tfrac{1}{2\pi\sqrt{0.75}}\approx 0.1838$. Writing the quadratic form out, $x^\top\Sigma^{-1}x=\tfrac43(x_1^2+x_2^2)-\tfrac43 x_1 x_2$.
+
+**B3.** Let $H$ denote high season, with prior $\Pr(H)=0.3$ and $\Pr(H^c)=0.7$. The likelihoods of a spike are $\Pr(\text{spike}\mid H)=0.8$ and $\Pr(\text{spike}\mid H^c)=0.2$. By Bayes' rule,
+$$
+\Pr(H\mid\text{spike}) = \frac{\Pr(\text{spike}\mid H)\,\Pr(H)}{\Pr(\text{spike}\mid H)\,\Pr(H)+\Pr(\text{spike}\mid H^c)\,\Pr(H^c)} = \frac{0.8\cdot0.3}{0.8\cdot0.3+0.2\cdot0.7} = \frac{0.24}{0.38} \approx 0.6316.
+$$
+Observing the spike lifts the probability of high season from the prior $0.30$ to about $0.63$.
+
+### P — Prove It
+
+**P1.** *Claim.* If $\operatorname{Cov}(w)=\Sigma$, $A$ is a fixed matrix, and $b$ is a fixed vector, then $\operatorname{Cov}(Aw+b)=A\Sigma A^\top$.
+
+*Proof.* By linearity of expectation, $\mathbb{E}[Aw+b]=A\,\mathbb{E}[w]+b$, so the centered vector is
+$$
+(Aw+b)-\mathbb{E}[Aw+b] = A\big(w-\mathbb{E}[w]\big).
+$$
+The constant shift $b$ cancels. Write $u=w-\mathbb{E}[w]$. From the definition,
+$$
+\operatorname{Cov}(Aw+b) = \mathbb{E}\big[(Au)(Au)^\top\big] = \mathbb{E}\big[A u u^\top A^\top\big].
+$$
+Since $A$ is non-random, it pulls outside the expectation on both sides,
+$$
+\operatorname{Cov}(Aw+b) = A\,\mathbb{E}\big[u u^\top\big]\,A^\top = A\,\operatorname{Cov}(w)\,A^\top = A\Sigma A^\top. \qquad\blacksquare
+$$
+
+**P2.** *Claim.* If $y\sim\mathcal N(X\beta,\sigma^2 I)$ with $X$ of full column rank, then the MLE $\hat\beta$ satisfies $X^\top X\hat\beta=X^\top y$.
+
+*Proof.* The density of $y$ is $p(y\mid\beta)=(2\pi\sigma^2)^{-n/2}\exp\!\big(-\tfrac{1}{2\sigma^2}\lVert y-X\beta\rVert^2\big)$, so the log-likelihood is
+$$
+\ell(\beta) = -\frac{n}{2}\log(2\pi\sigma^2) - \frac{1}{2\sigma^2}\lVert y-X\beta\rVert^2.
+$$
+Only the last term depends on $\beta$, and it enters with a negative sign, so maximizing $\ell$ is equivalent to minimizing $\lVert y-X\beta\rVert^2 = (y-X\beta)^\top(y-X\beta)$. Differentiating,
+$$
+\nabla_\beta\,\lVert y-X\beta\rVert^2 = -2X^\top(y-X\beta).
+$$
+Setting the gradient to zero gives $X^\top(y-X\hat\beta)=0$, i.e. the normal equations $X^\top X\hat\beta=X^\top y$. Full column rank makes $X^\top X$ positive definite (for any $v\neq0$, $v^\top X^\top X v=\lVert Xv\rVert^2>0$ since $Xv\neq0$), hence invertible, so $\hat\beta=(X^\top X)^{-1}X^\top y$ is the *unique* solution; the objective is strictly convex, so this stationary point is the global maximizer. $\blacksquare$
+
+**P3.** *Claim (weak law of large numbers).* If $X_1,\dots,X_n$ are i.i.d. with mean $\mu$ and finite variance $\sigma^2$, and $\bar X_n=\tfrac1n\sum_{i=1}^n X_i$, then for every $\epsilon>0$, $\Pr(|\bar X_n-\mu|\ge\epsilon)\to0$ as $n\to\infty$.
+
+*Proof.* By linearity, $\mathbb{E}[\bar X_n]=\tfrac1n\sum_{i=1}^n\mathbb{E}[X_i]=\mu$. By independence the variances add, so
+$$
+\operatorname{Var}(\bar X_n) = \frac{1}{n^2}\sum_{i=1}^n\operatorname{Var}(X_i) = \frac{1}{n^2}\cdot n\sigma^2 = \frac{\sigma^2}{n}.
+$$
+Chebyshev's inequality applied to $\bar X_n$, which has mean $\mu$ and variance $\sigma^2/n$, gives for any $\epsilon>0$,
+$$
+\Pr\!\big(|\bar X_n-\mu|\ge\epsilon\big) \le \frac{\operatorname{Var}(\bar X_n)}{\epsilon^2} = \frac{\sigma^2}{n\,\epsilon^2}.
+$$
+The right-hand side tends to $0$ as $n\to\infty$ for each fixed $\epsilon>0$, and the probability is nonnegative, so it is squeezed to $0$. Hence $\bar X_n\to\mu$ in probability. $\blacksquare$
+
+### A — Applied / Code
+
+**A1.** Fixing $X$ and $\beta_{\text{true}}$ and resampling $y=X\beta_{\text{true}}+\varepsilon$ with fresh $\varepsilon\sim\mathcal N(0,\sigma^2 I)$, each refit $\hat\beta=(X^\top X)^{-1}X^\top y$ is a draw from $\mathcal N\big(\beta_{\text{true}},\sigma^2(X^\top X)^{-1}\big)$. The empirical covariance of the stored $\hat\beta$ vectors therefore converges to the theoretical $\sigma^2(X^\top X)^{-1}$, and the largest absolute entrywise discrepancy shrinks roughly like $1/\sqrt{B}$ (Monte-Carlo error) as the number of replications $B$ grows.
+
+A reference sketch:
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(0)
+n, p, sigma = 50, 3, 1.0
+X = rng.standard_normal((n, p))
+beta_true = np.array([1.0, -2.0, 0.5])
+XtX_inv = np.linalg.inv(X.T @ X)
+
+B = 10_000
+fits = np.empty((B, p))
+for b in range(B):
+    y = X @ beta_true + sigma * rng.standard_normal(n)
+    fits[b] = XtX_inv @ X.T @ y
+
+emp_cov = np.cov(fits, rowvar=False)
+theo_cov = sigma**2 * XtX_inv
+print(np.max(np.abs(emp_cov - theo_cov)))   # small; -> 0 as B grows
+```
+
+The qualitative point: the OLS sampling covariance is *exactly* $\sigma^2(X^\top X)^{-1}$, and the simulation confirms it — the max discrepancy is already small at $B=10{,}000$ and decreases as $B$ increases.
+
+**A2.** For each $n\in\{1,5,30,200\}$, drawing $10{,}000$ samples of size $n$ from a strongly non-normal distribution (e.g. Exponential with mean $\mu$ and standard deviation $\sigma$), recording $\bar X_n$, and standardizing as $Z_n=(\bar X_n-\mu)/(\sigma/\sqrt n)$, the central limit theorem predicts $Z_n\to\mathcal N(0,1)$ in distribution. The histograms show this directly: at $n=1$ the standardized sample mean inherits the parent's shape — for the Exponential, sharply right-skewed with a hard left cutoff. As $n$ grows the histogram becomes progressively more symmetric and bell-shaped; by $n=30$ it already closely tracks the standard normal curve, and by $n=200$ it is nearly indistinguishable from $\mathcal N(0,1)$.
+
+A reference sketch:
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(0)
+mu, sigma = 1.0, 1.0          # Exponential(rate=1): mean = sd = 1
+for n in (1, 5, 30, 200):
+    means = rng.standard_exponential((10_000, n)).mean(axis=1)
+    z = (means - mu) / (sigma / np.sqrt(n))
+    # plt.hist(z, bins=60, density=True)  # overlay N(0,1) pdf
+```
+
+The qualitative point: regardless of the skewed parent, standardizing the sample mean produces histograms that converge to the same standard Gaussian as $n$ increases.
+
 :::
