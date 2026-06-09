@@ -148,6 +148,64 @@ $$
 
 The same pivot delivers a hypothesis test. To ask whether a media channel's effect is distinguishable from noise, set $H_0: \beta_j = 0$; under the null the statistic $\hat\beta_j / \operatorname{se}(\hat\beta_j)$ follows $t_{n-p}$, so we reject when its magnitude exceeds the t-quantile $t_{n-p,\,1-\alpha/2}$ — the **$t$-test** of a single coefficient. When several coefficients must be judged together — say, all of a channel's lagged terms at once — the analogous **F-test** compares the drop in $\text{RSS}$ from including them against the residual variance, referred to an $F$ distribution [@hastie2009]. Returning to the Motivation: the coefficient of 2.3 is no longer a bare number. The confidence interval is the precise, defensible answer to "how sure are you?" — distinguishing "$2.3 \pm 0.6$" from "$2.3$, but the interval spans $-1$ to $6$."
 
+### Fitted values, residuals, and goodness of fit
+
+Inference so far has concerned the coefficients; we now turn to the fit itself and the assumptions underwriting it. Collecting the fitted values $\hat y = X\hat\beta$ and substituting the OLS formula exposes the linear operator that produces them:
+
+$$
+\hat y = X\hat\beta = X(X^\top X)^{-1} X^\top y = Hy, \qquad H = X(X^\top X)^{-1} X^\top .
+$$
+
+The matrix $H$ "puts the hat on $y$," and is exactly the orthogonal projection onto the column space of $X$ from Chapter 1. It is **symmetric** and **idempotent**: $H^\top = H$ because $(X^\top X)^{-1}$ is symmetric, and
+
+$$
+H^2 = X(X^\top X)^{-1} X^\top X(X^\top X)^{-1} X^\top = X(X^\top X)^{-1} X^\top = H,
+$$
+
+since the inner $X^\top X(X^\top X)^{-1}$ collapses to $I$. Projecting twice onto a subspace lands in the same place as projecting once. The residual is then $\hat\varepsilon = y - \hat y = (I - H)y$, the complementary projection onto the orthogonal complement.
+
+To summarize how much of the response the model explains, compare the residual sum of squares against the total variation around the mean. The **coefficient of determination** is
+
+$$
+R^2 = 1 - \frac{\text{RSS}}{\text{TSS}}, \qquad \text{TSS} = \lVert y - \bar y\rVert^2,
+$$
+
+the fraction of the variance in $y$ that the fitted model accounts for; $R^2 = 1$ is a perfect fit and $R^2 = 0$ is no better than predicting the mean $\bar y$.
+
+These quantities are only as trustworthy as the **four classical assumptions**, each of which buys a specific guarantee. **Linearity / zero-mean errors** ($\mathbb{E}[\varepsilon] = 0$) buys unbiasedness of $\hat\beta$ (rung 1). **Homoscedasticity and uncorrelated errors** ($\operatorname{Cov}(\varepsilon) = \sigma^2 I$) buy the Gauss–Markov optimality (rung 2) and the simple covariance formula $\sigma^2 (X^\top X)^{-1}$. **Normality** ($\varepsilon$ Gaussian) buys exact $t$ and $F$ inference (rung 4); without it those become only large-sample approximations. In practice these are checked with residual plots — residuals versus fitted values, residuals versus each predictor, and a normal QQ-plot of the residuals — where curvature, fanning, or heavy tails flag a violated assumption.
+
+### Multicollinearity and the bias–variance tradeoff
+
+The covariance $\operatorname{Cov}(\hat\beta) = \sigma^2 (X^\top X)^{-1}$ is benign only when $X^\top X$ is well-conditioned. Because $X^\top X$ is symmetric PSD (Chapter 1), its inverse has eigenvalues $1/\lambda_i$; when some $\lambda_i$ is tiny, the corresponding $1/\lambda_i$ is enormous and the coefficient variances blow up. A small eigenvalue means the columns of $X$ are nearly linearly dependent — collinear media channels whose spend moves together — equivalently a large condition number $\kappa(X)$ (Chapter 1). The estimates stay unbiased but become so variable as to be useless.
+
+The per-coefficient diagnostic is the **variance inflation factor**
+
+$$
+\text{VIF}_j = \frac{1}{1 - R_j^2},
+$$
+
+where $R_j^2$ is the $R^2$ from regressing predictor $j$ on all the *other* predictors. A $\text{VIF}_j$ of, say, 100 means $\hat\beta_j$'s variance is 100 times what it would be if predictor $j$ were orthogonal to the rest.
+
+Escaping this requires admitting biased estimators, which calls for the right yardstick. For any estimator $\hat\theta$ of a scalar $\theta$:
+
+> **Proposition.** $\operatorname{MSE}(\hat\theta) = \mathbb{E}\big[(\hat\theta - \theta)^2\big] = \operatorname{Var}(\hat\theta) + \big(\mathbb{E}[\hat\theta] - \theta\big)^2$ — variance plus bias squared.
+
+**Proof.** Write $\mu = \mathbb{E}[\hat\theta]$ and add and subtract it inside the square:
+
+$$
+\mathbb{E}\big[(\hat\theta - \theta)^2\big] = \mathbb{E}\big[(\hat\theta - \mu)^2\big] + 2(\mu - \theta)\,\mathbb{E}[\hat\theta - \mu] + (\mu - \theta)^2 .
+$$
+
+The middle term vanishes because $\mathbb{E}[\hat\theta - \mu] = \mu - \mu = 0$, leaving
+
+$$
+\operatorname{MSE}(\hat\theta) = \operatorname{Var}(\hat\theta) + (\mu - \theta)^2 = \text{variance} + \text{bias}^2 .
+$$
+
+$\blacksquare$
+
+Gauss–Markov (rung 2) makes OLS the minimum-variance estimator among the *unbiased* ones, but the proposition shows that a *biased* estimator with much smaller variance can have lower MSE. Under severe collinearity OLS variance is enormous, so accepting a little bias to buy a large variance reduction is a highly favorable trade — exactly the bargain ridge regression (rung 7) walks through next.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
