@@ -124,6 +124,58 @@ the normal equations. Under full column rank $X^\top X \succ 0$ (Chapter 1), so 
 
 The curvature of $\ell$ in $\beta$ also quantifies how precisely $\beta$ is determined. The **Fisher information** for $\beta$ — the negative expected Hessian of $\ell$ — is $\mathcal{I}(\beta) = X^\top X / \sigma^2$, so the MLE's sampling covariance scales like $\sigma^2 (X^\top X)^{-1}$. This is the probabilistic restatement of Chapter 1's conditioning story: collinear media channels make $X^\top X$ near-singular (small eigenvalues, large condition number $\kappa(X)$), so $\sigma^2(X^\top X)^{-1}$ blows up and $\hat\beta$ is imprecise — ill-conditioning and statistical imprecision are two views of the same matrix.
 
+### Law of large numbers and the central limit theorem
+
+Two elementary tail bounds drive everything that follows. **Markov's inequality** states that for a non-negative random variable $Y$ and any $a > 0$, $\Pr(Y \ge a) \le \mathbb{E}[Y]/a$. Applying it to $(Y - \mathbb{E}Y)^2$ with $a = \epsilon^2$ yields **Chebyshev's inequality**,
+
+$$
+\Pr(|Y - \mathbb{E}Y| \ge \epsilon) \le \frac{\operatorname{Var}(Y)}{\epsilon^2},
+$$
+
+which says that a random variable rarely strays many standard deviations from its mean. Chebyshev is the whole engine of the law of large numbers.
+
+> **Theorem (Weak LLN).** Let $X_1,\dots,X_n$ be i.i.d. with mean $\mu$ and finite variance $\sigma^2$. Then for every $\epsilon > 0$, $\Pr(|\bar X_n - \mu| \ge \epsilon) \to 0$ as $n \to \infty$.
+
+*Proof.* By linearity, $\mathbb{E}[\bar X_n] = \frac{1}{n}\sum_i \mathbb{E}[X_i] = \mu$, so $\bar X_n$ is centered at the target. By independence the variances add, and the constant $\frac{1}{n}$ pulls out squared:
+
+$$
+\operatorname{Var}(\bar X_n) = \frac{1}{n^2}\sum_{i=1}^n \operatorname{Var}(X_i) = \frac{n\sigma^2}{n^2} = \frac{\sigma^2}{n}.
+$$
+
+Applying Chebyshev's inequality to $\bar X_n$ gives
+
+$$
+\Pr(|\bar X_n - \mu| \ge \epsilon) \le \frac{\operatorname{Var}(\bar X_n)}{\epsilon^2} = \frac{\sigma^2}{n\epsilon^2} \xrightarrow[n\to\infty]{} 0 . \qquad \blacksquare
+$$
+
+The variance shrinks like $1/n$, so the sample mean concentrates on $\mu$. The law tells us *that* $\bar X_n$ converges; the **central limit theorem** tells us *how fast* and *with what shape*. After rescaling by $\sqrt{n}$ the fluctuations stabilize to a Gaussian:
+
+$$
+\sqrt{n}\,(\bar X_n - \mu) \ \xrightarrow{d}\ \mathcal{N}(0, \sigma^2),
+$$
+
+for any i.i.d. sample with finite variance, regardless of the distribution of the $X_i$ [@casella2002; @wasserman2004].
+
+These two results justify much of what comes later. The LLN is the license for **Monte-Carlo estimation**: an average of many simulated draws converges to the expectation it estimates, which is exactly how Part III approximates posterior means, variances, and other integrals that have no closed form. The CLT does double duty: it explains why a Gaussian noise model is so often reasonable — observed noise is typically the aggregate of many small, independent shocks — and it tells us that the sampling distribution of an estimator like $\hat\beta$ is approximately normal, which is the basis for the standard errors and confidence statements of uncertainty quantification.
+
+### Bayes' theorem
+
+The likelihood of rung 5 scores parameters against data; Bayes' theorem turns that score into an updated belief. Writing $\beta$ for parameters and $y$ for data, the conditional-probability form is
+
+$$
+p(\beta \mid y) = \frac{p(y \mid \beta)\,p(\beta)}{p(y)},
+$$
+
+and, because the denominator does not depend on $\beta$, the proportional (unnormalized) form is
+
+$$
+p(\beta \mid y) \ \propto\ \underbrace{p(y \mid \beta)}_{\text{likelihood (rung 5)}}\ \times\ \underbrace{p(\beta)}_{\text{prior}} ,
+$$
+
+with $p(y) = \int p(y \mid \beta)\,p(\beta)\,d\beta$ the normalizing **evidence**. Each piece has a plain reading: the **prior** $p(\beta)$ is our belief about $\beta$ before seeing the data; the **likelihood** $p(y \mid \beta)$ is exactly the rung-5 object, the data density read as a function of $\beta$; and the **posterior** $p(\beta \mid y)$ is the belief about $\beta$ updated by the data.
+
+This is a genuine departure from maximum likelihood. Where the MLE returns a single point estimate $\hat\beta$ — the parameter that best explains the data — the Bayesian posterior is a full distribution over $\beta$. It answers the Motivation's question of how much of an apparent effect is signal versus luck not with one number but with the spread of plausible $\beta$ values, so the width of the posterior *is* the uncertainty. Actually computing that posterior — conjugate forms when they exist, and MCMC when no closed form does — is the work of Parts II and III.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
