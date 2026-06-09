@@ -102,6 +102,52 @@ $\blacksquare$
 
 Gauss–Markov is why OLS is the default estimator: no linear unbiased competitor can do better. But read the theorem's scope carefully — it certifies OLS as best among *unbiased* estimators only. That leaves a door open: by tolerating a little bias we may be able to shrink the variance below the Gauss–Markov floor, the maneuver that rungs 6–7 develop into ridge regression.
 
+### Estimating the noise level
+
+Every result so far is written in terms of $\sigma^2$, the variance of the noise — yet $\sigma^2$ is never observed. To make the sampling distribution operational we must estimate it from the data. The natural raw material is the residual vector $\hat\varepsilon = y - X\hat\beta$, the part of $y$ that the fit could not explain, and its squared length, the **residual sum of squares** $\text{RSS} = \lVert \hat\varepsilon \rVert^2$.
+
+A first instinct is to estimate $\sigma^2$ by the average squared residual, $\text{RSS}/n$. This is biased downward. The fitted values are tuned to this very sample, so the residuals are systematically *too small*: least squares spent some of the data's variability fitting the $p$ coefficients. Geometrically, the fitted vector $X\hat\beta$ lives in the $p$-dimensional column space of $X$, so the residual is confined to the orthogonal complement of that subspace, which has dimension only $n - p$. The residual has $n - p$ free directions, not $n$. Dividing by this **degrees of freedom** rather than by $n$ exactly corrects the bias:
+
+$$
+\hat\sigma^2 = \frac{\text{RSS}}{n - p},
+$$
+
+which satisfies $\mathbb{E}[\hat\sigma^2] = \sigma^2$. Beyond unbiasedness, the residual carries a sharper distributional structure. Under the Gaussian model the scaled $\text{RSS}$ follows a chi-square law on the same $n - p$ degrees of freedom, and — crucially — it is independent of the coefficient estimate:
+
+$$
+\frac{\text{RSS}}{\sigma^2} \sim \chi^2_{n-p}, \quad \text{independent of } \hat\beta,
+$$
+
+a consequence of the orthogonal decomposition of the Gaussian vector, which we take as given [@hastie2009; @casella2002]. That independence, paired with the chi-square form, is precisely what makes the next rung's $t$-statistic an *exact* finite-sample pivot rather than a large-sample approximation.
+
+### Standard errors, $t$-tests, and confidence intervals
+
+We now have all the pieces to attach error bars to a coefficient. From rung 1, reading off the $j$-th diagonal entry of the sampling covariance, the $j$-th coefficient satisfies
+
+$$
+\hat\beta_j \sim \mathcal{N}\big(\beta_j,\ \sigma^2 [(X^\top X)^{-1}]_{jj}\big).
+$$
+
+Its true standard deviation is $\sigma\sqrt{[(X^\top X)^{-1}]_{jj}}$, but $\sigma$ is unknown. Substituting the estimate $\hat\sigma$ from rung 3 yields the **standard error**, the reported measure of a coefficient's precision:
+
+$$
+\operatorname{se}(\hat\beta_j) = \hat\sigma\sqrt{[(X^\top X)^{-1}]_{jj}}.
+$$
+
+Standardizing $\hat\beta_j$ by its *true* standard deviation would give an exact standard normal. The catch is that we divide instead by the *estimated* $\operatorname{se}$. The resulting ratio is a normal variable divided by the square root of an independent scaled chi-square — and that ratio is, by the very definition of the distribution, a **Student-$t$** on $n - p$ degrees of freedom:
+
+$$
+\frac{\hat\beta_j - \beta_j}{\operatorname{se}(\hat\beta_j)} \sim t_{n-p}.
+$$
+
+This is the central pivot of inference. Inverting it — solving for the set of $\beta_j$ consistent with the observed estimate at level $1 - \alpha$ — produces the **confidence interval**
+
+$$
+\hat\beta_j \pm t_{n-p,\,1-\alpha/2}\,\operatorname{se}(\hat\beta_j).
+$$
+
+The same pivot delivers a hypothesis test. To ask whether a media channel's effect is distinguishable from noise, set $H_0: \beta_j = 0$; under the null the statistic $\hat\beta_j / \operatorname{se}(\hat\beta_j)$ follows $t_{n-p}$, so we reject when its magnitude exceeds the t-quantile $t_{n-p,\,1-\alpha/2}$ — the **$t$-test** of a single coefficient. When several coefficients must be judged together — say, all of a channel's lagged terms at once — the analogous **F-test** compares the drop in $\text{RSS}$ from including them against the residual variance, referred to an $F$ distribution [@hastie2009]. Returning to the Motivation: the coefficient of 2.3 is no longer a bare number. The confidence interval is the precise, defensible answer to "how sure are you?" — distinguishing "$2.3 \pm 0.6$" from "$2.3$, but the interval spans $-1$ to $6$."
+
 ## Worked Examples
 
 _Worked numerical example(s)._
