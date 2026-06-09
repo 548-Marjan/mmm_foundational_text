@@ -74,6 +74,56 @@ $$
 
 The off-diagonal zeros in $\sigma^2 I$ encode independence of the noise across rows — the assumption that the weeks do not influence one another's random shocks. It is a strong assumption, convenient for now and one we will relax when we model autocorrelated or seasonal errors.
 
+### The multivariate normal
+
+The Gaussian generalizes to a random vector $w \in \mathbb{R}^m$ with mean $\mu$ and covariance $\Sigma \succ 0$. Its density is
+
+$$
+p(w) = (2\pi)^{-m/2}\,(\det\Sigma)^{-1/2}\,\exp\!\Big(-\tfrac12 (w - \mu)^\top \Sigma^{-1}(w - \mu)\Big).
+$$
+
+Two structural pieces deserve attention. The quadratic form $(w - \mu)^\top \Sigma^{-1}(w - \mu)$ is the squared **Mahalanobis distance** of $w$ from $\mu$: it measures how many "standard deviations" $w$ sits from the mean, but unlike a plain Euclidean distance it accounts for correlation and unequal variances by stretching space through $\Sigma^{-1}$. Directions in which $w$ varies a lot are downweighted; tightly constrained directions are amplified. The scalar $\det\Sigma$ is the normalizing volume — the factor $(\det\Sigma)^{-1/2}$ rescales the density so it integrates to one, just as $1/\sqrt{2\pi\sigma^2}$ does in one dimension.
+
+The cleanest way to build such a vector is to push a standard Gaussian through an affine map, which connects directly to Chapter 1's Cholesky factorization.
+
+> **Proposition.** If $z \sim \mathcal{N}(0, I)$ and $w = \mu + Lz$, then $\mathbb{E}[w] = \mu$ and $\operatorname{Cov}(w) = LL^\top$. In particular, with $\Sigma = LL^\top$ (the Chapter 1 Cholesky factor), $w \sim \mathcal{N}(\mu, \Sigma)$.
+
+*Proof.* By linearity of expectation, $\mathbb{E}[w] = \mathbb{E}[\mu + Lz] = \mu + L\,\mathbb{E}[z] = \mu$, since $\mathbb{E}[z] = 0$. For the covariance, a constant shift does not change spread, so the rung-1 identity $\operatorname{Cov}(Aw + b) = A\,\operatorname{Cov}(w)\,A^\top$ gives
+
+$$
+\operatorname{Cov}(w) = \operatorname{Cov}(\mu + Lz) = L\,\operatorname{Cov}(z)\,L^\top = L\,I\,L^\top = LL^\top,
+$$
+
+using $\operatorname{Cov}(z) = I$. With $\Sigma = LL^\top$ this is exactly $\Sigma$. $\blacksquare$
+
+That the affine image of a Gaussian is again *Gaussian* — not merely some distribution with the matched mean and covariance — is the standard closure property of the normal family, which we take as given and cite [@casella2002]. Applied to our model, $y = X\beta + \varepsilon$ is an affine map of the Gaussian noise $\varepsilon \sim \mathcal{N}(0, \sigma^2 I)$, so $y \sim \mathcal{N}(X\beta, \sigma^2 I)$ — the regression mean and covariance of rung 3, now upgraded to a full distributional statement.
+
+### Likelihood and the Gaussian MLE
+
+With the distribution of $y$ in hand we can ask which parameters best explain the data. The **likelihood** $\mathcal{L}(\beta, \sigma^2) = p(y \mid \beta, \sigma^2)$ is the model density read as a function of the parameters with the observed data $y$ held fixed, and the **log-likelihood** is $\ell = \log\mathcal{L}$. For $y \sim \mathcal{N}(X\beta, \sigma^2 I)$ — equivalently a product of $n$ independent Gaussians, or the multivariate density with $\Sigma = \sigma^2 I$ so that $\det\Sigma = (\sigma^2)^n$ and $\Sigma^{-1} = \sigma^{-2}I$ — the density is
+
+$$
+\mathcal{L}(\beta, \sigma^2) = (2\pi\sigma^2)^{-n/2}\,\exp\!\Big(-\frac{1}{2\sigma^2}\lVert y - X\beta\rVert^2\Big).
+$$
+
+Taking logs turns the product into a sum and the exponential into its argument:
+
+$$
+\ell(\beta, \sigma^2) = -\frac{n}{2}\log(2\pi\sigma^2) - \frac{1}{2\sigma^2}\lVert y - X\beta\rVert^2 .
+$$
+
+> **Theorem (Gaussian MLE = least squares).** For any fixed $\sigma^2 > 0$, the value of $\beta$ maximizing $\ell(\beta, \sigma^2)$ is the least-squares solution: it solves the normal equations $X^\top X\hat\beta = X^\top y$.
+
+*Proof.* In $\ell$ the first term $-\frac{n}{2}\log(2\pi\sigma^2)$ is free of $\beta$, so only $-\frac{1}{2\sigma^2}\lVert y - X\beta\rVert^2$ depends on $\beta$. Because $\frac{1}{2\sigma^2} > 0$ is a positive constant, maximizing $\ell$ over $\beta$ is equivalent to *minimizing* $\lVert y - X\beta\rVert^2$ — the exact least-squares objective $L(\beta)$ of Chapters 1–2. Differentiating, $\nabla_\beta\ell = \frac{1}{\sigma^2}X^\top(y - X\beta)$, and setting this to zero gives
+
+$$
+X^\top(y - X\hat\beta) = 0 \quad\Longleftrightarrow\quad X^\top X\hat\beta = X^\top y,
+$$
+
+the normal equations. Under full column rank $X^\top X \succ 0$ (Chapter 1), so this solution is unique; and the objective is convex, its Hessian $\nabla^2 L = 2X^\top X \succeq 0$ (Chapter 2), so the stationary point is the global maximizer of $\ell$. $\blacksquare$
+
+The curvature of $\ell$ in $\beta$ also quantifies how precisely $\beta$ is determined. The **Fisher information** for $\beta$ — the negative expected Hessian of $\ell$ — is $\mathcal{I}(\beta) = X^\top X / \sigma^2$, so the MLE's sampling covariance scales like $\sigma^2 (X^\top X)^{-1}$. This is the probabilistic restatement of Chapter 1's conditioning story: collinear media channels make $X^\top X$ near-singular (small eigenvalues, large condition number $\kappa(X)$), so $\sigma^2(X^\top X)^{-1}$ blows up and $\hat\beta$ is imprecise — ill-conditioning and statistical imprecision are two views of the same matrix.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
