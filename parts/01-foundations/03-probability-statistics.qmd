@@ -178,7 +178,67 @@ This is a genuine departure from maximum likelihood. Where the MLE returns a sin
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+### Example: the Gaussian MLE is the least-squares fit
+
+We return to the three-week, two-channel design of Chapter 2 and view it through the likelihood. Take
+
+$$
+X = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{bmatrix}, \qquad y = \begin{bmatrix} 1 \\ 3 \\ 2 \end{bmatrix},
+$$
+
+with the model $y = X\beta + \varepsilon$ and $\varepsilon \sim \mathcal{N}(0, \sigma^2 I_3)$. Conditioning on $X$ and $\beta$, rung 3 gives the mean and covariance of the response directly,
+
+$$
+\mathbb{E}[y] = X\beta, \qquad \operatorname{Cov}(y) = \sigma^2 I_3,
+$$
+
+so $y \sim \mathcal{N}(X\beta, \sigma^2 I_3)$. Writing out the log-likelihood of rung 5 for this data,
+
+$$
+\ell(\beta, \sigma^2) = -\frac{3}{2}\log(2\pi\sigma^2) - \frac{1}{2\sigma^2}\lVert y - X\beta \rVert^2 ,
+$$
+
+the first term is free of $\beta$, so the entire dependence on $\beta$ sits in $-\frac{1}{2\sigma^2}\lVert y - X\beta \rVert^2$. Maximizing over $\beta$ means setting the gradient to zero:
+
+$$
+\nabla_\beta \ell = \frac{1}{\sigma^2} X^\top(y - X\hat\beta) = 0 \quad\Longleftrightarrow\quad X^\top X\hat\beta = X^\top y ,
+$$
+
+the normal equations. The two ingredients are short to assemble by hand. The Gram matrix is
+
+$$
+X^\top X = \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix}\begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{bmatrix} = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix},
+$$
+
+and the right-hand side is
+
+$$
+X^\top y = \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix}\begin{bmatrix} 1 \\ 3 \\ 2 \end{bmatrix} = \begin{bmatrix} 4 \\ 5 \end{bmatrix}.
+$$
+
+The system $\begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}\hat\beta = \begin{bmatrix} 4 \\ 5 \end{bmatrix}$ has determinant $2\cdot 2 - 1\cdot 1 = 3$, so
+
+$$
+\hat\beta = \frac{1}{3}\begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix}\begin{bmatrix} 4 \\ 5 \end{bmatrix} = \frac{1}{3}\begin{bmatrix} 8 - 5 \\ -4 + 10 \end{bmatrix} = \frac{1}{3}\begin{bmatrix} 3 \\ 6 \end{bmatrix} = \begin{bmatrix} 1 \\ 2 \end{bmatrix}.
+$$
+
+Notice that the noise scale $\sigma^2$ cancelled the moment we set $\nabla_\beta\ell = 0$: the positive factor $1/\sigma^2$ multiplies the whole gradient and so plays no role in locating its zero. The estimate $\hat\beta = (1, 2)^\top$ is exactly the vector Chapter 2 obtained by minimizing the loss $\lVert y - X\beta \rVert^2$ — here it falls out of maximizing a Gaussian likelihood instead. Maximum likelihood and least squares are not analogous, they are the same computation on this data.
+
+### Example: how fast does an estimate sharpen?
+
+Suppose we observe $n$ i.i.d. weekly readings $X_1, \dots, X_n$ of some quantity — a baseline conversion rate, say — each with unknown mean $\mu$ and known variance $\sigma^2$, and we estimate $\mu$ by the sample mean $\bar X_n$. From rung 6, the mean is unbiased, $\mathbb{E}[\bar X_n] = \mu$, and because the readings are independent their variances add:
+
+$$
+\operatorname{Var}(\bar X_n) = \frac{1}{n^2}\sum_{i=1}^n \operatorname{Var}(X_i) = \frac{n\sigma^2}{n^2} = \frac{\sigma^2}{n}.
+$$
+
+The **standard error** is the standard deviation of the estimator, $\operatorname{SE}(\bar X_n) = \sigma/\sqrt{n}$. With $\sigma = 2$ this gives a concrete schedule of precision:
+
+$$
+n = 4:\ \operatorname{SE} = 1, \qquad n = 16:\ \operatorname{SE} = 0.5, \qquad n = 64:\ \operatorname{SE} = 0.25 .
+$$
+
+Each entry is a quarter of the variance of its predecessor's source data folded into a factor-of-four more weeks: quadrupling $n$ halves the standard error, which is the $\sqrt{n}$ law in numbers. The CLT of rung 6 adds the shape — $\bar X_n$ is approximately $\mathcal{N}(\mu, \sigma^2/n)$ for large $n$, so these standard errors translate directly into confidence statements about $\mu$. The same $\sqrt{n}$ shrinkage governs the regression estimate: with sampling covariance $\sigma^2(X^\top X)^{-1}$ and roughly $X^\top X \propto n$ as weeks accrue, $\hat\beta$ sharpens at the identical rate, so doubling our precision on a media effect costs four times the data.
 
 ## Code Tie-in
 
