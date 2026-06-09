@@ -242,7 +242,47 @@ Each entry is a quarter of the variance of its predecessor's source data folded 
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The theory of this chapter becomes concrete the moment we simulate it. Below we draw thousands of synthetic datasets $y = X\beta_{\text{true}} + \varepsilon$, refit OLS each time, and watch the sampling distribution of $\hat\beta$ emerge — checking its mean against $\beta_{\text{true}}$ and its covariance against the inverse Fisher information $\sigma^2(X^\top X)^{-1}$ from rung 5. We also generate correlated draws with the Cholesky recipe from Chapter 1, and plot one coefficient to see the CLT's bell shape directly.
+
+```{python}
+import numpy as np
+from scipy.linalg import cholesky
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(0)
+n, sigma = 60, 0.5
+X = np.column_stack([np.ones(n), rng.normal(size=n), rng.normal(size=n)])
+beta_true = np.array([1.0, 2.0, -0.5])
+XtX_inv = np.linalg.inv(X.T @ X)
+
+# Sampling distribution of beta_hat over many simulated datasets y = X beta + noise.
+B = 5000
+beta_hats = np.empty((B, 3))
+for b in range(B):
+    y = X @ beta_true + rng.normal(scale=sigma, size=n)
+    beta_hats[b] = np.linalg.lstsq(X, y, rcond=None)[0]
+
+emp_mean = beta_hats.mean(axis=0)
+emp_cov = np.cov(beta_hats.T)
+theory_cov = sigma**2 * XtX_inv
+print("empirical mean of beta_hat:", np.round(emp_mean, 3), " (true:", beta_true, ")")
+print("max |empirical cov - sigma^2 (X^T X)^-1|:",
+      f"{np.max(np.abs(emp_cov - theory_cov)):.2e}")
+
+# Correlated draws via the Cholesky factor (Chapter 1): Cov(Lz) = L L^T.
+Sigma = np.array([[1.0, 0.6], [0.6, 1.0]])
+L = cholesky(Sigma, lower=True)
+draws = L @ rng.standard_normal((2, 10000))
+print("Cholesky draws empirical cov:\n", np.round(np.cov(draws), 2))
+
+# CLT in action: the sampling distribution of one coefficient is Gaussian.
+plt.hist(beta_hats[:, 2], bins=40, density=True, alpha=0.65)
+plt.xlabel(r"$\hat\beta_{\mathrm{search}}$"); plt.ylabel("density")
+plt.title("Sampling distribution of one coefficient")
+plt.show()
+```
+
+Reading the output: the empirical mean of $\hat\beta$ lands on $\beta_{\text{true}} = (1, 2, -0.5)$, confirming that OLS is unbiased, and its empirical covariance matches $\sigma^2(X^\top X)^{-1}$ — the inverse Fisher information of rung 5 — to within $\sim 10^{-4}$. The Cholesky-generated draws reproduce the target correlation of $0.6$ almost exactly, validating Chapter 1's $\operatorname{Cov}(Lz) = LL^\top$ construction. Finally, the histogram of the search coefficient is visibly bell-shaped: the Central Limit Theorem made manifest in the geometry of estimation.
 
 ## Exercises
 
