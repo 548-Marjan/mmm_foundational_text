@@ -20,7 +20,59 @@ This chapter builds the probabilistic toolkit in the order it is needed: random 
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+### Random variables, expectation, and covariance
+
+A **random variable** $X$ is a function assigning a numerical value to each outcome of a random experiment; for our purposes it is described by a density $p(x)$ (continuous case) or a probability mass function (discrete case). Its **expectation** is the average value weighted by probability, $\mathbb{E}[X] = \int x\,p(x)\,dx$, and its **variance** measures spread about that average, $\operatorname{Var}(X) = \mathbb{E}\big[(X - \mathbb{E}[X])^2\big]$. Expectation is **linear**: for constants $a, b$ and random variables $X, Y$, $\mathbb{E}[aX + bY] = a\,\mathbb{E}[X] + b\,\mathbb{E}[Y]$, regardless of any dependence between $X$ and $Y$.
+
+Marketing data is multivariate — a vector of weekly outcomes, a vector of media spends — so we work with random vectors. For a random vector $w \in \mathbb{R}^m$ the analogue of variance is the **covariance matrix**
+
+$$
+\operatorname{Cov}(w) = \mathbb{E}\big[(w - \mathbb{E}w)(w - \mathbb{E}w)^\top\big],
+$$
+
+whose $(i,j)$ entry is the covariance between coordinates $w_i$ and $w_j$. It is symmetric and positive semidefinite: for any fixed $c$, $c^\top \operatorname{Cov}(w)\, c = \operatorname{Var}(c^\top w) \ge 0$. The single most useful fact about it is how it behaves under linear maps.
+
+> **Proposition.** For a fixed matrix $A$ and fixed vector $b$, $\operatorname{Cov}(Aw + b) = A\,\operatorname{Cov}(w)\,A^\top$.
+
+*Proof.* Let $\mu = \mathbb{E}w$. By linearity of expectation, $\mathbb{E}[Aw + b] = A\mu + b$, so the centered vector is $(Aw + b) - (A\mu + b) = A(w - \mu)$. Therefore
+
+$$
+\operatorname{Cov}(Aw + b) = \mathbb{E}\big[A(w - \mu)(w - \mu)^\top A^\top\big] = A\,\mathbb{E}\big[(w - \mu)(w - \mu)^\top\big]\,A^\top = A\,\operatorname{Cov}(w)\,A^\top,
+$$
+
+where the middle step pulls the constant matrices $A$ and $A^\top$ outside the expectation. $\blacksquare$
+
+This is exactly the identity that justified Chapter 1's Cholesky sampling: if $z$ has $\operatorname{Cov}(z) = I$ and $\Sigma = LL^\top$, then $\operatorname{Cov}(Lz) = L\,I\,L^\top = LL^\top = \Sigma$, so $Lz$ has the desired correlation structure.
+
+### The distributions we will need
+
+The star of this chapter is the **Gaussian** (normal) distribution $\mathcal{N}(\mu, \sigma^2)$, with one-dimensional density
+
+$$
+p(x) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\!\left(-\frac{(x - \mu)^2}{2\sigma^2}\right).
+$$
+
+Its parameters are exactly its mean $\mu$ and variance $\sigma^2$, and it is the assumed law of the noise term $\varepsilon$ in our model $y = X\beta + \varepsilon$. We will lean on it repeatedly, both as a noise model and, in Part II, as a prior on $\beta$.
+
+A handful of other distributions recur in marketing mix modeling [@casella2002]. The **Bernoulli** distribution models a single binary outcome — a user who converted or did not — and the **Binomial** counts the conversions among many independent such users. The **Poisson** distribution models counts of events over a fixed window, such as the number of store visits or website sessions in a week. The **Gamma** distribution governs positive continuous quantities and will later serve as a prior for a variance parameter or for a non-negative spend coefficient. We state these here and call on them as needed rather than developing each in full.
+
+### Joint, conditional, and the regression model
+
+When several random variables vary together, their **joint density** $p(u, v)$ describes the probability of each combination. From it we recover the **marginal density** of one variable by integrating out the other, $p(u) = \int p(u, v)\,dv$, and the **conditional density** of $u$ given a known value of $v$ by renormalizing, $p(u \mid v) = p(u, v) / p(v)$. The variables are **independent** when the joint factors into marginals, $p(u, v) = p(u)\,p(v)$, equivalently when conditioning changes nothing, $p(u \mid v) = p(u)$.
+
+Regression is conditioning made operational: we do not model the marginal distribution of sales, but the distribution of $y$ *given* the design $X$ and parameters $\beta$, written $y \mid X, \beta$. Under $y = X\beta + \varepsilon$ with $\varepsilon \sim \mathcal{N}(0, \sigma^2 I)$, the matrix $X\beta$ is a constant once we condition on $X$ and $\beta$, so the mean is
+
+$$
+\mathbb{E}[y] = \mathbb{E}[X\beta + \varepsilon] = X\beta + \mathbb{E}[\varepsilon] = X\beta,
+$$
+
+using linearity and $\mathbb{E}[\varepsilon] = 0$. For the covariance, a constant shift does not change spread, so the rung-1 identity gives
+
+$$
+\operatorname{Cov}(y) = \operatorname{Cov}(X\beta + \varepsilon) = \operatorname{Cov}(\varepsilon) = \sigma^2 I.
+$$
+
+The off-diagonal zeros in $\sigma^2 I$ encode independence of the noise across rows — the assumption that the weeks do not influence one another's random shocks. It is a strong assumption, convenient for now and one we will relax when we model autocorrelated or seasonal errors.
 
 ## Worked Examples
 
