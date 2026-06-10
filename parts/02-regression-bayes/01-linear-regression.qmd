@@ -451,3 +451,28 @@ compute the ridge estimate $\hat\beta_{\text{ridge}}=(X^\top X+\lambda I)^{-1}X^
 **A1.** *Sampling variability of OLS.* Build a fixed two-channel design matrix $X$ (an intercept plus two media channels) whose two channel columns have a target correlation $\rho$, and pick a true coefficient vector $\beta_{\text{true}}$. For each $\rho\in\{0,\,0.9,\,0.99\}$, hold $X$ fixed and draw many response vectors $y=X\beta_{\text{true}}+\varepsilon$ with $\varepsilon\sim\mathcal N(0,\sigma^2 I)$; refit OLS on each draw and collect the estimated coefficient $\hat\beta_{\text{search}}$ for the second channel across the draws. Plot (e.g. histograms or overlaid densities) showing the empirical spread of $\hat\beta_{\text{search}}$ widening as $\rho$ increases. For each $\rho$, overlay the theoretical standard deviation $\sigma\sqrt{[(X^\top X)^{-1}]_{jj}}$ (where $j$ indexes the search coefficient) and confirm that the empirical standard deviation of your $\hat\beta_{\text{search}}$ samples matches it.
 
 **A2.** *Bias–variance experiment, OLS vs. ridge.* Fix a strongly collinear design $X$ and a true coefficient vector $\beta_{\text{true}}$. Simulate many datasets $y=X\beta_{\text{true}}+\varepsilon$; on each, compute the OLS estimate and the ridge estimate $(X^\top X+\lambda I)^{-1}X^\top y$ over a grid of $\lambda$ values. For each estimator, average the squared recovery error $\lVert\hat\beta-\beta_{\text{true}}\rVert^2$ across datasets to estimate its mean-squared error. Plot MSE versus $\lambda$ (with the OLS MSE shown as the $\lambda=0$ reference), and identify a value $\lambda>0$ at which ridge achieves lower MSE than OLS. Comment on how the curve illustrates the bias–variance tradeoff.
+
+## Summary
+
+This chapter turned the OLS estimator into working inference and then fixed what collinearity breaks. If you can state each concept in a sentence and reproduce each identity from memory, you are ready for the Bayesian inference of the next chapter.
+
+**Key concepts**
+
+- **OLS is optimal and Gaussian.** $\hat\beta$ is unbiased and, under the Gaussian model, normally distributed with covariance $\sigma^2(X^\top X)^{-1}$; **Gauss–Markov** makes it the minimum-variance *linear unbiased* estimator (no normality needed for that).
+- **Inference rests on the sampling distribution.** Estimating $\sigma^2$ by $\hat\sigma^2=\text{RSS}/(n-p)$ turns the unknown spread into a **standard error**; the studentized coefficient is a $t_{n-p}$ pivot, which gives confidence intervals and the $t$-test of $\beta_j=0$.
+- **Diagnostics and assumptions.** The hat matrix $H$ is the projection onto the column space; $R^2$ reports the variance explained; the four assumptions each buy a specific guarantee (unbiasedness, Gauss–Markov, exact $t$/$F$).
+- **Collinearity is the MMM disease.** Nearly dependent channels make $X^\top X$ near-singular (large $\kappa(X)$), so $(X^\top X)^{-1}$ and the standard errors blow up — quantified per coefficient by the **VIF**.
+- **Bias can beat unbiasedness.** MSE = variance + bias$^2$; since Gauss–Markov only optimizes among *unbiased* estimators, a biased estimator with far smaller variance can win.
+- **Ridge is that estimator, and it is a prior.** $\hat\beta_{\text{ridge}}=(X^\top X+\lambda I)^{-1}X^\top y$ lifts every eigenvalue of $X^\top X$ by $\lambda$, curing the conditioning; it is exactly the **MAP estimate under a Gaussian prior** $\beta\sim\mathcal N(0,\tau^2 I)$ with $\lambda=\sigma^2/\tau^2$ — a penalty *is* a prior, the bridge to Bayesian inference.
+
+**Key identities**
+
+- OLS decomposition: $\hat\beta = \beta + (X^\top X)^{-1}X^\top\varepsilon$.
+- Sampling distribution: $\hat\beta \sim \mathcal N\big(\beta,\ \sigma^2(X^\top X)^{-1}\big)$.
+- Variance estimate: $\hat\sigma^2 = \text{RSS}/(n-p)$, with $\text{RSS}/\sigma^2\sim\chi^2_{n-p}$ independent of $\hat\beta$.
+- Standard error: $\operatorname{se}(\hat\beta_j) = \hat\sigma\sqrt{[(X^\top X)^{-1}]_{jj}}$.
+- Confidence interval: $\hat\beta_j \pm t_{n-p,\,1-\alpha/2}\,\operatorname{se}(\hat\beta_j)$, from $(\hat\beta_j-\beta_j)/\operatorname{se}(\hat\beta_j)\sim t_{n-p}$.
+- Fit summaries: $H = X(X^\top X)^{-1}X^\top$, $R^2 = 1 - \text{RSS}/\text{TSS}$.
+- Variance inflation: $\text{VIF}_j = 1/(1-R_j^2)$.
+- Bias–variance: $\operatorname{MSE}(\hat\theta) = \operatorname{Var}(\hat\theta) + \big(\mathbb{E}[\hat\theta]-\theta\big)^2$.
+- Ridge / MAP: $\hat\beta_{\text{ridge}} = (X^\top X + \lambda I)^{-1}X^\top y$, with $\lambda = \sigma^2/\tau^2$ under $\beta\sim\mathcal N(0,\tau^2 I)$.
