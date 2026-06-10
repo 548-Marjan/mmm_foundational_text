@@ -240,7 +240,111 @@ What follows from this barrier is not a dead end but a change of tools. A poster
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+### Example (a) — Beta–Binomial by hand
+
+A media buyer wants to estimate the conversion rate $\theta$ of a new display campaign — the fraction of served impressions that result in a purchase. Before the campaign runs, domain knowledge suggests the rate is somewhere in the middle range (not extremely high, not near zero), and that belief carries mild weight. We encode it as a symmetric prior with mean $0.5$:
+
+$$
+\theta \sim \text{Beta}(2, 2).
+$$
+
+The prior parameters are $\alpha = 2$ and $\beta = 2$, which act as pseudo-counts (Rung 2): two prior successes and two prior failures, as if we had already observed four imaginary exposures.
+
+**The data.** Run the campaign for a day and observe $k = 8$ conversions in $n = 10$ exposures.
+
+**The posterior update.** By the Beta–Binomial conjugacy theorem (Rung 2), the posterior is obtained by adding the observed counts to the prior pseudo-counts:
+
+$$
+\theta \mid k \sim \text{Beta}(\alpha + k,\; \beta + n - k) = \text{Beta}(2 + 8,\; 2 + 2) = \text{Beta}(10, 4).
+$$
+
+The arithmetic is kernel-matching in one line: the likelihood kernel $\theta^k(1-\theta)^{n-k} = \theta^8(1-\theta)^2$ multiplied by the prior kernel $\theta^{\alpha-1}(1-\theta)^{\beta-1} = \theta^1(1-\theta)^1$ yields $\theta^9(1-\theta)^3$, which is exactly the kernel of a $\text{Beta}(10, 4)$ density. No integration required — recognizing the family forces the normalizing constant.
+
+**The posterior mean.** The posterior mean (Rung 2) is
+
+$$
+\mathbb{E}[\theta \mid k] = \frac{\alpha + k}{\alpha + \beta + n} = \frac{2 + 8}{2 + 2 + 10} = \frac{10}{14} \approx 0.714.
+$$
+
+Comparing the three summaries side by side makes the structure vivid:
+
+$$
+\underbrace{0.500}_{\text{prior mean}} \quad < \quad \underbrace{0.714}_{\text{posterior mean}} \quad < \quad \underbrace{0.800}_{\text{MLE}\; k/n}.
+$$
+
+The MLE $\hat\theta = 8/10 = 0.800$ is the value that maximizes the likelihood alone, giving full weight to the observed data and none to prior belief. The posterior mean is pulled from $0.800$ **toward** $0.500$ — this is **shrinkage**, driven by the prior pseudo-count total $\alpha + \beta = 4$ in competition with the real data count $n = 10$.
+
+**Interpretation and shrinkage mechanics.** The four prior pseudo-observations carry $4/(4 + 10) \approx 29\%$ of the total evidential weight, so their pull is visible but not dominant. Had the campaign run for $n = 100$ exposures (say, $80$ conversions), the posterior mean would be $(2 + 80)/(4 + 100) \approx 0.788$, much closer to the empirical rate $0.800$. The prior's influence fades as real data accumulate — not discarded, simply outweighed. This is the quantitative expression of the Rung 3 formula: the posterior mean is a precision-weighted blend of prior and data, with the data's precision growing with $n$ while the prior's precision stays fixed.
+
+The posterior $\text{Beta}(10, 4)$ is also sharper than the prior $\text{Beta}(2, 2)$. Prior variance is $\alpha\beta/((\alpha+\beta)^2(\alpha+\beta+1)) = 4/(16\cdot 5) = 0.050$; posterior variance is $10\cdot 4/(14^2\cdot 15) \approx 0.014$, a reduction by more than a factor of three. The data added information and the posterior reflects it — the distribution has contracted around the updated belief.
+
+### Example (b) — Bayesian linear regression by hand
+
+We revisit the exact dataset from Chapter 4's first worked example: four weeks of a single media channel with intercept,
+
+$$
+X = \begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \\ 1 & 4 \end{bmatrix}, \qquad y = \begin{bmatrix} 2 \\ 2 \\ 4 \\ 5 \end{bmatrix},
+$$
+
+now treated within the Bayesian framework. We take the noise variance **known** at $\sigma^2 = 1$ and place a zero-mean Gaussian prior $\beta \sim \mathcal{N}(0, \tau^2 I)$ with $\tau^2 = 1$. The penalty ratio is $\lambda = \sigma^2/\tau^2 = 1$. With both variances equal to one, the posterior formulas of Rung 4 simplify cleanly: the posterior covariance is $(X^\top X + I)^{-1}$ and the posterior mean is $(X^\top X + I)^{-1} X^\top y$ — exactly the ridge estimator at $\lambda = 1$.
+
+**The ingredients.** The cross-product matrix and vector are identical to Chapter 4:
+
+$$
+X^\top X = \begin{bmatrix} 4 & 10 \\ 10 & 30 \end{bmatrix}, \qquad X^\top y = \begin{bmatrix} 13 \\ 38 \end{bmatrix}.
+$$
+
+**The posterior covariance.** Add $I$ to $X^\top X$:
+
+$$
+X^\top X + I = \begin{bmatrix} 4+1 & 10 \\ 10 & 30+1 \end{bmatrix} = \begin{bmatrix} 5 & 10 \\ 10 & 31 \end{bmatrix}.
+$$
+
+The determinant is $5 \cdot 31 - 10 \cdot 10 = 155 - 100 = 55$. Applying the $2 \times 2$ inversion rule (swap the diagonal entries, negate the off-diagonal entries, divide by the determinant):
+
+$$
+\Sigma_{\text{post}} = \frac{1}{55}\begin{bmatrix} 31 & -10 \\ -10 & 5 \end{bmatrix} = \begin{bmatrix} 0.5636 & -0.1818 \\ -0.1818 & 0.0909 \end{bmatrix}.
+$$
+
+The diagonal entries are the posterior variances: $0.5636$ for the intercept $\beta_0$ and $0.0909$ for the slope $\beta_1$. The negative off-diagonal entry reflects that, conditional on the data, uncertainty in the intercept and slope are negatively correlated — a higher-than-expected intercept implies a lower-than-expected slope.
+
+**The posterior mean.** Apply $\mu_{\text{post}} = \Sigma_{\text{post}}\, X^\top y$:
+
+$$
+\mu_{\text{post}} = \frac{1}{55}\begin{bmatrix} 31 & -10 \\ -10 & 5 \end{bmatrix}\begin{bmatrix} 13 \\ 38 \end{bmatrix} = \frac{1}{55}\begin{bmatrix} 31\cdot 13 - 10\cdot 38 \\ -10\cdot 13 + 5\cdot 38 \end{bmatrix}.
+$$
+
+Computing entry by entry: $31\cdot 13 = 403$ and $10\cdot 38 = 380$, so the first entry is $403 - 380 = 23$; $10\cdot 13 = 130$ and $5\cdot 38 = 190$, so the second entry is $-130 + 190 = 60$. Therefore
+
+$$
+\mu_{\text{post}} = \frac{1}{55}\begin{bmatrix} 23 \\ 60 \end{bmatrix} = \begin{bmatrix} 0.4182 \\ 1.0909 \end{bmatrix}.
+$$
+
+The posterior mean intercept is $0.4182$ and the posterior mean slope is $1.0909$.
+
+**The ridge connection confirmed.** By construction, $\mu_{\text{post}} = (X^\top X + \lambda I)^{-1}X^\top y$ with $\lambda = 1$: this is precisely the ridge estimator Chapter 4 derived as the MAP estimate. The theorem of Rung 4 guarantees the two are the same object — Chapter 4 extracted the mode of a distribution whose full shape we now hold. Chapter 4's OLS slope was $\hat\beta_1 = 1.1$; the posterior mean slope $1.0909$ is slightly smaller, pulled toward zero by the prior precision $I/\tau^2 = I$. That pull is the same ridge shrinkage Chapter 4 described as a penalty, now understood as the posterior mean of a Gaussian prior centered at zero.
+
+**The 95% credible interval for the slope.** The posterior marginal for the slope (Rung 5) is
+
+$$
+\beta_1 \mid y \;\sim\; \mathcal{N}\!\left(1.0909,\; 0.0909\right),
+$$
+
+reading $\mu_{\text{post},1} = 1.0909$ and $[\Sigma_{\text{post}}]_{11} = 0.0909$ from the results above. The posterior standard deviation is $\sqrt{0.0909} = 0.3015$. The central 95% credible interval is
+
+$$
+1.0909 \pm 1.96 \times 0.3015 = 1.0909 \pm 0.5910 = [0.500,\; 1.682].
+$$
+
+This is a direct probability statement: given the observed data $y$ and the prior $\mathcal{N}(0, I)$, the probability that the true slope lies in $[0.500, 1.682]$ is $0.95$.
+
+**Contrast with Chapter 4's confidence interval.** Chapter 4 computed the OLS 95% confidence interval for the slope on this same data as
+
+$$
+1.1 \pm 4.303 \times 0.2646 = 1.1 \pm 1.138 = [-0.038,\; 2.238],
+$$
+
+using the Student-$t$ quantile $t_{2,\,0.975} = 4.303$ for $n - p = 2$ degrees of freedom (an extremely wide quantile for only two degrees of freedom). The Bayesian 95% credible interval $[0.500, 1.682]$ is substantially narrower: width $1.182$ versus the frequentist width $2.276$, a factor of nearly two. Two forces drive the gap. First, the prior $\mathcal{N}(0, \tau^2 I)$ contributed extra precision $I/\tau^2 = I$ to the posterior precision matrix $\Sigma_{\text{post}}^{-1} = X^\top X + I$ — information the frequentist analysis had no access to. Second, the Bayesian interval uses the standard normal quantile $z_{0.975} = 1.96$ because $\sigma^2$ is treated as **known**, whereas frequentist inference must account for the additional uncertainty in estimating $\sigma^2$ from only two residual degrees of freedom, inflating the quantile from $1.96$ to $4.303$. Together these effects compress the credible interval substantially on both ends. The Bayesian interval also carries the more natural interpretation: not a statement about a long-run procedure, but a direct claim that the posterior places $95\%$ of its mass on $\beta_1 \in [0.500, 1.682]$ given this data and this prior.
 
 ## Code Tie-in
 
