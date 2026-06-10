@@ -314,7 +314,7 @@ for n in (1, 5, 30, 200):
 
 The qualitative point: regardless of the skewed parent, standardizing the sample mean produces histograms that converge to the same standard Gaussian as $n$ increases.
 
-## Part II · Linear Regression
+## Chapter 4 — Linear Regression
 
 ### C — Conceptual / Reading Comprehension
 
