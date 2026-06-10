@@ -1,14 +1,20 @@
-# Bayesian & Hierarchical Regression
+# Hierarchical Models
 
 *Canonical anchors: Gelman & Hill; McElreath.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapter 5 derived the full Bayesian posterior for a single regression: place a prior $\beta \sim \mathcal{N}(0, \tau^2 I)$ on a coefficient vector, observe one dataset, and the posterior is a Gaussian whose mean is the ridge estimator and whose covariance quantifies all remaining uncertainty. That story is complete and exact — for a national campaign. Practitioners running MMM across the approximately fifty U.S. designated market areas confront a decision that shatters the single-population model at the outset. The recurring model for this chapter is
+
+$$
+y_g = X_g\beta_g + \varepsilon_g, \qquad \varepsilon_g \sim \mathcal{N}(0,\sigma^2 I),
+$$
+
+where $y_g \in \mathbb{R}^{T}$ is the vector of weekly sales in geography $g$, $X_g \in \mathbb{R}^{T \times p}$ is its media-spend design matrix, and $\beta_g \in \mathbb{R}^p$ is allowed to vary across geographies. The choice is between two obviously inadequate extremes. **Complete pooling** fits one national model with a single shared $\beta$, asserting that TV's incremental return is the same in Chicago and rural Nebraska and that every geography runs on the same data-generating process. This is convenient and almost certainly wrong: the bias from forcing a common slope across genuinely heterogeneous markets distorts every coefficient, and the one it distorts most is usually the channel coefficient the analyst needs most to trust. **No pooling** fits fifty independent regressions, each confined to its own slice of data. A dense metro with years of weekly observations yields a tolerable per-geo estimate; a small DMA with a handful of active weeks produces an OLS estimate that is effectively pure sampling noise — a diffuse Bayesian prior on the per-geo fit does nothing to improve matters because the local likelihood is too weak to constrain the posterior away from its baseline.
+
+*"Des Moines came back with a TV coefficient of 9.2 — absurd on 10 weeks of data. Do you trust it, throw it out, or shrink it toward the national average — and by exactly how much?"*
+
+The answer is **partial pooling** — the principled middle ground — and it is delivered by modeling the per-geo coefficients as draws from a shared population distribution, $\beta_g \sim \mathcal{N}(\mu, \tau^2 I)$. This single hierarchical prior converts fifty isolated estimation problems into one joint model whose posterior borrows strength across all geographies simultaneously: coefficient estimates for data-rich geographies converge toward their local OLS solutions while estimates for data-sparse geographies are shrunk toward the population mean $\mu$, by exactly the amount the joint evidence supports. The shrinkage is not a heuristic — it is the posterior mean of the multilevel model, and it falls straight out of Chapter 5's "precisions add" rule operating one level up: the within-geography data precision $n_g/\sigma^2$ is weighed against the between-geography precision $1/\tau^2$, and their ratio determines exactly how hard each geography is pulled toward the national mean. This chapter delivers four payoffs from that mechanism. The **shrinkage formula** — the closed-form posterior mean for each $\beta_g$ as a function of its local data and the population parameters — is the keystone result. The **James–Stein theorem** provides a finite-sample guarantee: any estimator that shrinks per-group estimates toward a common center has strictly lower total squared error than the collection of unpooled per-group fits, a dominance result that holds regardless of the true $\mu$ and $\tau^2$. The **between-geography variance** $\tau^2$ is estimated from all the geographies at once rather than chosen by the analyst, so the degree of pooling is a property the data determine rather than an assumption imposed on them. And because the joint posterior over all $\beta_g$, $\mu$, and $\tau^2$ is non-conjugate — marginalizing over $\tau^2$ does not yield a closed form — the chapter closes with the **Gibbs sampler** whose conjugate full conditionals are each a Gaussian-on-Gaussian update identical to a Chapter 5 result. That Gibbs sampler is the direct prototype for the Markov chain Monte Carlo methods of Part III, and the conjugacy wall it meets is precisely the structural reason Part III is not optional.
 
 ## Theory & Proofs
 
