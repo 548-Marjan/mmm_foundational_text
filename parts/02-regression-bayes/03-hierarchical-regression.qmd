@@ -146,6 +146,87 @@ $\blacksquare$
 
 The connection to Rung 2 is direct. The James–Stein factor $1 - (G-2)\sigma^2/\lVert z\rVert^2$ is the **empirical-Bayes** counterpart of $\lambda_g$: it estimates the population precision $1/\tau^2$ from the data using the observed spread $\lVert z\rVert^2$ rather than treating $\tau^2$ as a known hyperparameter. Rung 2 set the shrinkage by a known $\tau^2$; James–Stein recovers the same shrinkage structure from the data alone. Both point in the same direction — toward the center, by an amount governed by the ratio of observation noise to between-group spread — and the dominance theorem guarantees that this direction is right not on average over priors, but for every single $\theta$ [@gelmanhill2006].
 
+### Rung 4 — Where $\mu$ and $\tau^2$ come from
+
+Rungs 1 through 3 treated the hyperparameters $\mu$ and $\tau^2$ as known quantities. In practice they are not, and the question of how to supply them is the defining choice between two estimation philosophies.
+
+**Empirical Bayes** estimates $\mu$ and $\tau^2$ from the data and plugs those point estimates into the Rung 2 shrinkage formula. The natural estimate of $\mu$ is the precision-weighted grand mean of the group sample means, weighting each $\bar y_g$ by its data precision $n_g/\sigma^2$. Estimating $\tau^2$ requires a **variance-components** decomposition: the observed variance among the $\bar y_g$ combines genuine between-geography heterogeneity $\tau^2$ and within-geography sampling noise $\sigma^2/n_g$; subtracting the expected sampling contribution from the observed spread yields a method-of-moments estimator $\hat\tau^2$.
+
+**Full Bayes** places hyperpriors $p(\mu)$ and $p(\tau^2)$ above the coefficient layer and integrates them out, so uncertainty about $\mu$ and $\tau^2$ propagates into the $\theta_g$ posteriors rather than disappearing behind point estimates.
+
+The variance-components reading of $\tau^2$ supplies the central intuition. As $\tau^2 \to 0$ the between-geography spread vanishes and the model forces complete pooling; as $\tau^2 \to \infty$ the prior flattens and the model produces no pooling. At intermediate values the model reads the observed dispersion among the $\bar y_g$, nets out the portion attributable to sampling noise, and infers how much genuine heterogeneity the data support. The shrinkage weight $\lambda_g$ is then computed with that inferred $\tau^2$ rather than an analyst-chosen one. This is the key conceptual payoff: **the hierarchical model decides for itself how much to pool.** The amount of shrinkage is a property the data determine, not an assumption imposed on them.
+
+The empirical-Bayes approach carries one important caveat. Plugging in point estimates $\hat\mu$ and $\hat\tau^2$ treats them as known truth and understates posterior uncertainty, because the estimation error in $\hat\mu$ and $\hat\tau^2$ is not accounted for. Full Bayes — and, in practice, MCMC — repairs this by drawing $\mu$ and $\tau^2$ from their own posteriors alongside the $\theta_g$, propagating uncertainty at every level of the hierarchy to the final estimates [@gelmanhill2006].
+
+### Rung 5 — The vectorized geo-MMM model
+
+Each geography in a real MMM carries a coefficient *vector* $\beta_g \in \mathbb{R}^p$ — an intercept plus one entry for each media channel. Rung 2's scalar shrinkage lifts coordinate-wise to this vector setting. The likelihood per geography is the Chapter 5 Gaussian regression model; the hierarchical prior replaces the scalar $\theta_g \sim \mathcal{N}(\mu, \tau^2)$ with its multivariate counterpart:
+
+$$
+y_g \mid \beta_g \;\sim\; \mathcal{N}(X_g\beta_g,\, \sigma^2 I), \qquad \beta_g \;\sim\; \mathcal{N}(\mu_\beta,\, \Sigma_\beta),
+$$
+
+where $\mu_\beta \in \mathbb{R}^p$ is the population mean coefficient vector and $\Sigma_\beta \in \mathbb{R}^{p \times p}$ is the between-geography covariance. The hyperparameters are estimated from the data exactly as in Rung 4: $\mu_\beta$ by the precision-weighted mean of the $\beta_g$, and $\Sigma_\beta$ by the between-group scatter net of within-group sampling variance.
+
+To preserve closed forms, keep $\Sigma_\beta$ **diagonal**: write $\Sigma_\beta = \operatorname{diag}(\tau_1^2, \ldots, \tau_p^2)$, so each coefficient $j$ carries its own between-geography variance $\tau_j^2$. Pooling then happens **per coefficient**, with the Rung 2 shrinkage formula applied coordinate-wise: coefficient $j$ in geography $g$ is shrunk by $\lambda_{g,j} = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau_j^2)$. A coefficient that varies little across geographies — say, a national base-price sensitivity — accumulates a small estimated $\tau_j^2$, so $\lambda_{g,j}$ is small and the model pools hard. A coefficient that genuinely differs across markets — say, a locally targeted promotion — accumulates a large $\tau_j^2$, so $\lambda_{g,j}$ approaches one and the model trusts the local data. The full off-diagonal extension, which lets $\Sigma_\beta$ capture cross-coefficient correlations across geographies — for instance, geographies where TV works especially well may also show elevated digital returns — is natural and requires only an Inverse-Wishart prior (Rung 6) and MCMC to handle.
+
+The grouping variable need not be geography. The identical machinery applies to any partition of the data: product segments, retailer tiers, time blocks, or any combination. Geography is the running example here because it is the dominant structure in geo-split MMM designs, not because the model is geographically special. In all cases this is Rung 2 run coordinate-wise, with $\mu_\beta$ and $\Sigma_\beta$ playing the roles that $\mu$ and $\tau^2$ played in the scalar model, and learned from the data as in Rung 4.
+
+### Rung 6 — Non-conjugate joint posterior, conjugate full conditionals
+
+With $G$ geographies each contributing a coefficient vector $\beta_g$, the joint posterior over all unknowns is
+
+$$
+p(\beta_{1:G}, \mu_\beta, \Sigma_\beta, \sigma^2 \mid y) \;\propto\; \left[\prod_{g=1}^G p(y_g \mid \beta_g, \sigma^2)\, p(\beta_g \mid \mu_\beta, \Sigma_\beta)\right] p(\mu_\beta)\, p(\Sigma_\beta)\, p(\sigma^2).
+$$
+
+This joint posterior has **no closed form.** The obstacle is the same conjugacy wall that closed Chapter 5: marginalizing over $\Sigma_\beta$ — or over $\tau^2$ in the diagonal case — destroys conjugacy and leaves integrals that cannot be evaluated analytically. The three-level hierarchy is more expressive than the single-level Chapter 5 model precisely because it carries an extra layer of uncertainty, and that extra layer is what breaks the closed form.
+
+What the joint posterior lacks in tractability it regains through its **full conditionals.** A full conditional is the distribution of one block of unknowns given all others and the data. Each full conditional in the hierarchical MMM model is conjugate, meaning each one can be sampled exactly. There are four blocks.
+
+**Full conditional for $\beta_g \mid \text{rest}$.** With $\mu_\beta$, $\Sigma_\beta$, and $\sigma^2$ fixed, the model for geography $g$ is a Bayesian linear regression with Gaussian prior $\mathcal{N}(\mu_\beta, \Sigma_\beta)$ — Chapter 5 Rung 4 with prior mean shifted from zero to $\mu_\beta$. Completing the square in $\beta_g$, the log-kernel of $p(y_g \mid \beta_g, \sigma^2)\,p(\beta_g \mid \mu_\beta, \Sigma_\beta)$ is
+
+$$
+-\tfrac{1}{2}\left[\beta_g^\top\!\left(\tfrac{X_g^\top X_g}{\sigma^2} + \Sigma_\beta^{-1}\right)\!\beta_g \;-\; 2\beta_g^\top\!\left(\tfrac{X_g^\top y_g}{\sigma^2} + \Sigma_\beta^{-1}\mu_\beta\right)\right] + \text{const},
+$$
+
+which is the log-kernel of a Gaussian with precision matrix $V_g^{-1} = X_g^\top X_g/\sigma^2 + \Sigma_\beta^{-1}$ and mean $m_g = V_g(X_g^\top y_g/\sigma^2 + \Sigma_\beta^{-1}\mu_\beta)$. Therefore
+
+$$
+\begin{aligned}
+\beta_g \mid \text{rest} &\;\sim\; \mathcal{N}(m_g,\, V_g), \\[4pt]
+V_g &= \left(\frac{X_g^\top X_g}{\sigma^2} + \Sigma_\beta^{-1}\right)^{-1}\!, \qquad m_g = V_g\!\left(\frac{X_g^\top y_g}{\sigma^2} + \Sigma_\beta^{-1}\mu_\beta\right).
+\end{aligned}
+$$
+
+$\blacksquare$
+
+**Full conditional for $\mu_\beta \mid \text{rest}$.** With the $\{\beta_g\}$ observed, the $G$ vectors $\beta_g \overset{\text{iid}}{\sim} \mathcal{N}(\mu_\beta, \Sigma_\beta)$ treat $\mu_\beta$ as a Gaussian location parameter with $G$ observations. By Chapter 5 Rung 3, precisions add across the $G$ groups. Under a flat hyperprior $p(\mu_\beta) \propto 1$, the posterior is
+
+$$
+\mu_\beta \mid \text{rest} \;\sim\; \mathcal{N}\!\left(\bar\beta,\; \tfrac{1}{G}\Sigma_\beta\right), \qquad \bar\beta = \frac{1}{G}\sum_{g=1}^G \beta_g.
+$$
+
+Adding a Gaussian hyperprior $\mu_\beta \sim \mathcal{N}(\mu_0, \Sigma_0)$ shifts and tightens this Gaussian in the standard precision-weighted way.
+
+**Full conditional for $\Sigma_\beta \mid \text{rest}$.** Given $\{\beta_g\}$ and $\mu_\beta$, the between-group scatter $S = \sum_{g=1}^G (\beta_g - \mu_\beta)(\beta_g - \mu_\beta)^\top$ is the sufficient statistic for $\Sigma_\beta$. The conjugate family is **Inverse-Wishart**: with prior $\Sigma_\beta \sim \mathcal{IW}(\Psi_0, \nu_0)$, the posterior is
+
+$$
+\Sigma_\beta \mid \text{rest} \;\sim\; \mathcal{IW}\!\left(\Psi_0 + S,\; \nu_0 + G\right).
+$$
+
+In the diagonal case $\Sigma_\beta = \operatorname{diag}(\tau_1^2, \ldots, \tau_p^2)$, each $\tau_j^2$ is updated independently by its Inverse-Gamma conjugate, driven by the $j$th diagonal entry of $S$.
+
+**Full conditional for $\sigma^2 \mid \text{rest}$.** Given $\{\beta_g\}$, the pooled residual sum of squares $\text{RSS} = \sum_{g=1}^G \lVert y_g - X_g\beta_g\rVert^2$ is the sufficient statistic for $\sigma^2$. With a conjugate Inverse-Gamma prior $\sigma^2 \sim \mathcal{IG}(a_0, b_0)$, the posterior is
+
+$$
+\sigma^2 \mid \text{rest} \;\sim\; \mathcal{IG}\!\left(a_0 + \tfrac{1}{2}\textstyle\sum_g T_g,\; b_0 + \tfrac{1}{2}\,\text{RSS}\right),
+$$
+
+where $T_g$ is the number of observations in geography $g$.
+
+Sampling each full conditional in turn — draw $\beta_1$, then $\beta_2$, $\ldots$, then $\beta_G$, then $\mu_\beta$, then $\Sigma_\beta$, then $\sigma^2$, then cycle back to $\beta_1$ — defines the **Gibbs sampler**, the simplest Markov chain Monte Carlo algorithm. Every step in the cycle is a draw from a named distribution: Gaussian for each $\beta_g$ and for $\mu_\beta$, Inverse-Wishart (or Inverse-Gamma) for $\Sigma_\beta$, Inverse-Gamma for $\sigma^2$. Each of those distributions is a Chapter 5 result applied one level higher in the hierarchy. The only missing ingredient is the theorem guaranteeing that these Gibbs iterates converge to draws from the intractable joint posterior we cannot write down — that theorem is the core result of Part III, and its necessity is the precise structural reason Part III is not optional [@gelman2013; @gelmanhill2006].
+
 ## Worked Examples
 
 _Worked numerical example(s)._
