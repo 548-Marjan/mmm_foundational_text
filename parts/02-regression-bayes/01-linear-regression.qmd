@@ -292,10 +292,10 @@ $$
 \hat\sigma^2 = \frac{\text{RSS}}{n - p} = \frac{0.70}{2} = 0.35, \qquad \hat\sigma = \sqrt{0.35} \approx 0.5916 .
 $$
 
-**Standard error and confidence interval.** The slope is the second coefficient, so its standard error reads off the $[(X^\top X)^{-1}]_{22} = 0.2$ entry:
+**Standard error and confidence interval.** The slope is the coefficient $\hat\beta_1$, so (indexing the matrix to match, with the intercept as entry $0$) its standard error reads off the $[(X^\top X)^{-1}]_{11} = 0.2$ entry:
 
 $$
-\operatorname{se}(\hat\beta_1) = \hat\sigma\sqrt{[(X^\top X)^{-1}]_{22}} = \sqrt{0.35}\,\sqrt{0.2} = \sqrt{0.07} \approx 0.2646 .
+\operatorname{se}(\hat\beta_1) = \hat\sigma\sqrt{[(X^\top X)^{-1}]_{11}} = \sqrt{0.35}\,\sqrt{0.2} = \sqrt{0.07} \approx 0.2646 .
 $$
 
 With $n - p = 2$ degrees of freedom the relevant Student-$t$ quantile is $t_{2,\,0.975} \approx 4.303$, far larger than the familiar $1.96$ because two degrees of freedom is a very thin sample. The 95% confidence interval for the slope is therefore
@@ -331,7 +331,7 @@ so each slope's variance is roughly $309$ times — and its standard error about
 **Ridge stabilizes the split.** Apply the ridge estimator $\hat\beta_{\text{ridge}} = (X^\top X + \lambda I)^{-1} X^\top y$ with a modest penalty $\lambda = 1$:
 
 $$
-\hat\beta_{\text{ridge}} = \begin{bmatrix} 0.861 \\ 0.706 \\ 0.892 \\ \end{bmatrix}.
+\hat\beta_{\text{ridge}} = \begin{bmatrix} 0.861 \\ 0.706 \\ 0.892 \end{bmatrix}.
 $$
 
 The shift of every eigenvalue of $X^\top X$ by $\lambda = 1$ (rung 7) cures the near-singular inversion. Both channel coefficients are now positive and close together — $0.706$ and $0.892$, a spread of $0.186$ rather than the OLS spread of $|3.563 - (-2.050)| = 5.613$ — and each sits at a sensible value reflecting that the two near-identical channels should receive near-identical credit. The wild sign flip is gone. The price, as the theory insists, is bias: the coefficients are shrunk toward zero (and their sum, $1.598$, no longer matches the OLS sum exactly), but in exchange for a collinear design that OLS rendered uninterpretable, ridge returns coefficients an analyst can actually report.
