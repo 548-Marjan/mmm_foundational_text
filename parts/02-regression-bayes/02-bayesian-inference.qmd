@@ -2,13 +2,13 @@
 
 *Canonical anchors: Gelman et al. (BDA3); Hoff.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapter 4 closed with a quiet revelation: ridge regression is not merely a numerical remedy for ill-conditioned systems. The penalized estimator $\hat\beta_{\text{ridge}} = (X^\top X + \lambda I)^{-1} X^\top y$ is the posterior mode of $p(\beta \mid y)$ under a Gaussian prior $\beta \sim \mathcal{N}(0, \tau^2 I)$ and the correspondence $\lambda = \sigma^2 / \tau^2$. That equivalence is exact, yet it delivers only one number per coefficient — the peak of the posterior — and discards the entire distribution surrounding that peak. The analyst who reports $\hat\beta_{\text{TV}} = 1.8$ from a ridge fit has recovered the most probable value, but nothing about how sharp or diffuse that peak is, how much posterior mass sits near zero, or what the data actually rule out.
+
+*"Ridge handed you $\hat\beta_{\text{TV}} = 1.8$. But how plausible is 1.5? Is 0 ruled out? And what will next quarter's sales actually be?"*
+
+None of these questions has a coherent answer inside the MAP framework. Answering them requires the full posterior $p(\beta \mid y)$ — the distribution over all values $\beta$ can take given the observed campaign data. Obtaining it is not a new operation: it is conditioning, applied to the regression model $y = X\beta + \varepsilon$, using Bayes' theorem that Chapter 3 already introduced. The conceptual shift relative to Chapter 4 is fundamental: $\beta$ is now treated as genuinely random, governed by a prior $p(\beta)$ that encodes beliefs or constraints before the data arrived, and the posterior $p(\beta \mid y) \propto p(y \mid \beta)\, p(\beta)$ is the exact update after observing $y$. From that single object, four payoffs follow. Credible intervals give the honest answer to "how sure are you?" — a 90% posterior interval is a direct probability statement about where $\beta$ lies, given this data, not a statement about hypothetical repeated samples. The posterior predictive distribution $p(\tilde{y} \mid y)$ propagates uncertainty in $\beta$ all the way through to sales forecasts, producing the uncertainty bands that budget-planning decisions actually require. Priors become explicit, auditable modeling choices: the non-negativity of media-channel effects can be stated directly as a constraint on $p(\beta)$, rather than enforced by ad hoc post-processing. And this chapter closes by tracing the boundary where that clean conjugate story ends — the moment adstock and saturation transformations enter the likelihood — because it is that boundary, not a pedagogical preference, that makes the Markov chain Monte Carlo methods of Part III a necessity rather than a convenience.
 
 ## Theory & Proofs
 
