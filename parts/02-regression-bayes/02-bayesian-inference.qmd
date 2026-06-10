@@ -12,7 +12,173 @@ None of these questions has a coherent answer inside the MAP framework. Answerin
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The four rungs below climb from the raw statement of Bayes' theorem to the full Gaussian posterior for linear regression, each rung the clean warm-up for the next. The through-line, already glimpsed at the end of Chapter 4, is that ridge regression is the posterior *mode*; this chapter delivers the entire posterior that mode sat on top of.
+
+### Rung 1 — The Bayesian framework
+
+The Bayesian framework reverses the direction of statistical inquiry. Chapter 4 asked which value of $\beta$ maximizes $p(y \mid \beta)$; Bayesian inference asks for the full conditional distribution $p(\beta \mid y)$. The two ingredients are the **prior** $p(\beta)$, encoding beliefs about $\beta$ before any data arrive, and the **likelihood** $p(y \mid \beta)$, scoring how probable the observed data would be under each candidate $\beta$. From the regression model $y = X\beta + \varepsilon$ with $\varepsilon \sim \mathcal{N}(0, \sigma^2 I)$ established in Chapter 3, the likelihood is
+
+$$
+p(y \mid \beta) = (2\pi\sigma^2)^{-n/2}\exp\!\left(-\frac{1}{2\sigma^2}\lVert y - X\beta \rVert^2\right).
+$$
+
+Bayes' theorem (Chapter 3) combines prior and likelihood into the **posterior**:
+
+$$
+p(\beta \mid y) = \frac{p(y \mid \beta)\, p(\beta)}{p(y)} \propto p(y \mid \beta)\, p(\beta).
+$$
+
+The denominator $p(y) = \int p(y \mid \beta)\, p(\beta)\, d\beta$ is the **evidence** — the prior-weighted probability of the data integrated over all $\beta$. It depends only on the model specification, not on $\beta$ itself, and acts purely as the normalizing constant ensuring $\int p(\beta \mid y)\, d\beta = 1$. In the conjugate settings of rungs 2–4 we identify the posterior's family by recognizing its **kernel** (the $\beta$-dependent factor in $p(y \mid \beta)\, p(\beta)$), after which the normalizing constant is forced by the known form of that family.
+
+Alongside the posterior sits the **posterior predictive distribution** for a future observation $\tilde{y}$:
+
+$$
+p(\tilde{y} \mid y) = \int p(\tilde{y} \mid \beta)\, p(\beta \mid y)\, d\beta.
+$$
+
+This marginalizes over the full posterior uncertainty in $\beta$, producing a forecast that honestly propagates everything the data constrain and everything they do not. Chapter 4's plug-in prediction $\hat{y} = X\hat\beta_{\text{ridge}}$ treats $\beta$ as fixed at its MAP estimate and discards the surrounding distribution entirely; the posterior predictive does not.
+
+The unifying slogan is **estimation becomes conditioning.** We do not minimize an objective; we condition a probability model on the observed data. The posterior $p(\beta \mid y)$ is the complete inferential object, and point estimates — posterior mode (MAP), posterior mean — are derived summaries of it. Chapter 4's ridge estimator $(X^\top X + \lambda I)^{-1}X^\top y$ is the MAP of $p(\beta \mid y)$ under the prior $\beta \sim \mathcal{N}(0, \tau^2 I)$: a single number extracted from a distribution whose full shape this chapter now develops.
+
+### Rung 2 — Conjugacy and the Beta–Binomial
+
+When the evidence integral $p(y) = \int p(y \mid \theta)\, p(\theta)\, d\theta$ admits a closed form, the posterior update reduces to algebra. A **conjugate** prior makes this systematic.
+
+**Definition.** A prior family $\mathcal{F}$ is **conjugate** to the likelihood $p(y \mid \theta)$ if, whenever the prior $p(\theta) \in \mathcal{F}$, the posterior $p(\theta \mid y) \in \mathcal{F}$ as well. The posterior remains in the same parametric family; observing data only updates the parameters.
+
+The simplest MMM instance is channel-conversion attribution: does a media channel drive purchases? Observe $k$ conversions from $n$ exposures. The probability of the observed count depends on the conversion rate $\theta \in (0, 1)$ through the Binomial kernel
+
+$$
+p(k \mid \theta) \propto \theta^k(1 - \theta)^{n-k}.
+$$
+
+Place a **Beta prior** on $\theta$: $\theta \sim \text{Beta}(\alpha, \beta)$, with density $p(\theta) \propto \theta^{\alpha-1}(1-\theta)^{\beta-1}$.
+
+> **Theorem (Beta–Binomial conjugacy).** Under $p(k \mid \theta) \propto \theta^k(1-\theta)^{n-k}$ with prior $\theta \sim \text{Beta}(\alpha, \beta)$, the posterior is $\theta \mid k \sim \text{Beta}(\alpha + k,\; \beta + n - k)$.
+
+**Proof.** Multiply prior and likelihood kernel-to-kernel:
+
+$$
+p(\theta \mid k) \propto \theta^k(1-\theta)^{n-k}\cdot\theta^{\alpha-1}(1-\theta)^{\beta-1} = \theta^{(\alpha+k)-1}(1-\theta)^{(\beta+n-k)-1}.
+$$
+
+This is the kernel of a $\text{Beta}(\alpha+k,\; \beta+n-k)$ density. Because a probability density must integrate to one, the normalizing constant is uniquely determined: it must be $B(\alpha+k,\, \beta+n-k)^{-1}$, the reciprocal of the Beta function at the updated parameters. Therefore
+
+$$
+p(\theta \mid k) = \frac{\theta^{(\alpha+k)-1}(1-\theta)^{(\beta+n-k)-1}}{B(\alpha+k,\, \beta+n-k)}.
+$$
+
+$\blacksquare$
+
+The proof strategy is **kernel-matching**: identify the $\theta$-dependent pattern in $p(k \mid \theta)\, p(\theta)$, recognize the distributional family, and read off the normalizing constant from the family's known form without performing the integral directly.
+
+The prior parameters $\alpha$ and $\beta$ act as **pseudo-counts** — $\alpha$ prior successes and $\beta$ prior failures — contributed before any data arrive. Observing $k$ successes in $n$ trials increments the counts to $\alpha + k$ and $\beta + (n - k)$. The posterior mean conversion rate
+
+$$
+\mathbb{E}[\theta \mid k] = \frac{\alpha + k}{\alpha + \beta + n}
+$$
+
+is a precision-weighted blend of the prior mean $\alpha/(\alpha+\beta)$ and the empirical rate $k/n$, with the data winning as $n \to \infty$. This one-dimensional conjugate proof is the clean warm-up; the same kernel-matching strategy, applied to the Gaussian exponential family's quadratic exponent, drives the next two rungs.
+
+### Rung 3 — The Gaussian conjugate
+
+The Gaussian family closes under conjugate updating because its log-density is quadratic in the parameter. **Completing the square** — grouping the quadratic, linear, and constant terms in the parameter separately — reads off the posterior mean and variance directly, without evaluating any normalizing integral. This scalar calculation is the exact blueprint for the multivariate regression proof of Rung 4.
+
+Let the prior be $\mu \sim \mathcal{N}(\mu_0, \tau^2)$ and observe $n$ i.i.d. draws $y_1, \ldots, y_n \mid \mu \sim \mathcal{N}(\mu, \sigma^2)$ with **known** noise variance $\sigma^2$. Write $\bar{y} = n^{-1}\sum_{i=1}^n y_i$ for the sample mean.
+
+> **Theorem (Gaussian conjugacy).** Under the above model, the posterior is $\mu \mid y \sim \mathcal{N}(\mu_{\text{post}}, \sigma_{\text{post}}^2)$ with posterior precision $1/\sigma_{\text{post}}^2 = 1/\tau^2 + n/\sigma^2$ and posterior mean $\mu_{\text{post}} = \sigma_{\text{post}}^2(\mu_0/\tau^2 + n\bar{y}/\sigma^2)$.
+
+**Proof.** The log-posterior, up to additive constants free of $\mu$, combines log-prior and log-likelihood:
+
+$$
+\log p(\mu \mid y) = -\frac{(\mu - \mu_0)^2}{2\tau^2} - \frac{n(\mu - \bar{y})^2}{2\sigma^2} + \text{const},
+$$
+
+where we used the identity $\sum_i(y_i - \mu)^2 = n(\mu - \bar{y})^2 + \sum_i(y_i - \bar{y})^2$ and absorbed the last piece into the constant. Expanding each squared term and grouping by powers of $\mu$:
+
+$$
+\log p(\mu \mid y) = -\frac{1}{2}\!\left(\frac{1}{\tau^2} + \frac{n}{\sigma^2}\right)\mu^2 + \left(\frac{\mu_0}{\tau^2} + \frac{n\bar{y}}{\sigma^2}\right)\mu + \text{const}.
+$$
+
+Define the **posterior precision** $\sigma_{\text{post}}^{-2} = \tau^{-2} + n\sigma^{-2}$. The quadratic and linear terms complete to a perfect square:
+
+$$
+-\frac{(\mu - \mu_{\text{post}})^2}{2\sigma_{\text{post}}^2} + \text{const},
+$$
+
+where the linear coefficient pins the posterior mean: $\mu_{\text{post}} = \sigma_{\text{post}}^2(\mu_0/\tau^2 + n\bar{y}/\sigma^2)$. A negative quadratic in $\mu$ is the hallmark of a Gaussian log-density, so the posterior is $\mathcal{N}(\mu_{\text{post}}, \sigma_{\text{post}}^2)$ with the stated parameters.
+
+$\blacksquare$
+
+Two readings are essential for what follows. First, **precisions add**:
+
+$$
+\frac{1}{\sigma_{\text{post}}^2} = \frac{1}{\tau^2} + \frac{n}{\sigma^2}.
+$$
+
+Each observation contributes precision $1/\sigma^2$; $n$ observations contribute $n/\sigma^2$; the prior precision $1/\tau^2$ stacks on top. Second, the posterior mean is a **precision-weighted average** of the prior mean $\mu_0$ and the sample mean $\bar{y}$:
+
+$$
+\mu_{\text{post}} = \frac{\tau^{-2}}{\tau^{-2} + n\sigma^{-2}}\,\mu_0 + \frac{n\sigma^{-2}}{\tau^{-2} + n\sigma^{-2}}\,\bar{y}.
+$$
+
+The weights sum to one and are proportional to the respective precisions. As $n \to \infty$ the data precision dominates and $\mu_{\text{post}} \to \bar{y}$, recovering the maximum-likelihood estimate; a vague prior ($\tau^2 \to \infty$) yields the same limit. This scalar proof is the complete blueprint; Rung 4 replaces the scalar precision $\sigma_{\text{post}}^{-2}$ with the $p \times p$ precision matrix $\Sigma_{\text{post}}^{-1}$.
+
+### Rung 4 — Bayesian linear regression
+
+We now execute the completing-the-square strategy for the full regression model. Place the **Gaussian prior** $\beta \sim \mathcal{N}(0, \tau^2 I)$ on $\beta \in \mathbb{R}^p$ and combine it with the Chapter 3 **Gaussian likelihood** $y \mid \beta \sim \mathcal{N}(X\beta, \sigma^2 I)$. Taking $-2$ times the log-posterior and dropping all terms free of $\beta$:
+
+$$
+-2\log p(\beta \mid y) = \frac{1}{\sigma^2}(y - X\beta)^\top(y - X\beta) + \frac{1}{\tau^2}\beta^\top\beta + \text{const}.
+$$
+
+This is quadratic in $\beta$ — the multivariate signature of a Gaussian posterior — so the proof is: expand, collect, complete the square, read off precision and mean.
+
+> **Theorem (Bayesian linear regression).** [@hoff2009] Under $y \mid \beta \sim \mathcal{N}(X\beta, \sigma^2 I)$ with prior $\beta \sim \mathcal{N}(0, \tau^2 I)$, the posterior is $\beta \mid y \sim \mathcal{N}(\mu_{\text{post}}, \Sigma_{\text{post}})$ with $\Sigma_{\text{post}} = (X^\top X/\sigma^2 + I/\tau^2)^{-1}$, $\mu_{\text{post}} = \Sigma_{\text{post}}\, X^\top y/\sigma^2$, and the keystone identity $\mu_{\text{post}} = (X^\top X + \lambda I)^{-1}X^\top y$ with $\lambda = \sigma^2/\tau^2$ — the Chapter 4 ridge estimator.
+
+**Proof.** Expand the fit term $(y - X\beta)^\top(y - X\beta) = y^\top y - 2\beta^\top X^\top y + \beta^\top X^\top X\beta$ and collect only the $\beta$-dependent terms:
+
+$$
+-2\log p(\beta \mid y) = \beta^\top\!\left(\frac{X^\top X}{\sigma^2} + \frac{I}{\tau^2}\right)\!\beta - \frac{2}{\sigma^2}\beta^\top X^\top y + \text{const}.
+$$
+
+Write $A = X^\top X/\sigma^2 + I/\tau^2$ — symmetric positive definite, since $I/\tau^2$ ensures strict positive definiteness regardless of the rank of $X$ — and $b = X^\top y/\sigma^2$. The expression is $\beta^\top A\beta - 2\beta^\top b + \text{const}$. Complete the square via the matrix identity
+
+$$
+\beta^\top A\beta - 2\beta^\top b = (\beta - A^{-1}b)^\top A\,(\beta - A^{-1}b) - b^\top A^{-1}b;
+$$
+
+the term $b^\top A^{-1}b$ is free of $\beta$ and folds into the constant. Therefore
+
+$$
+-2\log p(\beta \mid y) = (\beta - A^{-1}b)^\top A\,(\beta - A^{-1}b) + \text{const},
+$$
+
+which is the kernel of $\mathcal{N}(A^{-1}b,\, A^{-1})$. Reading off the parameters:
+
+$$
+\Sigma_{\text{post}} = A^{-1} = \left(\frac{X^\top X}{\sigma^2} + \frac{I}{\tau^2}\right)^{-1}, \qquad \mu_{\text{post}} = A^{-1}b = \Sigma_{\text{post}}\,\frac{X^\top y}{\sigma^2}.
+$$
+
+To identify $\mu_{\text{post}}$ as the ridge estimator, factor $\sigma^{-2}$ from $A$:
+
+$$
+A = \frac{1}{\sigma^2}\!\left(X^\top X + \frac{\sigma^2}{\tau^2}I\right) = \frac{1}{\sigma^2}(X^\top X + \lambda I), \qquad \lambda = \frac{\sigma^2}{\tau^2}.
+$$
+
+Substituting into $\mu_{\text{post}} = A^{-1}\,X^\top y/\sigma^2$:
+
+$$
+\begin{aligned}
+\mu_{\text{post}} &= \left[\frac{1}{\sigma^2}(X^\top X + \lambda I)\right]^{-1}\frac{X^\top y}{\sigma^2} \\[4pt]
+&= \sigma^2(X^\top X + \lambda I)^{-1}\cdot\frac{X^\top y}{\sigma^2} \\[4pt]
+&= (X^\top X + \lambda I)^{-1}X^\top y.
+\end{aligned}
+$$
+
+$\blacksquare$
+
+The payoff is the chapter's central claim. Chapter 4's ridge estimator $(X^\top X + \lambda I)^{-1}X^\top y$ was derived as the MAP estimate — the *mode* of $p(\beta \mid y)$. The theorem above shows that this mode sits atop a full Gaussian posterior $\mathcal{N}(\mu_{\text{post}}, \Sigma_{\text{post}})$. For a Gaussian distribution, mode and mean coincide, so $\hat\beta_{\text{ridge}} = \mu_{\text{post}}$ exactly: Chapter 4 computed the center of this distribution without realizing it was a distribution's center. The new object now in hand is $\Sigma_{\text{post}}$, the joint uncertainty over all $p$ coefficients simultaneously. The posterior precision $\Sigma_{\text{post}}^{-1} = X^\top X/\sigma^2 + I/\tau^2$ is the multivariate echo of Rung 3's "precisions add": data precision $X^\top X/\sigma^2$ and prior precision $I/\tau^2$ combine additively, and as $n$ grows $\Sigma_{\text{post}} \to \sigma^2(X^\top X)^{-1}$, the OLS sampling covariance of Chapter 4. The next rungs cash $\Sigma_{\text{post}}$ out: it generates **credible intervals** — direct probability statements about where each $\beta_j$ lies given this data, the honest answer to the Motivation's question — and the **posterior predictive covariance** that quantifies uncertainty bands in the MMM sales forecasts that budget-planning decisions require.
 
 ## Worked Examples
 
