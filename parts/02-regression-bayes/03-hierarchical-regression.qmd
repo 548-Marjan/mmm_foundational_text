@@ -457,8 +457,86 @@ The printed output ties every quantitative claim back to the chapter's theory. T
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** A geo-split Marketing Mix Model estimates a per-geography channel effect $\theta_g$ for $g = 1, \ldots, G$ designated market areas. The two-level Gaussian hierarchy has $\bar y_g \mid \theta_g \sim \mathcal{N}(\theta_g, \sigma^2/n_g)$ — each geography's sample mean is Gaussian around its true effect with variance $\sigma^2/n_g$ — and $\theta_g \sim \mathcal{N}(\mu, \tau^2)$, so the true effects are themselves drawn from a population with mean $\mu$ and between-geography variance $\tau^2$. The posterior mean under this model is the shrinkage formula $\hat\theta_g = \lambda_g \bar y_g + (1 - \lambda_g)\mu$ with $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$. Describe precisely what "complete pooling" and "no pooling" are as estimation procedures for a geo-MMM analyst; then show algebraically that the limits $\tau^2 \to 0$ and $\tau^2 \to \infty$ of the shrinkage formula recover complete and no pooling respectively, and explain what each limit asserts about geographic heterogeneity. Analyze the bias–variance trade-off for each stance using the decomposition $\mathbb{E}[(\hat\theta_g - \theta_g)^2] = (\mathbb{E}[\hat\theta_g] - \theta_g)^2 + \operatorname{Var}(\hat\theta_g)$: for complete pooling, write the squared-bias term explicitly and state under what condition on $\theta_g$ and $\mu$ this bias is large; for no pooling, write $\operatorname{Var}(\bar y_g) = \sigma^2/n_g$ and explain why this becomes problematic for a small DMA. Finally, state in which empirical scenario each stance is appropriate for a geo-MMM practitioner and identify the regime of $\tau^2$ relative to $\sigma^2/n_g$ where partial pooling delivers a better bias–variance balance than either extreme.
+
+**C2.** The shrinkage weight in the two-level Gaussian geo-MMM is $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$, where $n_g$ is the number of weekly observations for geography $g$, $\sigma^2$ is the known within-geo noise variance, and $\tau^2$ is the between-geography variance. Explain what happens to $\lambda_g$ as each of the quantities $n_g \to \infty$, $\sigma^2 \to \infty$, $\tau^2 \to \infty$, and $\tau^2 \to 0$ separately, and translate each limit into a verbal statement about whether the model should trust the local data or the national mean. A small DMA has $n_g = 4$ weeks of data; a large DMA has $n_g = 100$ weeks; both share $\sigma^2 = 4$ and $\tau^2 = 1$. Compute $\lambda_g$ for each and state in absolute terms how many units the small DMA's partial-pooled estimate is pulled from $\bar y_g$ toward $\mu$ relative to the large DMA's pullback. Explain why this differential shrinkage is described as the principled resolution of the practitioner's dilemma — "trust it, throw it out, or shrink it?" — and specifically what makes the shrinkage amount principled rather than arbitrary. Finally, in the empirical-Bayes extension of Rung 4, $\tau^2$ is estimated from all geographies via a variance-components decomposition rather than fixed by the analyst. Explain why learning $\tau^2$ from the data matters: what would go wrong if an analyst simply set $\tau^2 = 0.1$ for every MMM run regardless of dataset, and how does the data-driven estimate protect against both over-pooling (erasing real geographic heterogeneity) and under-pooling (fitting noise in data-sparse DMAs)?
+
+**C3.** The full joint posterior of the vectorized geo-MMM is
+
+$$
+p(\beta_{1:G}, \mu_\beta, \Sigma_\beta, \sigma^2 \mid y) \;\propto\; \left[\prod_{g=1}^G p(y_g \mid \beta_g, \sigma^2)\, p(\beta_g \mid \mu_\beta, \Sigma_\beta)\right] p(\mu_\beta)\, p(\Sigma_\beta)\, p(\sigma^2),
+$$
+
+where $\beta_g \in \mathbb{R}^p$ is the coefficient vector for geography $g$, $\mu_\beta \in \mathbb{R}^p$ is the population mean, $\Sigma_\beta \in \mathbb{R}^{p \times p}$ is the between-geography covariance, and $\sigma^2 > 0$ is the within-geo noise variance. Explain in detail why this joint posterior has no closed form, even though the individual likelihood $p(y_g \mid \beta_g, \sigma^2) = \mathcal{N}(X_g\beta_g, \sigma^2 I)$ and the individual prior $p(\beta_g \mid \mu_\beta, \Sigma_\beta) = \mathcal{N}(\mu_\beta, \Sigma_\beta)$ are each Gaussian: identify the specific integration step that destroys conjugacy when one attempts to obtain the marginal posterior of $\beta_g$ after integrating out $\Sigma_\beta$, and explain what property of the Inverse-Wishart distribution over $\Sigma_\beta$ makes that integral analytically intractable. Then explain why the full conditionals are each conjugate: identify the distributional family of $p(\beta_g \mid \text{rest})$, $p(\mu_\beta \mid \text{rest})$, $p(\Sigma_\beta \mid \text{rest})$, and $p(\sigma^2 \mid \text{rest})$ (Gaussian, Gaussian, Inverse-Wishart, and Inverse-Gamma respectively), and cite the Rung in the chapter's theory section that establishes each one. Conclude by explaining precisely why the combination — an intractable joint posterior but conjugate full conditionals — is exactly what makes the Gibbs sampler applicable, and state in one sentence why this structural property is the reason Part III is not optional for real-world MMM inference.
+
 ### B -- By Hand
+
+**B1.** A single DMA in a geo-MMM has between-geography variance $\tau^2 = 1$ (so prior precision $1/\tau^2 = 1$), known within-geo noise variance $\sigma^2 = 9$, population mean $\mu = 0$, and $n_g = 9$ weeks of observations with sample mean $\bar y_g = 6$. (a) Compute the data precision $n_g/\sigma^2$ and the shrinkage weight $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$; show that the arithmetic reduces cleanly to $\lambda_g = 1/(1 + 1) = 1/2$. (b) Compute the partial-pooled posterior mean $\hat\theta_g = \lambda_g \bar y_g + (1 - \lambda_g)\mu$ numerically and state the distance the estimate is pulled from the raw local mean $\bar y_g = 6$ toward the national mean $\mu = 0$. (c) Now increase the DMA's data to $n_g = 81$ weeks (same $\bar y_g = 6$, $\sigma^2 = 9$, $\tau^2 = 1$, $\mu = 0$); recompute $\lambda_g$ and $\hat\theta_g$ and compare the pullback distance to part (b). Explain why the nine-fold increase in sample size produces a dramatically smaller shrinkage, using the language of data precision versus prior precision.
+
+**B2.** A national MMM team has collected one aggregate observation per geo-cluster ($G = 5$ clusters, one observation each, known $\sigma^2 = 1$), giving the observed vector
+
+$$
+z = (3,\; 1,\; -2,\; 2,\; -2).
+$$
+
+(a) Compute $\lVert z\rVert^2 = \sum_{g=1}^5 z_g^2$ term by term and verify it equals $22$. (b) Compute the James–Stein shrink factor
+
+$$
+1 - \frac{(G-2)\sigma^2}{\lVert z\rVert^2}
+$$
+
+with $G = 5$ and $\sigma^2 = 1$, showing the factor equals $19/22 \approx 0.8636$. (c) Apply the factor to $z$ to obtain $\hat\theta^{\text{JS}} = (19/22)\,z$; write out all five components as exact fractions with denominator $22$ and as two-decimal-place decimals. (d) The true group means are $\theta = (2.5,\; 0.5,\; -1.5,\; 1.5,\; -1.5)$. Compute the total squared error of the MLE $\lVert z - \theta\rVert^2 = \sum_g (z_g - \theta_g)^2$ and the total squared error of $\hat\theta^{\text{JS}}$; state which estimator wins and by what multiplicative factor, confirming the James–Stein dominance theorem on this realization. Express the JS squared errors as exact fractions over $484 = 22^2$ to make the arithmetic clean.
+
+**B3.** A two-channel geo-MMM is fit for a single geography whose design matrix satisfies
+
+$$
+X_g^\top X_g = \begin{bmatrix} 4 & 1 \\ 1 & 3 \end{bmatrix}, \qquad X_g^\top y_g = \begin{bmatrix} 5 \\ 2 \end{bmatrix},
+$$
+
+with known noise variance $\sigma^2 = 1$. The population hyperparameters are $\mu_\beta = \begin{bmatrix} 0 \\ 0 \end{bmatrix}$ and $\Sigma_\beta = I_2$, so $\Sigma_\beta^{-1} = I_2$. (a) Form the full-conditional precision matrix $V_g^{-1} = X_g^\top X_g/\sigma^2 + \Sigma_\beta^{-1}$ explicitly; state the resulting $2 \times 2$ matrix and its determinant. (b) Compute the full-conditional covariance $V_g = (V_g^{-1})^{-1}$ by hand using the $2 \times 2$ inversion formula
+
+$$
+\begin{bmatrix} a & b \\ c & d \end{bmatrix}^{-1} = \frac{1}{ad - bc}\begin{bmatrix} d & -b \\ -c & a \end{bmatrix};
+$$
+
+write out $V_g$ as exact fractions. (c) Compute the full-conditional mean $m_g = V_g(X_g^\top y_g/\sigma^2 + \Sigma_\beta^{-1}\mu_\beta)$; since $\mu_\beta = 0$ this reduces to $m_g = V_g\,X_g^\top y_g/\sigma^2$; carry out the matrix–vector product explicitly and express both components of $m_g$ as exact fractions.
 
 ### P -- Prove It
 
+**P1.** Prove the partial-pooling shrinkage formula from first principles. Let $\bar y_g \mid \theta_g \sim \mathcal{N}(\theta_g, \sigma^2/n_g)$ and $\theta_g \sim \mathcal{N}(\mu, \tau^2)$ with $\sigma^2$, $n_g$, $\mu$, and $\tau^2$ all known. Write the joint log-density $\log p(\theta_g \mid \bar y_g) \propto \log p(\bar y_g \mid \theta_g) + \log p(\theta_g)$, drop all additive constants free of $\theta_g$, and collect the remaining quadratic and linear terms in $\theta_g$ into the form $-\tfrac{1}{2}[A\theta_g^2 - 2B\theta_g] + \text{const}$; identify $A$ and $B$ explicitly as functions of $n_g$, $\sigma^2$, $\tau^2$, $\mu$, and $\bar y_g$. Complete the square in $\theta_g$: apply the identity $A\theta_g^2 - 2B\theta_g = A(\theta_g - B/A)^2 - B^2/A$ and read off the posterior mean $B/A$ and posterior variance $1/A$ directly. Show that $B/A$ equals $\lambda_g \bar y_g + (1-\lambda_g)\mu$ with $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$ by writing $B/A$ as a single fraction with denominator $n_g/\sigma^2 + 1/\tau^2$ and factoring into the two-term convex combination. Verify that the limits $\lambda_g \to 1$ as $\tau^2 \to \infty$ (or $n_g \to \infty$) and $\lambda_g \to 0$ as $\tau^2 \to 0$ are recovered, confirming that the no-pooling and complete-pooling stances of Rung 1 are recovered as limiting cases.
+
+**P2.** Prove James–Stein dominance for $G \ge 3$. Observe $z \sim \mathcal{N}(\theta, \sigma^2 I_G)$ with $\theta \in \mathbb{R}^G$ unknown and $\sigma^2 > 0$ known. Write the James–Stein estimator as $\hat\theta^{\text{JS}} = z + g(z)$ with $g(z) = -(G-2)\sigma^2 z/\lVert z\rVert^2$. Stein's unbiased risk estimate (SURE) states that for any weakly differentiable $g : \mathbb{R}^G \to \mathbb{R}^G$,
+
+$$
+\mathbb{E}\lVert z + g(z) - \theta\rVert^2 = G\sigma^2 + \mathbb{E}\!\left[2\sigma^2\,\nabla\!\cdot g(z) + \lVert g(z)\rVert^2\right].
+$$
+
+(a) Compute $\lVert g(z)\rVert^2$ explicitly in terms of $G$, $\sigma^2$, and $\lVert z\rVert^2$. (b) Compute the divergence $\nabla\!\cdot(z/\lVert z\rVert^2) = \sum_{i=1}^G \partial(z_i/\lVert z\rVert^2)/\partial z_i$ by differentiating the $i$th component with respect to $z_i$ using $\partial \lVert z\rVert^2/\partial z_i = 2z_i$, summing over $i$, and simplifying $\sum_i z_i^2 = \lVert z\rVert^2$; show the result is $(G-2)/\lVert z\rVert^2$ and hence find $\nabla\!\cdot g(z)$. (c) Substitute both pieces into the SURE expression to obtain
+
+$$
+\mathbb{E}\lVert\hat\theta^{\text{JS}} - \theta\rVert^2 = G\sigma^2 - (G-2)^2\sigma^4\,\mathbb{E}\!\left[\frac{1}{\lVert z\rVert^2}\right],
+$$
+
+and conclude the risk is strictly below $G\sigma^2$ for every $\theta$ when $G \ge 3$, by arguing that $\mathbb{E}[1/\lVert z\rVert^2]$ is strictly positive and finite — use the fact that $\lVert z - \theta\rVert^2/\sigma^2 \sim \chi^2_G$ and a non-central chi-squared distribution with $G \ge 3$ degrees of freedom places zero probability mass on any bounded neighborhood of the origin, giving a finite reciprocal expectation.
+
+**P3.** Prove that the full conditional for $\beta_g$ in the hierarchical geo-MMM is Gaussian. The model for geography $g$ has likelihood $y_g \mid \beta_g \sim \mathcal{N}(X_g\beta_g, \sigma^2 I)$ with $y_g \in \mathbb{R}^T$ and $X_g \in \mathbb{R}^{T \times p}$, and prior $\beta_g \sim \mathcal{N}(\mu_\beta, \Sigma_\beta)$ with $\mu_\beta \in \mathbb{R}^p$ and $\Sigma_\beta \in \mathbb{R}^{p \times p}$ symmetric positive definite; treat $\sigma^2$, $\mu_\beta$, and $\Sigma_\beta$ as fixed. Write $-2\log p(\beta_g \mid y_g, \mu_\beta, \Sigma_\beta, \sigma^2)$ up to additive constants, expand $(y_g - X_g\beta_g)^\top(y_g - X_g\beta_g)$ and $(\beta_g - \mu_\beta)^\top \Sigma_\beta^{-1}(\beta_g - \mu_\beta)$, discard all terms free of $\beta_g$, and collect what remains into the form $\beta_g^\top A\beta_g - 2\beta_g^\top b + \text{const}$; identify $A$ and $b$ explicitly in terms of $X_g$, $y_g$, $\sigma^2$, $\mu_\beta$, and $\Sigma_\beta$. Apply the matrix completing-the-square identity
+
+$$
+\beta_g^\top A\beta_g - 2\beta_g^\top b = (\beta_g - A^{-1}b)^\top A\,(\beta_g - A^{-1}b) - b^\top A^{-1}b
+$$
+
+to conclude that the log-kernel is that of a Gaussian with covariance $V_g = A^{-1}$ and mean $m_g = A^{-1}b$; write $V_g$ and $m_g$ explicitly as
+
+$$
+\begin{aligned}
+V_g &= \left(\frac{X_g^\top X_g}{\sigma^2} + \Sigma_\beta^{-1}\right)^{-1}, \qquad m_g = V_g\!\left(\frac{X_g^\top y_g}{\sigma^2} + \Sigma_\beta^{-1}\mu_\beta\right).
+\end{aligned}
+$$
+
+Finally, verify that specializing to $\mu_\beta = 0$ and $\Sigma_\beta = \tau^2 I$ recovers the Chapter 5 Rung 4 posterior exactly, confirming that the hierarchical full conditional is Bayesian linear regression with a non-zero prior mean.
+
 ### A -- Applied / Code
+
+**A1.** *Three-way pooling simulation with shrinkage plot.* Simulate a scalar geo-MMM with $G = 30$ geographies. Draw week counts $n_g$ independently and uniformly from $\{4, 5, \ldots, 60\}$; set $\sigma^2 = 4.0$ and $\tau^2 = 1.0$; draw true effects $\theta_g \overset{\text{iid}}{\sim} \mathcal{N}(\mu, \tau^2)$ with $\mu = 2.0$; and generate group sample means $\bar y_g \sim \mathcal{N}(\theta_g, \sigma^2/n_g)$. Implement three estimators. **Complete pooling**: estimate every $\theta_g$ by the precision-weighted grand mean $\hat\mu = (\sum_g (n_g/\sigma^2)\bar y_g)/(\sum_g n_g/\sigma^2)$. **No pooling**: estimate each $\theta_g$ by $\bar y_g$. **Empirical-Bayes partial pooling**: set $\hat\mu$ as above, estimate $\hat\tau^2 = \max(0,\; \operatorname{Var}(\bar y_g) - n^{-1}\sum_g \sigma^2/n_g)$ (observed variance of the group means minus the average sampling variance, clamped at zero), then compute per-geography shrinkage weights $\hat\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\hat\tau^2)$ and partial-pooled estimates $\hat\theta_g^{\text{EB}} = \hat\lambda_g \bar y_g + (1 - \hat\lambda_g)\hat\mu$. Compute total RMSE against the known $\theta_g$ for all three methods and assert that partial pooling achieves strictly lower RMSE than both complete and no pooling. Produce a shrinkage plot: for each geography draw a line segment connecting its no-pooling estimate (at $y = 1$) to its partial-pooled estimate (at $y = 0$), colored by $n_g$; add a dashed vertical line at $\hat\mu$; verify visually that light-colored (small-$n_g$) geographies travel farther toward $\hat\mu$ than dark (large-$n_g$) geographies. Then sweep $\hat\tau^2$ by replacing $\tau^2_{\text{true}}$ with values $\tau^2 \in \{0.01, 0.1, 0.5, 1.0, 4.0, 16.0\}$ in the data-generating process (holding $\sigma^2$, $\mu$, and the $n_g$ fixed), refit partial pooling each time, and produce a second plot showing the partial-pooled estimates for the smallest-$n_g$ geography as a function of $\tau^2$; describe how the shrinkage strength changes and explain the direction in terms of the shrinkage weight formula.
+
+**A2.** *Scalar hierarchical Gibbs sampler and closed-form verification.* Simulate a scalar geo-MMM with $G = 15$ geographies: draw $n_g$ uniformly from $\{5, \ldots, 50\}$ (integer), set $\sigma^2 = 4.0$, $\tau^2 = 1.0$, $\mu = 2.0$, generate $\theta_g \overset{\text{iid}}{\sim} \mathcal{N}(\mu, \tau^2)$ and $\bar y_g \sim \mathcal{N}(\theta_g, \sigma^2/n_g)$. Implement a Gibbs sampler that cycles through the following conjugate full conditionals. (i) For each $g = 1, \ldots, G$ in turn: given current $(\mu, \tau^2, \sigma^2)$, draw $\theta_g$ from $\mathcal{N}(\hat m_g, v_g)$ where $\hat m_g = \lambda_g \bar y_g + (1-\lambda_g)\mu$, $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$, and $v_g = \lambda_g \sigma^2/n_g$. (ii) Given current $\{\theta_g\}$ and $\tau^2$: draw $\mu$ from $\mathcal{N}(\bar\theta,\; \tau^2/G)$ with $\bar\theta = G^{-1}\sum_g \theta_g$. (iii) Given current $\{\theta_g\}$ and $\mu$: draw $\tau^2$ from $\mathcal{IG}(a_0 + G/2,\; b_0 + \tfrac{1}{2}\sum_g(\theta_g - \mu)^2)$ using weak hyperpriors $a_0 = b_0 = 0.01$. Run $25{,}000$ Gibbs iterations and discard the first $5{,}000$ as warm-up. Compute the Gibbs posterior mean of every $\theta_g$ and compare it to the closed-form empirical-Bayes shrinkage estimate evaluated at the *true* hyperparameters ($\mu = 2.0$, $\tau^2 = 1.0$): assert that all $G$ absolute deviations are below $0.15$ and report the maximum deviation. Then explain in two sentences why the Gibbs posterior means do *not* match the closed-form shrinkage formula exactly, even with infinitely many samples: what additional source of uncertainty does the Gibbs sampler propagate that the closed-form empirical-Bayes estimate ignores, and why does that additional uncertainty make the full Bayesian approach more honest about the final coefficient estimates?
