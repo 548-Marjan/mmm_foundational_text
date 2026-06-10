@@ -180,6 +180,64 @@ $\blacksquare$
 
 The payoff is the chapter's central claim. Chapter 4's ridge estimator $(X^\top X + \lambda I)^{-1}X^\top y$ was derived as the MAP estimate — the *mode* of $p(\beta \mid y)$. The theorem above shows that this mode sits atop a full Gaussian posterior $\mathcal{N}(\mu_{\text{post}}, \Sigma_{\text{post}})$. For a Gaussian distribution, mode and mean coincide, so $\hat\beta_{\text{ridge}} = \mu_{\text{post}}$ exactly: Chapter 4 computed the center of this distribution without realizing it was a distribution's center. The new object now in hand is $\Sigma_{\text{post}}$, the joint uncertainty over all $p$ coefficients simultaneously. The posterior precision $\Sigma_{\text{post}}^{-1} = X^\top X/\sigma^2 + I/\tau^2$ is the multivariate echo of Rung 3's "precisions add": data precision $X^\top X/\sigma^2$ and prior precision $I/\tau^2$ combine additively, and as $n$ grows $\Sigma_{\text{post}} \to \sigma^2(X^\top X)^{-1}$, the OLS sampling covariance of Chapter 4. The next rungs cash $\Sigma_{\text{post}}$ out: it generates **credible intervals** — direct probability statements about where each $\beta_j$ lies given this data, the honest answer to the Motivation's question — and the **posterior predictive covariance** that quantifies uncertainty bands in the MMM sales forecasts that budget-planning decisions require.
 
+### Rung 5 — Credible intervals and posterior summaries
+
+The posterior $\beta \mid y \sim \mathcal{N}(\mu_{\text{post}}, \Sigma_{\text{post}})$ is a full probability distribution over $\beta$, and the most immediately useful thing a distribution can do is assign probability to regions. A **credible interval** for coefficient $\beta_j$ is any interval $[a, b]$ satisfying $P(\beta_j \in [a, b] \mid y) = 1 - \alpha$. The canonical choice is the **central** $1 - \alpha$ interval, which places equal probability mass $\alpha/2$ in each tail. For the Gaussian marginal $\beta_j \mid y \sim \mathcal{N}(\mu_{\text{post},j},\, [\Sigma_{\text{post}}]_{jj})$, the central interval takes the explicit form
+
+$$
+\mu_{\text{post},j} \pm z_{1-\alpha/2}\sqrt{[\Sigma_{\text{post}}]_{jj}},
+$$
+
+where $z_{1-\alpha/2}$ is the standard normal upper-tail quantile and $[\Sigma_{\text{post}}]_{jj}$ is the $j$-th diagonal entry of the posterior covariance.
+
+The interpretation is literal: given the observed data $y$ and the prior $p(\beta)$, the probability that $\beta_j$ falls inside this interval is exactly $1 - \alpha$. No qualification about repeated sampling, no implicit reference to a long-run procedure — just a direct probability statement about the parameter given what was actually observed.
+
+That directness stands in sharp contrast to the frequentist **confidence interval** from Chapter 4. In the OLS sampling framework, $\beta$ is a fixed unknown and the data are the random objects; the interval $\hat\beta_j \pm z_{1-\alpha/2}\hat\sigma_j$ is itself random because $\hat\beta_j$ and $\hat\sigma_j$ vary across datasets. "Ninety-five percent confidence" describes the long-run behavior of the *procedure*: ninety-five percent of all intervals constructed by this rule, over repeated draws of $y$ from the true model, would contain the fixed true $\beta_j$. It is a statement about the interval, not about the parameter. A specific realized interval either does or does not contain the true $\beta_j$; frequentist theory assigns no probability to which case holds for the particular interval in front of you. The Bayesian credible interval makes exactly that statement — but only because the prior converts $\beta$ from a fixed unknown into a random quantity whose probability can be discussed. The confidence interval requires no such commitment; the credible interval requires it and is rewarded with the more natural language.
+
+The posterior also supports several **point summaries**. The **posterior mean** $\mu_{\text{post}} = \mathbb{E}[\beta \mid y]$ minimizes posterior expected squared error. The **posterior median** minimizes expected absolute error. The **MAP mode** maximizes $p(\beta \mid y)$. For the symmetric Gaussian posterior of Rung 4, all three coincide at $\mu_{\text{post}}$ — which is precisely why Chapter 4's ridge estimator, derived as the MAP mode, is also the posterior mean and posterior median. Once the non-negativity constraint of Rung 7 truncates the posterior, symmetry is lost: the mode shifts toward zero, the mean sits above it, and the median lies between them. The choice of point summary then becomes a substantive modeling decision, not a matter of convenience.
+
+### Rung 6 — The posterior predictive distribution
+
+Rungs 1–5 characterize uncertainty in the model parameters $\beta$. Marketing decisions, however, are about *outcomes* — specifically, the sales $\tilde{y}$ that a planned media spend $\tilde{x}$ would generate next quarter. The posterior predictive distribution $p(\tilde{y} \mid y)$ carries the posterior uncertainty in $\beta$ forward into a forecast by marginalizing $\beta$ out of the joint distribution $p(\tilde{y}, \beta \mid y)$. For Bayesian linear regression this marginalization yields a closed form.
+
+> **Theorem (posterior predictive).** Under the model of Rung 4, let $\tilde{y} = \tilde{x}^\top\beta + \tilde{\varepsilon}$ for a fixed covariate vector $\tilde{x} \in \mathbb{R}^p$, with $\tilde{\varepsilon} \sim \mathcal{N}(0, \sigma^2)$ independent of $\beta \mid y$. Then $\tilde{y} \mid y \sim \mathcal{N}\!\left(\tilde{x}^\top\mu_{\text{post}},\;\tilde{x}^\top\Sigma_{\text{post}}\,\tilde{x} + \sigma^2\right)$.
+
+**Proof.** Conditional on $y$, the posterior is $\beta \mid y \sim \mathcal{N}(\mu_{\text{post}}, \Sigma_{\text{post}})$. The linear form $\tilde{x}^\top\beta$ is a scalar affine image of a Gaussian vector, so by the affine-image property:
+
+$$
+\tilde{x}^\top\beta \mid y \;\sim\; \mathcal{N}\!\left(\tilde{x}^\top\mu_{\text{post}},\;\tilde{x}^\top\Sigma_{\text{post}}\,\tilde{x}\right).
+$$
+
+Adding the independent noise $\tilde{\varepsilon} \sim \mathcal{N}(0, \sigma^2)$ to $\tilde{x}^\top\beta$ sums independent Gaussians — means add and variances add — giving
+
+$$
+\tilde{y} \mid y \;=\; \tilde{x}^\top\beta + \tilde{\varepsilon} \;\sim\; \mathcal{N}\!\left(\tilde{x}^\top\mu_{\text{post}},\;\tilde{x}^\top\Sigma_{\text{post}}\,\tilde{x} + \sigma^2\right).
+$$
+
+$\blacksquare$
+
+The predictive variance decomposes into two structurally distinct contributions. The term $\tilde{x}^\top\Sigma_{\text{post}}\,\tilde{x}$ is **parameter uncertainty** (epistemic): it measures how much the posterior spread in $\beta$ — our remaining uncertainty about the true model coefficients — propagates into spread in the forecast through the planned spend vector $\tilde{x}$. As the training data accumulate, $\Sigma_{\text{post}} \to \sigma^2(X^\top X)^{-1} \to 0$, so this term shrinks: more data tighten the posterior and narrow the predictive band. The term $\sigma^2$ is **irreducible noise** (aleatoric): genuine randomness in next quarter's sales that would remain even if $\beta$ were perfectly known. No amount of additional historical data eliminates it.
+
+The practical consequence for MMM is direct. Forecasting next quarter's sales at a planned spend $\tilde{x}$ with the plug-in estimate $\tilde{x}^\top\hat\beta_{\text{ridge}}$ reports only the predictive mean; it silently treats $\Sigma_{\text{post}} = 0$ and discards the parameter uncertainty entirely. Budget-planning decisions that depend on a risk margin — holding reserves when forecast uncertainty is wide, committing aggressively when the posterior is tight — cannot be made rationally from a point forecast alone. The posterior predictive distribution is the correct object for those decisions.
+
+### Rung 7 — Priors in practice and the conjugacy wall
+
+The Gaussian prior $\beta \sim \mathcal{N}(0, \tau^2 I)$ was mathematically convenient: it is conjugate to the Gaussian likelihood and yields the clean closed-form posterior of Rung 4. But the choice of $\tau^2$ is a genuine modeling decision, not a formality, and the conjugate Gaussian family covers only a small corner of the space of priors that real MMM problems require.
+
+**Prior calibration.** The prior precision $1/\tau^2$ is a dial controlling how strongly the prior pulls coefficients toward zero. Set $\tau^2$ large — a vague, diffuse prior — and the prior contributes negligible precision: $\Sigma_{\text{post}}^{-1} \approx X^\top X/\sigma^2$ and $\mu_{\text{post}} \approx (X^\top X)^{-1}X^\top y$, recovering OLS as $\lambda = \sigma^2/\tau^2 \to 0$. Set $\tau^2$ small — a tight, informative prior — and the coefficients are shrunk hard toward zero, corresponding to large-penalty ridge. The pseudo-count reading of Rung 2 generalizes: specifying a prior is equivalent to augmenting the dataset with imaginary observations encoding the prior beliefs. **Weakly-informative defaults** — Gaussian priors wide enough not to exclude plausible values but tight enough to prevent coefficients from drifting to implausible extremes — regularize without asserting strong substantive beliefs, and are now standard practice in applied Bayesian modeling [@gelman2013].
+
+**The MMM-critical sign constraint.** Media channels are expected to drive sales, not suppress them: economic theory and advertising practice both demand $\beta_j \ge 0$ for each channel $j$. The natural encoding is a **half-normal** or **truncated-normal** prior on each channel coefficient:
+
+$$
+p(\beta_j) \;\propto\; \exp\!\left(-\frac{\beta_j^2}{2\tau^2}\right)\mathbf{1}[\beta_j \ge 0].
+$$
+
+This prior encodes the sign constraint directly, before any data arrive, rather than enforcing it by post-processing. But it is **not conjugate** to the Gaussian likelihood. Multiplying the Gaussian likelihood kernel by the truncated-Gaussian prior kernel produces a function that is Gaussian in shape but restricted to the non-negative half-line; the resulting posterior is a truncated normal with no closed-form expression for its mean vector or covariance matrix. Computing the posterior mean $\mathbb{E}[\beta \mid y]$ now requires integrating over the truncated support, which involves the Gaussian CDF rather than elementary matrix algebra. Conjugacy was a luxury of the unconstrained Gaussian-Gaussian pairing; the indicator $\mathbf{1}[\beta_j \ge 0]$ dissolves it.
+
+**The wall.** The truncated-prior problem, though it forfeits conjugacy, is geometrically mild compared to what realistic MMM specifications introduce. Practical models pass media spend through an **adstock** (carryover) transformation — modeling the geometric decay of advertising's lingering effect — and a **saturation** transformation — a diminishing-returns curve such as the Hill function $f(x;\, K, n) = x^n/(K^n + x^n)$ — before the linear stage. Both transforms are nonlinear functions of their own parameters (decay rates, saturation half-points, Hill exponents), which means the full likelihood $p(y \mid \beta, \theta_{\text{adstock}}, \theta_{\text{sat}})$ is **nonlinear in the model parameters**. The negative log-posterior is no longer quadratic in all parameters simultaneously, the completing-the-square strategy of Rung 4 has no purchase, and the posterior $p(\beta, \theta \mid y)$ has no closed form at all — not just for the covariance matrix, but for the entire distributional shape [@gelman2013]. This is not a gap that more careful algebra might close. It is a structural barrier: the quadratic-exponent algebra that made Rung 4 tractable requires the log-likelihood to be quadratic in all parameters simultaneously, and nonlinear transforms break that condition permanently.
+
+What follows from this barrier is not a dead end but a change of tools. A posterior that cannot be written down can still be **sampled from**, and samples from the posterior carry every inferential quantity that a closed-form expression would — posterior means, credible intervals, predictive distributions, and marginals over any subset of parameters. Constructing those samples is the business of **Markov chain Monte Carlo**, developed in Part III. Everything established in the rungs above — the prior, the likelihood, the Bayes' theorem update, the posterior predictive decomposition of Rung 6 — defines exactly what MCMC will be sampling from. The conjugacy wall at the end of this section is not a flaw in the exposition; it is the precise structural reason that Part III is not optional.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
