@@ -706,4 +706,303 @@ print("OLS:", np.round(ols, 4))
 
 The qualitative takeaway: the $\tau^2$ sweep makes the Bayesian–frequentist connection concrete — the prior variance is a continuous knob interpolating between full shrinkage and OLS, with $\lambda=\sigma^2/\tau^2$ as the ridge parameter. The predictive band's irreducible floor is the visual proof that parameter certainty and predictive certainty are fundamentally distinct objects.
 
+## Chapter 6 — Hierarchical Models
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** **Complete pooling** is the practice of fitting one national regression with a single shared channel-effect estimate $\hat\theta = \hat\mu$ for every geography — equivalently, the $\tau^2\to 0$ limit of the hierarchical model. In the shrinkage formula $\hat\theta_g = \lambda_g\bar y_g + (1-\lambda_g)\mu$, as $\tau^2\to 0$ the prior precision $1/\tau^2\to\infty$ dominates the denominator of $\lambda_g$, forcing $\lambda_g\to 0$ and therefore $\hat\theta_g\to\mu$. Complete pooling asserts that geographies are identical ($\tau^2=0$), so a single shared value is the correct estimate for every DMA. **No pooling** is the practice of fitting $G$ entirely independent regressions, retaining each group sample mean $\hat\theta_g = \bar y_g$ — equivalently, the $\tau^2\to\infty$ limit. As $\tau^2\to\infty$ the prior precision $1/\tau^2\to 0$, so $\lambda_g\to 1$ and $\hat\theta_g\to\bar y_g$. No pooling asserts that geographies are completely unrelated, so each DMA's estimate is determined entirely by its own data.
+
+The bias–variance trade-off for each stance follows from the MSE decomposition $\mathbb{E}[(\hat\theta_g - \theta_g)^2] = (\mathbb{E}[\hat\theta_g] - \theta_g)^2 + \operatorname{Var}(\hat\theta_g)$.
+
+For **complete pooling**, the estimator is the constant $\mu$, so $\operatorname{Var}(\hat\theta_g)=0$ but the squared bias is
+$$
+(\mu - \theta_g)^2,
+$$
+which is large whenever a DMA's true effect $\theta_g$ differs substantially from the national mean $\mu$. This bias is systematic: it does not shrink with more data within the geography, only with a more homogeneous market.
+
+For **no pooling**, the estimator $\bar y_g$ is unbiased ($\mathbb{E}[\bar y_g] = \theta_g$), so the squared-bias term is zero, but the variance is
+$$
+\operatorname{Var}(\bar y_g) = \frac{\sigma^2}{n_g},
+$$
+which diverges as $n_g\to 0$. A DMA with only a handful of active weeks produces a wildly noisy estimate: a "TV coefficient of 9.2 on 10 weeks of data" is sampling noise, not signal.
+
+Partial pooling dominates both extremes in the regime where $\tau^2$ is comparable to $\sigma^2/n_g$: neither source of error is negligible and the hierarchy correctly trades off the two. When geographies are genuinely heterogeneous and all DMAs are data-rich, no pooling is defensible. When all geographies are truly identical and data are abundant, complete pooling incurs no bias cost.
+
+**C2.** The shrinkage weight $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$ behaves as follows under each limiting change.
+
+- $n_g\to\infty$: data precision $n_g/\sigma^2\to\infty$, so $\lambda_g\to 1$ — the model trusts the local data completely and $\hat\theta_g\to\bar y_g$.
+- $\sigma^2\to\infty$: each observation is dominated by noise, data precision $\to 0$, so $\lambda_g\to 0$ — the model ignores the local data and falls back on the national mean.
+- $\tau^2\to\infty$: prior precision $1/\tau^2\to 0$, so $\lambda_g\to 1$ — geographies are treated as unrelated and the model trusts local data.
+- $\tau^2\to 0$: prior precision dominates, so $\lambda_g\to 0$ — the prior asserts all geographies are identical and the model trusts the national mean.
+
+For the small DMA with $n_g=4$, $\sigma^2=4$, $\tau^2=1$: data precision $=4/4=1$ and prior precision $=1$, so
+$$
+\lambda_{\text{small}} = \frac{1}{1+1} = 0.5.
+$$
+For the large DMA with $n_g=100$, same $\sigma^2=4$, $\tau^2=1$: data precision $=100/4=25$, prior precision $=1$, so
+$$
+\lambda_{\text{large}} = \frac{25}{25+1} = \frac{25}{26} \approx 0.962.
+$$
+If both DMAs observe $\bar y_g - \mu = 4$ units above the national mean, the small DMA's estimate is pulled $(1-0.5)\cdot 4 = 2$ units toward $\mu$, while the large DMA's estimate is pulled only $(1/26)\cdot 4 \approx 0.15$ units. The shrinkage is principled because the amount is determined by the ratio of data precision to prior precision — not by analyst judgment.
+
+Fixing $\tau^2=0.1$ for every run regardless of dataset forces $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 10)$. On a heterogeneous dataset where the true $\tau^2$ is large, this hard-wired small $\tau^2$ over-pools, erasing real geographic differences and introducing systematic bias in every estimate. On a homogeneous, noisy dataset where $\tau^2$ genuinely is small, a larger fixed value under-pools, inflating variance in data-sparse DMAs by trusting their noisy local means too much. The data-driven estimate $\hat\tau^2$ adapts to the actual between-geography spread, protecting against both failure modes simultaneously.
+
+**C3.** Each individual factor in the joint posterior is Gaussian: the likelihood $p(y_g\mid\beta_g,\sigma^2) = \mathcal{N}(X_g\beta_g,\sigma^2 I)$ is Gaussian in $y_g$ given $\beta_g$, and the prior $p(\beta_g\mid\mu_\beta,\Sigma_\beta)=\mathcal{N}(\mu_\beta,\Sigma_\beta)$ is Gaussian in $\beta_g$. The obstacle to a closed-form joint posterior is that $\Sigma_\beta$ appears simultaneously inside $p(\beta_g\mid\mu_\beta,\Sigma_\beta)$ for *every* geography $g$ and inside its own prior $p(\Sigma_\beta)$. Attempting to marginalize over $\Sigma_\beta$ yields an integrand of the form $(\text{Inverse-Wishart}) \times \prod_g \mathcal{N}(\beta_g\mid\mu_\beta,\Sigma_\beta)$; the Inverse-Wishart kernel couples all $G$ scatter contributions $(\beta_g - \mu_\beta)(\beta_g-\mu_\beta)^\top$ in the matrix-exponential, and the resulting integral over $\Sigma_\beta$ is not of standard Gaussian form. The marginal of $\beta_g$ after integrating out $\Sigma_\beta$ is a multivariate-$t$-like object with no closed normalizing constant — conjugacy is irreversibly broken by the extra layer of uncertainty.
+
+The four full conditionals, however, are each conjugate.
+
+- $p(\beta_g\mid\text{rest})$: with $\mu_\beta$, $\Sigma_\beta$, $\sigma^2$ fixed, the model for geography $g$ is Bayesian linear regression with a Gaussian prior — Rung 6 of this chapter (equivalently, Chapter 5 Rung 4 with prior mean shifted to $\mu_\beta$). The log-kernel is quadratic in $\beta_g$, so the full conditional is $\mathcal{N}(m_g,V_g)$ as derived in Rung 6.
+- $p(\mu_\beta\mid\text{rest})$: with $\{\beta_g\}$ and $\Sigma_\beta$ fixed, the $G$ vectors $\beta_g\overset{\text{iid}}{\sim}\mathcal{N}(\mu_\beta,\Sigma_\beta)$ treat $\mu_\beta$ as a Gaussian location with $G$ observations — this is Chapter 5 Rung 3 applied across groups, yielding a Gaussian full conditional.
+- $p(\Sigma_\beta\mid\text{rest})$: with $\{\beta_g\}$ and $\mu_\beta$ fixed, the between-group scatter $S=\sum_g(\beta_g-\mu_\beta)(\beta_g-\mu_\beta)^\top$ is the sufficient statistic, and the Inverse-Wishart prior is conjugate for a Gaussian likelihood with unknown covariance — the full conditional is $\mathcal{IW}(\Psi_0+S,\nu_0+G)$ as in Rung 6.
+- $p(\sigma^2\mid\text{rest})$: with $\{\beta_g\}$ fixed, the pooled residual sum of squares is the sufficient statistic for $\sigma^2$, and the Inverse-Gamma prior is conjugate — the full conditional is $\mathcal{IG}$ as in Rung 6.
+
+The combination of an intractable joint posterior with conjugate full conditionals is precisely what makes the Gibbs sampler applicable: one samples the joint distribution by cycling through exact draws from each full conditional in turn, and a convergence theorem (Part III's core result) guarantees the chain reaches the target joint posterior. Part III is not optional because no closed-form joint exists, yet each Gibbs step is a Chapter 5 result applied one level higher in the hierarchy — MCMC is the only exact inference strategy available for the full geo-MMM.
+
+### B — By Hand
+
+**B1.** **(a)** The data precision is $n_g/\sigma^2 = 9/9 = 1$ and the prior precision is $1/\tau^2 = 1/1 = 1$. The shrinkage weight is
+$$
+\lambda_g = \frac{n_g/\sigma^2}{n_g/\sigma^2 + 1/\tau^2} = \frac{1}{1 + 1} = \frac{1}{2}.
+$$
+
+**(b)** The partial-pooled posterior mean is
+$$
+\hat\theta_g = \lambda_g\bar y_g + (1-\lambda_g)\mu = \frac{1}{2}\cdot 6 + \frac{1}{2}\cdot 0 = 3.
+$$
+The estimate is pulled $6 - 3 = 3$ units from $\bar y_g = 6$ toward $\mu = 0$: with equal data and prior precisions, both contribute equally and the posterior mean lands exactly halfway between the local mean and the national mean.
+
+**(c)** With $n_g = 81$: data precision $= 81/9 = 9$, prior precision $= 1$, so
+$$
+\lambda_g = \frac{9}{9 + 1} = \frac{9}{10} = 0.9, \qquad \hat\theta_g = 0.9\cdot 6 + 0.1\cdot 0 = 5.4.
+$$
+The pullback is now only $6 - 5.4 = 0.6$ units, compared to $3.0$ units at $n_g=9$. The nine-fold increase in sample size raised the data precision from $1$ to $9$ while the prior precision remained $1$; the ratio $9:1$ means data now carry nine times as much weight as the prior, so the estimate is anchored overwhelmingly to $\bar y_g$ and barely moves toward $\mu$.
+
+**B2.** **(a)** Computing $\lVert z\rVert^2$ term by term:
+$$
+\lVert z\rVert^2 = 3^2 + 1^2 + (-2)^2 + 2^2 + (-2)^2 = 9 + 1 + 4 + 4 + 4 = 22.
+$$
+
+**(b)** With $G=5$ and $\sigma^2=1$ the James–Stein shrink factor is
+$$
+1 - \frac{(G-2)\sigma^2}{\lVert z\rVert^2} = 1 - \frac{3\cdot 1}{22} = 1 - \frac{3}{22} = \frac{19}{22} \approx 0.8636.
+$$
+
+**(c)** Applying the factor to $z$:
+$$
+\hat\theta^{\text{JS}} = \frac{19}{22}\,z = \left(\frac{57}{22},\;\frac{19}{22},\;-\frac{38}{22},\;\frac{38}{22},\;-\frac{38}{22}\right) \approx (2.59,\;0.86,\;-1.73,\;1.73,\;-1.73).
+$$
+
+**(d)** Writing $\theta = (5/2,1/2,-3/2,3/2,-3/2)$ in twenty-seconds gives $\theta = (55/22,11/22,-33/22,33/22,-33/22)$.
+
+The MLE total squared error is
+$$
+\lVert z - \theta\rVert^2 = \left(\frac{1}{2}\right)^2\!\times 5 = \frac{5}{4} = 1.25.
+$$
+
+For the James–Stein estimator, the componentwise errors in twenty-seconds are $2/22$, $8/22$, $-5/22$, $5/22$, $-5/22$:
+$$
+\lVert\hat\theta^{\text{JS}} - \theta\rVert^2 = \frac{4 + 64 + 25 + 25 + 25}{484} = \frac{143}{484} \approx 0.2955.
+$$
+
+James–Stein wins by a factor of $(5/4)\div(143/484) = 2420/572 \approx 4.23$: uniform shrinkage toward zero reduces total squared error by about 76\% on this realization, confirming the Rung 3 dominance theorem.
+
+**B3.** **(a)** The full-conditional precision matrix is
+$$
+V_g^{-1} = \frac{X_g^\top X_g}{\sigma^2} + \Sigma_\beta^{-1} = \begin{bmatrix}4&1\\1&3\end{bmatrix} + \begin{bmatrix}1&0\\0&1\end{bmatrix} = \begin{bmatrix}5&1\\1&4\end{bmatrix}.
+$$
+The determinant is $\det V_g^{-1} = 5\cdot 4 - 1\cdot 1 = 19$.
+
+**(b)** Applying the $2\times 2$ inversion formula with determinant $19$:
+$$
+V_g = \frac{1}{19}\begin{bmatrix}4&-1\\-1&5\end{bmatrix}.
+$$
+
+**(c)** Since $\mu_\beta = 0$ the full-conditional mean reduces to $m_g = V_g\,X_g^\top y_g/\sigma^2 = V_g\,(5,2)^\top$. Carrying out the matrix–vector product:
+$$
+m_g = \frac{1}{19}\begin{bmatrix}4&-1\\-1&5\end{bmatrix}\begin{bmatrix}5\\2\end{bmatrix} = \frac{1}{19}\begin{bmatrix}4\cdot5 - 1\cdot2\\-1\cdot5 + 5\cdot2\end{bmatrix} = \frac{1}{19}\begin{bmatrix}18\\5\end{bmatrix} = \begin{bmatrix}18/19\\5/19\end{bmatrix}\approx\begin{bmatrix}0.947\\0.263\end{bmatrix}.
+$$
+
+### P — Prove It
+
+**P1.** *Claim.* For the two-level Gaussian model $\bar y_g\mid\theta_g\sim\mathcal{N}(\theta_g,\sigma^2/n_g)$ and $\theta_g\sim\mathcal{N}(\mu,\tau^2)$ with $\sigma^2$, $n_g$, $\mu$, $\tau^2$ all known, the posterior is $\theta_g\mid\bar y_g\sim\mathcal{N}(\lambda_g\bar y_g+(1-\lambda_g)\mu,\;1/A)$ with $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$ and $A = n_g/\sigma^2 + 1/\tau^2$.
+
+*Proof.* By Bayes' rule, $-2\log p(\theta_g\mid\bar y_g)$ equals, up to $\theta_g$-free constants,
+$$
+\frac{(\bar y_g - \theta_g)^2}{\sigma^2/n_g} + \frac{(\theta_g - \mu)^2}{\tau^2} = \frac{n_g}{\sigma^2}(\bar y_g - \theta_g)^2 + \frac{1}{\tau^2}(\theta_g - \mu)^2.
+$$
+Expanding and collecting powers of $\theta_g$:
+$$
+-2\log p(\theta_g\mid\bar y_g) = \underbrace{\left(\frac{n_g}{\sigma^2}+\frac{1}{\tau^2}\right)}_{=:\,A}\theta_g^2 - 2\underbrace{\left(\frac{n_g\bar y_g}{\sigma^2}+\frac{\mu}{\tau^2}\right)}_{=:\,B}\theta_g + \text{const}.
+$$
+Applying the completing-the-square identity $A\theta_g^2 - 2B\theta_g = A(\theta_g - B/A)^2 - B^2/A$ gives
+$$
+-2\log p(\theta_g\mid\bar y_g) = A\!\left(\theta_g - \frac{B}{A}\right)^2 + \text{const},
+$$
+which is the kernel of $\mathcal{N}(B/A,\,1/A)$. The posterior mean is
+$$
+\frac{B}{A} = \frac{n_g\bar y_g/\sigma^2 + \mu/\tau^2}{n_g/\sigma^2 + 1/\tau^2} = \frac{n_g/\sigma^2}{n_g/\sigma^2+1/\tau^2}\,\bar y_g + \frac{1/\tau^2}{n_g/\sigma^2+1/\tau^2}\,\mu = \lambda_g\bar y_g + (1-\lambda_g)\mu,
+$$
+and the posterior variance is $1/A$. As $\tau^2\to\infty$, $1/\tau^2\to 0$ so $\lambda_g\to 1$ (no pooling, $\hat\theta_g\to\bar y_g$); as $\tau^2\to 0$, $1/\tau^2\to\infty$ so $\lambda_g\to 0$ (complete pooling, $\hat\theta_g\to\mu$). Likewise $\lambda_g\to 1$ as $n_g\to\infty$, recovering the data-dominated limit. $\blacksquare$
+
+**P2.** *Claim.* For $G\ge 3$ and $z\sim\mathcal{N}(\theta,\sigma^2 I_G)$, the James–Stein estimator $\hat\theta^{\text{JS}}=z+g(z)$ with $g(z) = -(G-2)\sigma^2 z/\lVert z\rVert^2$ satisfies $\mathbb{E}\lVert\hat\theta^{\text{JS}}-\theta\rVert^2 < G\sigma^2$ for every $\theta\in\mathbb{R}^G$.
+
+*Proof via Stein's SURE.* By the SURE formula it suffices to show $2\sigma^2\,\nabla\!\cdot g + \lVert g\rVert^2 < 0$.
+
+**(a) $\lVert g(z)\rVert^2$.** With scalar $c = (G-2)\sigma^2/\lVert z\rVert^2$:
+$$
+\lVert g(z)\rVert^2 = c^2\lVert z\rVert^2 = \frac{(G-2)^2\sigma^4}{\lVert z\rVert^4}\cdot\lVert z\rVert^2 = \frac{(G-2)^2\sigma^4}{\lVert z\rVert^2}.
+$$
+
+**(b) $\nabla\!\cdot g$.** Differentiating $g_i(z) = -(G-2)\sigma^2\,z_i/\lVert z\rVert^2$ with respect to $z_i$ (using $\partial\lVert z\rVert^2/\partial z_i = 2z_i$):
+$$
+\frac{\partial g_i}{\partial z_i} = -(G-2)\sigma^2\!\left(\frac{1}{\lVert z\rVert^2} - \frac{2z_i^2}{\lVert z\rVert^4}\right).
+$$
+Summing over $i$ and using $\sum_i z_i^2 = \lVert z\rVert^2$:
+$$
+\nabla\!\cdot g = -(G-2)\sigma^2\!\left(\frac{G}{\lVert z\rVert^2} - \frac{2}{\lVert z\rVert^2}\right) = -\frac{(G-2)^2\sigma^2}{\lVert z\rVert^2}.
+$$
+
+**(c) Risk bound.** Substituting both pieces into the SURE expression:
+$$
+2\sigma^2\,\nabla\!\cdot g + \lVert g\rVert^2 = -\frac{2(G-2)^2\sigma^4}{\lVert z\rVert^2} + \frac{(G-2)^2\sigma^4}{\lVert z\rVert^2} = -\frac{(G-2)^2\sigma^4}{\lVert z\rVert^2} \;\le\; 0.
+$$
+Therefore
+$$
+\mathbb{E}\lVert\hat\theta^{\text{JS}}-\theta\rVert^2 = G\sigma^2 - (G-2)^2\sigma^4\,\mathbb{E}\!\left[\frac{1}{\lVert z\rVert^2}\right].
+$$
+For $G\ge 3$, $(G-2)^2>0$. The quantity $\lVert z-\theta\rVert^2/\sigma^2\sim\chi^2_G$ and for $G\ge 3$ the $\chi^2_G$ distribution places zero probability mass on any bounded neighborhood of the origin, so $\mathbb{E}[1/\lVert z\rVert^2]$ is strictly positive and finite (it equals $1/((G-2)\sigma^2)$ when $\theta=0$, and remains positive for all $\theta$). The risk is therefore strictly less than $G\sigma^2$ for every $\theta$. $\blacksquare$
+
+**P3.** *Claim.* For the model $y_g\mid\beta_g\sim\mathcal{N}(X_g\beta_g,\sigma^2 I)$ and $\beta_g\sim\mathcal{N}(\mu_\beta,\Sigma_\beta)$ with $\sigma^2$, $\mu_\beta$, $\Sigma_\beta$ fixed, the full conditional is $\beta_g\mid\text{rest}\sim\mathcal{N}(m_g,V_g)$ with
+$$
+\begin{aligned}
+V_g &= \left(\frac{X_g^\top X_g}{\sigma^2} + \Sigma_\beta^{-1}\right)^{-1}\!, \qquad m_g = V_g\!\left(\frac{X_g^\top y_g}{\sigma^2} + \Sigma_\beta^{-1}\mu_\beta\right).
+\end{aligned}
+$$
+
+*Proof.* By Bayes' rule, $-2\log p(\beta_g\mid y_g,\mu_\beta,\Sigma_\beta,\sigma^2)$ equals, up to $\beta_g$-free constants,
+$$
+\frac{1}{\sigma^2}(y_g - X_g\beta_g)^\top(y_g - X_g\beta_g) + (\beta_g - \mu_\beta)^\top\Sigma_\beta^{-1}(\beta_g - \mu_\beta).
+$$
+Expanding $(y_g - X_g\beta_g)^\top(y_g - X_g\beta_g) = y_g^\top y_g - 2\beta_g^\top X_g^\top y_g + \beta_g^\top X_g^\top X_g\beta_g$ and $(\beta_g - \mu_\beta)^\top\Sigma_\beta^{-1}(\beta_g-\mu_\beta) = \beta_g^\top\Sigma_\beta^{-1}\beta_g - 2\beta_g^\top\Sigma_\beta^{-1}\mu_\beta + \mu_\beta^\top\Sigma_\beta^{-1}\mu_\beta$, and discarding all terms free of $\beta_g$:
+$$
+-2\log p(\beta_g\mid\cdots) = \beta_g^\top\underbrace{\!\left(\frac{X_g^\top X_g}{\sigma^2}+\Sigma_\beta^{-1}\right)}_{=:\,A}\!\beta_g - 2\beta_g^\top\underbrace{\!\left(\frac{X_g^\top y_g}{\sigma^2}+\Sigma_\beta^{-1}\mu_\beta\right)}_{=:\,b} + \text{const}.
+$$
+The matrix $A$ is symmetric positive definite: $X_g^\top X_g/\sigma^2$ is positive semidefinite and $\Sigma_\beta^{-1}$ is strictly positive definite, so their sum is invertible. Applying the matrix completing-the-square identity $\beta_g^\top A\beta_g - 2\beta_g^\top b = (\beta_g - A^{-1}b)^\top A(\beta_g - A^{-1}b) - b^\top A^{-1}b$:
+$$
+-2\log p(\beta_g\mid\cdots) = (\beta_g - A^{-1}b)^\top A(\beta_g - A^{-1}b) + \text{const}.
+$$
+This is the kernel of $\mathcal{N}(A^{-1}b, A^{-1})$, so $V_g = A^{-1}$ and $m_g = A^{-1}b$.
+
+Specializing to $\mu_\beta = 0$ and $\Sigma_\beta = \tau^2 I$ gives $A = X_g^\top X_g/\sigma^2 + I/\tau^2$ and $b = X_g^\top y_g/\sigma^2 + 0$, which are exactly the precision matrix and information vector of Chapter 5 Rung 4 — confirming that the hierarchical full conditional with non-zero prior mean reduces to the Chapter 5 result when $\mu_\beta = 0$. $\blacksquare$
+
+### A — Applied / Code
+
+**A1.** With $G=30$ geographies and week counts drawn uniformly from $\{4,\ldots,60\}$, the three-way pooling comparison consistently shows partial pooling achieving the lowest RMSE against the known true effects. Complete pooling incurs systematic bias because forcing a single national estimate ignores the genuine between-geography spread $\tau^2=1.0$: geographies whose true effects lie far from $\mu$ drag the common estimate in both directions. No pooling suffers from high variance in data-sparse DMAs: a geography with four weeks of data has sampling variance $\sigma^2/n_g=1.0$, matching the full between-geography variance, so the raw $\bar y_g$ can easily land one or two standard deviations from the true $\theta_g$. Partial pooling borrows strength from all geographies simultaneously, using data-rich DMAs to anchor $\hat\mu$ and $\hat\tau^2$ and then calibrating shrinkage for data-sparse DMAs accordingly. In the shrinkage plot, light-colored (small-$n_g$) geographies visibly travel the farthest from their raw means toward $\hat\mu$, while dark (large-$n_g$) geographies barely shift — the visual signature of precision-weighted shrinkage. In the $\tau^2$ sweep, the smallest-$n_g$ geography's partial-pooled estimate moves smoothly from near $\hat\mu$ at $\tau^2=0.01$ (where $\lambda_g\approx 0$, near complete pooling) toward its raw $\bar y_g$ at $\tau^2=16$ (where $\lambda_g$ approaches its data-precision ceiling): the shrinkage weight formula $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$ traces this full spectrum.
+
+A reference sketch:
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(42)
+G = 30; sigma2 = 4.0; tau2 = 1.0; mu = 2.0
+
+n     = rng.integers(4, 61, size=G).astype(float)
+theta = mu + np.sqrt(tau2) * rng.standard_normal(G)
+ybar  = theta + np.sqrt(sigma2 / n) * rng.standard_normal(G)
+
+prec   = n / sigma2
+mu_hat = np.dot(prec, ybar) / prec.sum()
+
+# Empirical-Bayes tau2 estimate
+var_ybar = np.var(ybar, ddof=1)
+mean_sv  = np.mean(sigma2 / n)
+tau2_hat = max(0.0, var_ybar - mean_sv)
+
+if tau2_hat > 0:
+    lam = prec / (prec + 1.0 / tau2_hat)
+else:
+    lam = np.zeros(G)
+
+theta_partial  = lam * ybar + (1.0 - lam) * mu_hat
+theta_complete = np.full(G, mu_hat)
+theta_nopool   = ybar.copy()
+
+def rmse(est, truth): return np.sqrt(np.mean((est - truth)**2))
+
+print("RMSE complete:", round(rmse(theta_complete, theta), 4))
+print("RMSE nopool:  ", round(rmse(theta_nopool,   theta), 4))
+print("RMSE partial: ", round(rmse(theta_partial,  theta), 4))
+assert rmse(theta_partial, theta) < rmse(theta_nopool,   theta)
+assert rmse(theta_partial, theta) < rmse(theta_complete, theta)
+
+# tau2 sweep for the smallest-n geography
+idx_min   = int(np.argmin(n))
+tau2_vals = [0.01, 0.1, 0.5, 1.0, 4.0, 16.0]
+for t2 in tau2_vals:
+    lam_t = (n[idx_min] / sigma2) / (n[idx_min] / sigma2 + 1.0 / t2)
+    est_t = lam_t * ybar[idx_min] + (1.0 - lam_t) * mu_hat
+    print(f"tau2={t2:5.2f}  lambda={lam_t:.4f}  theta_hat={est_t:.4f}")
+```
+
+The shrinkage weight formula is the quantitative proof that the data decide the pooling level: as $\tau^2$ grows the prior becomes uninformative and $\lambda_g$ rises, so the small-$n_g$ geography's estimate moves from $\hat\mu$ toward its raw $\bar y_g$ — the model adapts rather than the analyst hard-coding a pooling fraction.
+
+**A2.** The Gibbs sampler's posterior means for $\theta_g$ will be close to, but not exactly equal to, the closed-form empirical-Bayes shrinkage formula evaluated at the true hyperparameters $(\mu=2.0, \tau^2=1.0)$. The discrepancy has two sources. First, finite-chain Monte Carlo error: sample means converge to posterior means at rate $1/\sqrt{T_{\text{eff}}}$, so even $20{,}000$ post-warmup draws leave residual noise. Second, and more fundamentally, the Gibbs sampler jointly samples $\mu$, $\tau^2$, and all $\theta_g$ from their posteriors, propagating uncertainty in $\mu$ and $\tau^2$ through to every $\theta_g$ posterior; the closed-form empirical-Bayes formula conditions on $\mu=2.0$ and $\tau^2=1.0$ as if they were known truth. Even with infinitely many MCMC draws the Gibbs posterior mean of $\theta_g$ would differ from the plug-in formula, because it is an average over the full posterior distribution of $(\mu,\tau^2)$ rather than an evaluation at a single point. This additional layer of hyperparameter uncertainty makes the full-Bayes credible intervals wider and more honest than the empirical-Bayes counterparts — propagating rather than discarding the uncertainty that was present all along.
+
+A reference sketch:
+
+```python
+import numpy as np
+from scipy.stats import invgamma
+
+rng = np.random.default_rng(0)
+G = 15; sigma2 = 4.0; tau2_true = 1.0; mu_true = 2.0
+
+n     = rng.integers(5, 51, size=G).astype(float)
+theta = mu_true + np.sqrt(tau2_true) * rng.standard_normal(G)
+ybar  = theta + np.sqrt(sigma2 / n) * rng.standard_normal(G)
+
+# Gibbs sampler
+N_iter = 25_000; N_warm = 5_000
+a0 = b0 = 0.01   # weak Inverse-Gamma hyperpriors on tau2
+
+mu_cur    = ybar.mean()
+tau2_cur  = 1.0
+theta_cur = ybar.copy()
+samples   = np.zeros((N_iter, G))
+
+for it in range(N_iter):
+    # (i) Draw theta_g | rest
+    prec_d = n / sigma2
+    prec_p = 1.0 / tau2_cur
+    lam    = prec_d / (prec_d + prec_p)
+    m_g    = lam * ybar + (1.0 - lam) * mu_cur
+    v_g    = lam * sigma2 / n
+    theta_cur = rng.normal(m_g, np.sqrt(v_g))
+
+    # (ii) Draw mu | rest
+    theta_bar = theta_cur.mean()
+    mu_cur    = rng.normal(theta_bar, np.sqrt(tau2_cur / G))
+
+    # (iii) Draw tau2 | rest
+    ss       = np.sum((theta_cur - mu_cur)**2)
+    tau2_cur = invgamma.rvs(a0 + G / 2.0,
+                            scale=b0 + ss / 2.0,
+                            random_state=rng)
+    samples[it] = theta_cur
+
+posterior_means = samples[N_warm:].mean(axis=0)
+
+# Closed-form EB at true hyperparameters
+prec_d_true = n / sigma2
+lam_true    = prec_d_true / (prec_d_true + 1.0 / tau2_true)
+eb_means    = lam_true * ybar + (1.0 - lam_true) * mu_true
+
+diffs = np.abs(posterior_means - eb_means)
+print(f"Max |Gibbs mean - EB mean| = {diffs.max():.4f}")
+assert diffs.max() < 0.15, f"deviation {diffs.max():.4f} exceeds 0.15"
+```
+
+The Gibbs posterior means match the empirical-Bayes closed form within Monte Carlo and hyperparameter-uncertainty error. The full-Bayes intervals are wider because $\mu$ and $\tau^2$ are themselves uncertain: the posterior of $\theta_g$ is an average over the posterior of $(\mu,\tau^2)$, not a conditional at a point estimate — this is the honest accounting that empirical Bayes discards and full Bayes preserves.
+
 :::
