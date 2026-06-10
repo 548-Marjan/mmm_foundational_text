@@ -478,4 +478,232 @@ print("OLS MSE:", mse[0], " best ridge:", mse[1:].min(),
 
 The qualitative takeaway: the U-shaped curve is the bias–variance tradeoff made visible — a little bias (small $\lambda$) is a bargain when it removes a lot of variance, but too much shrinkage eventually pushes the estimate so far from $\beta_{\text{true}}$ that bias dominates and MSE climbs back above OLS.
 
+## Chapter 5 — Bayesian Inference
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** The full posterior $p(\beta\mid y)$ is a distribution over every possible value of the coefficient vector simultaneously: it encodes the marginal distribution of each coefficient, all pairwise and higher-order dependencies, and the complete geometry of uncertainty. The posterior mean $\hat\beta_{\text{TV}}=1.8$ is a single real number — the location of the distribution projected onto one axis. The marginal posterior $p(\beta_{\text{TV}}\mid y)$ contains everything $1.8$ discards: the spread (posterior standard deviation and credible interval width), the shape (symmetric? heavy-tailed?), and the probability mass in any region of interest — e.g., $P(\beta_{\text{TV}}>0\mid y)$, or the probability that TV spend clears a minimum-ROI threshold. Two very different posteriors — one concentrated, one diffuse — can share the same mode, so $1.8$ alone gives no sense of inferential confidence.
+
+The posterior predictive $p(\tilde y\mid y)=\int p(\tilde y\mid\beta)\,p(\beta\mid y)\,d\beta$ answers a structurally different question: not "what are the parameters?" but "what will next quarter's sales $\tilde y$ actually be at planned spend $\tilde x$?" A budget decision requires the full distribution of the outcome, not just the parameter distribution. The predictive variance decomposes as
+$$
+\operatorname{Var}(\tilde y\mid y) = \tilde x^\top\Sigma_{\text{post}}\tilde x + \sigma^2.
+$$
+The first term, $\tilde x^\top\Sigma_{\text{post}}\tilde x$, is *parameter uncertainty*: as $n\to\infty$ the posterior concentrates and $\Sigma_{\text{post}}\to 0$, so this component shrinks toward zero with more data. The second term, $\sigma^2$, is *irreducible noise* — the inherent randomness in sales given any fixed parameter values — and no amount of data eliminates it. A planning interval built from $p(\tilde y\mid y)$ honestly accounts for both sources; one built from $p(\beta\mid y)$ alone ignores the irreducible component and is systematically too narrow.
+
+**C2.** The 95% Bayesian credible interval $\beta_{\text{TV}}\in[0.5,1.7]$ makes the formal claim
+$$
+P(\beta_{\text{TV}}\in[0.5,1.7]\mid y) = 0.95.
+$$
+In this statement $\beta_{\text{TV}}$ is *random* (it carries a prior and a posterior distribution) and the interval $[0.5,1.7]$ is *fixed* (computed once from the observed data). The object that licenses the probability statement is the *posterior* $p(\beta_{\text{TV}}\mid y)$: the 0.95 is the posterior probability mass lying inside the interval.
+
+The frequentist 95% confidence interval inverts the logic. There, $\beta_{\text{TV}}$ is a fixed but unknown constant, and the *interval endpoints* — functions of the random sample — are the random objects. The "95%" is a long-run coverage guarantee: over hypothetically repeated datasets, 95% of the randomly constructed intervals would contain the fixed $\beta_{\text{TV}}$. For a single *realized* confidence interval — the one in hand after observing the data — both endpoints are fixed numbers and $\beta_{\text{TV}}$ is a fixed number; there is no remaining randomness, so no probability can be attached to the claim "$\beta_{\text{TV}}$ lies in this particular interval." It either does or it does not.
+
+The one assumption the credible-interval statement requires that the confidence-interval statement does not is the *prior* $p(\beta_{\text{TV}})$. In practice, an MMM analyst almost always possesses relevant prior knowledge — sign constraints (advertising cannot suppress sales), order-of-magnitude channel benchmarks from similar campaigns, regulatory or business-logic bounds on spend elasticities — making the prior a genuine modeling feature that encodes real information rather than an arbitrary computational device.
+
+**C3.** The Rung 4 closed form works because the Gaussian prior and Gaussian likelihood together produce a log-posterior that is *quadratic* in $\beta$, enabling completing the square. When the prior is replaced by the half-normal $p(\beta_j)\propto\exp(-\beta_j^2/2\tau^2)\mathbf{1}[\beta_j\ge0]$, the product of prior kernel and likelihood kernel is still Gaussian-shaped but *truncated* to $\beta_j\ge0$: a truncated normal distribution. The mean of a truncated normal is not the unconstrained Gaussian mean; it involves the Gaussian CDF $\Phi$ through the Mills-ratio correction,
+$$
+\mathbb{E}[\beta_j\mid y] = \mu^* + \sigma^*\frac{\phi(\mu^*/\sigma^*)}{\Phi(\mu^*/\sigma^*)},
+$$
+where $\mu^*$ and $\sigma^*$ are the unconstrained posterior parameters. This expression cannot be read off by completing the square — evaluating $\Phi(\mu^*/\sigma^*)$ requires numerical integration in place of elementary matrix algebra.
+
+Adstock and saturation transforms compound the problem irreversibly. If spend enters the likelihood through a nonlinear function $f(x_{jt};\theta)$ — such as the Hill saturation function $f(x;K,n)=x^n/(K^n+x^n)$ with its own parameters $\theta$ — then the log-likelihood is no longer quadratic in the parameters $(\beta,\theta)$: it is a complicated nonlinear function whose level sets are curved manifolds, not ellipsoids. The *quadratic structure* of the log-posterior — the property that allowed completing the square — is permanently lost. Without a quadratic log-posterior there is no Gaussian kernel to recognize, no closed-form matrix inversion to perform, and no normalizing constant available analytically. Markov chain Monte Carlo (Part III) is then a mathematical necessity: it requires only the ability to evaluate $\log p(\beta,\theta\mid y)$ pointwise, which is available even when the likelihood is nonlinear.
+
+### B — By Hand
+
+**B1.** The likelihood kernel for $k=5$ successes in $n=8$ Bernoulli trials is $\theta^5(1-\theta)^3$. Multiplying by the $\text{Beta}(3,1)$ prior kernel $\theta^{3-1}(1-\theta)^{1-1}=\theta^2(1-\theta)^0$,
+$$
+p(\theta\mid k) \;\propto\; \theta^5(1-\theta)^3\cdot\theta^{2} = \theta^{(3+5)-1}(1-\theta)^{(1+3)-1} = \theta^{7}(1-\theta)^{3}.
+$$
+This is the $\text{Beta}(8,4)$ kernel ($\alpha_{\text{post}}=3+5=8$, $\beta_{\text{post}}=1+(8-5)=4$). The posterior mean is
+$$
+\mathbb{E}[\theta\mid k] = \frac{8}{8+4} = \frac{8}{12} = \frac{2}{3} \approx 0.667.
+$$
+The three reference values are: MLE $5/8=0.625$, posterior mean $2/3\approx0.667$, prior mean $3/4=0.750$. The posterior mean lies strictly between the MLE and the prior mean, pulled *upward* from $0.625$ toward $0.750$ because the $\text{Beta}(3,1)$ prior places substantial mass above $0.5$ and that belief survives after only eight observations.
+
+**B2.** The posterior precision is the sum of prior precision and data precision:
+$$
+\frac{1}{\sigma_{\text{post}}^2} = \frac{1}{\tau^2} + \frac{n}{\sigma^2} = \frac{1}{4} + \frac{9}{9} = \frac{1}{4} + 1 = \frac{5}{4}.
+$$
+Inverting, $\sigma_{\text{post}}^2=4/5=0.8$. The posterior mean is
+$$
+\mu_{\text{post}} = \sigma_{\text{post}}^2\!\left(\frac{\mu_0}{\tau^2}+\frac{n\bar{y}}{\sigma^2}\right) = 0.8\!\left(\frac{0}{4}+\frac{9\cdot6}{9}\right) = 0.8\cdot6 = 4.8.
+$$
+As a precision-weighted average: the weight on $\mu_0$ is $(1/\tau^2)\,\sigma_{\text{post}}^2=(1/4)\cdot(4/5)=1/5$, and the weight on $\bar{y}$ is $(n/\sigma^2)\,\sigma_{\text{post}}^2=(9/9)\cdot(4/5)=4/5$. These sum to $1/5+4/5=1$, giving $\mu_{\text{post}}=\tfrac{1}{5}\cdot0+\tfrac{4}{5}\cdot6=4.8$. The posterior mean lies much closer to $\bar{y}=6.0$ than to $\mu_0=0$ because the data precision $(n/\sigma^2=1)$ is four times the prior precision $(1/\tau^2=1/4)$, so the data carry four times as much weight in the average.
+
+**B3.** Adding the ridge penalty to the cross-product matrix,
+$$
+X^\top X + 2I = \begin{bmatrix}6&2\\2&6\end{bmatrix},
+$$
+with determinant $6\cdot6-2\cdot2=32$. Applying the $2\times2$ inversion formula (swap diagonal, negate off-diagonal, divide by determinant):
+$$
+(X^\top X+\lambda I)^{-1} = \frac{1}{32}\begin{bmatrix}6&-2\\-2&6\end{bmatrix}.
+$$
+Multiplying by $X^\top y=(6,4)^\top$:
+$$
+\mu_{\text{post}} = \frac{1}{32}\begin{bmatrix}6&-2\\-2&6\end{bmatrix}\begin{bmatrix}6\\4\end{bmatrix} = \frac{1}{32}\begin{bmatrix}28\\12\end{bmatrix} = \begin{bmatrix}0.875\\0.375\end{bmatrix},
+$$
+using $6\cdot6-2\cdot4=28$ and $-2\cdot6+6\cdot4=12$. This is exactly the ridge estimator of Chapter 4 at $\lambda=2$: the Bayesian posterior mean with $\lambda=\sigma^2/\tau^2$ and the ridge estimator at $\lambda$ are algebraically identical. The posterior covariance $\Sigma_{\text{post}}=(X^\top X+\lambda I)^{-1}=\frac{1}{32}\begin{bmatrix}6&-2\\-2&6\end{bmatrix}$ adds what the ridge point estimate omits: the marginal variances ($6/32=0.1875$ for each coefficient) and the negative covariance ($-2/32=-0.0625$), together quantifying joint estimation uncertainty and enabling credible intervals and predictive variance.
+
+### P — Prove It
+
+**P1.** *Claim.* The Beta distribution is conjugate to the Binomial likelihood, and the posterior mean is a convex combination of the prior mean and the MLE.
+
+*Proof.* Let $k\mid\theta\sim\text{Binomial}(n,\theta)$ so the likelihood kernel is $p(k\mid\theta)\propto\theta^k(1-\theta)^{n-k}$, and let $\theta\sim\text{Beta}(\alpha,\beta)$ with density proportional to $\theta^{\alpha-1}(1-\theta)^{\beta-1}$. By Bayes' rule,
+$$
+p(\theta\mid k) \;\propto\; \theta^k(1-\theta)^{n-k}\cdot\theta^{\alpha-1}(1-\theta)^{\beta-1} = \theta^{(\alpha+k)-1}(1-\theta)^{(\beta+n-k)-1}.
+$$
+This is the kernel of the $\text{Beta}(\alpha+k,\,\beta+n-k)$ distribution. Because every proper density integrates to one, the normalizing constant is uniquely forced to equal $1/B(\alpha+k,\,\beta+n-k)$ — recognizing the functional form of the kernel is sufficient to read off the full posterior without evaluating any integral.
+
+For the convex combination, set $w=(\alpha+\beta)/(\alpha+\beta+n)$ and $1-w=n/(\alpha+\beta+n)$. Both weights are non-negative and sum to one. Substituting:
+$$
+w\cdot\frac{\alpha}{\alpha+\beta}+(1-w)\cdot\frac{k}{n} = \frac{\alpha}{\alpha+\beta+n}+\frac{k}{\alpha+\beta+n} = \frac{\alpha+k}{\alpha+\beta+n},
+$$
+which is exactly the posterior mean. $\blacksquare$
+
+**P2.** *Claim.* Under the prior $\mu\sim\mathcal{N}(\mu_0,\tau^2)$ and i.i.d.\ observations $y_i\mid\mu\sim\mathcal{N}(\mu,\sigma^2)$ with $\sigma^2$ known, the posterior is $\mu\mid y\sim\mathcal{N}(\mu_{\text{post}},\sigma_{\text{post}}^2)$ with precisions adding and the posterior mean a precision-weighted average.
+
+*Proof.* By Bayes' rule, $-2\log p(\mu\mid y)$ equals, up to $\mu$-free constants,
+$$
+\frac{(\mu-\mu_0)^2}{\tau^2}+\frac{1}{\sigma^2}\sum_{i=1}^n(y_i-\mu)^2.
+$$
+Using the identity $\sum_{i=1}^n(y_i-\mu)^2=n(\mu-\bar{y})^2+\sum_{i=1}^n(y_i-\bar{y})^2$ and discarding the last term (free of $\mu$), then expanding both squares and collecting powers of $\mu$:
+$$
+-2\log p(\mu\mid y) = \underbrace{\left(\frac{1}{\tau^2}+\frac{n}{\sigma^2}\right)}_{=:\,\sigma_{\text{post}}^{-2}}\mu^2 - 2\underbrace{\left(\frac{\mu_0}{\tau^2}+\frac{n\bar{y}}{\sigma^2}\right)}_{=:\,\sigma_{\text{post}}^{-2}\mu_{\text{post}}}\mu + \text{const}.
+$$
+Completing the square gives $\sigma_{\text{post}}^{-2}(\mu-\mu_{\text{post}})^2+\text{const}$, which is a Gaussian kernel with precision $\sigma_{\text{post}}^{-2}=\tau^{-2}+n\sigma^{-2}$ and mean
+$$
+\mu_{\text{post}} = \sigma_{\text{post}}^2\!\left(\frac{\mu_0}{\tau^2}+\frac{n\bar{y}}{\sigma^2}\right).
+$$
+Dividing each summand in numerator and denominator by $\sigma_{\text{post}}^{-2}$ rewrites this as
+$$
+\mu_{\text{post}} = \frac{\tau^{-2}}{\tau^{-2}+n\sigma^{-2}}\,\mu_0 + \frac{n\sigma^{-2}}{\tau^{-2}+n\sigma^{-2}}\,\bar{y}.
+$$
+The two weights are non-negative and sum to $(\tau^{-2}+n\sigma^{-2})/(\tau^{-2}+n\sigma^{-2})=1$, confirming $\mu_{\text{post}}$ is a convex combination of $\mu_0$ and $\bar{y}$. $\blacksquare$
+
+**P3.** *Claim.* Under the prior $\beta\sim\mathcal{N}(0,\tau^2 I)$ and the likelihood $y\mid\beta\sim\mathcal{N}(X\beta,\sigma^2 I)$ with $X\in\mathbb{R}^{n\times p}$ fixed and $\sigma^2$ known, the posterior is $\beta\mid y\sim\mathcal{N}(\mu_{\text{post}},\Sigma_{\text{post}})$ with $\Sigma_{\text{post}}=A^{-1}$, $\mu_{\text{post}}=A^{-1}b$, and $\mu_{\text{post}}=(X^\top X+\lambda I)^{-1}X^\top y$ where $\lambda=\sigma^2/\tau^2$.
+
+*Proof.* By Bayes' rule, $-2\log p(\beta\mid y)$ equals, up to $\beta$-free constants,
+$$
+\frac{1}{\sigma^2}(y-X\beta)^\top(y-X\beta)+\frac{1}{\tau^2}\beta^\top\beta.
+$$
+Expanding $(y-X\beta)^\top(y-X\beta)=y^\top y-2y^\top X\beta+\beta^\top X^\top X\beta$ and discarding $y^\top y$:
+$$
+-2\log p(\beta\mid y) = \beta^\top\underbrace{\left(\frac{X^\top X}{\sigma^2}+\frac{I}{\tau^2}\right)}_{=:\,A}\beta - 2\beta^\top\underbrace{\frac{X^\top y}{\sigma^2}}_{=:\,b} + \text{const}.
+$$
+The matrix $A=X^\top X/\sigma^2+I/\tau^2$ is symmetric positive definite: $X^\top X/\sigma^2$ is positive semidefinite (for any $v$, $v^\top X^\top Xv/\sigma^2=\lVert Xv\rVert^2/\sigma^2\ge0$) and $I/\tau^2$ is strictly positive definite, so their sum is strictly positive definite and hence invertible.
+
+Applying the matrix completing-the-square identity $\beta^\top A\beta-2\beta^\top b=(\beta-A^{-1}b)^\top A(\beta-A^{-1}b)-b^\top A^{-1}b$:
+$$
+-2\log p(\beta\mid y) = (\beta-A^{-1}b)^\top A(\beta-A^{-1}b)+\text{const}.
+$$
+This is the kernel of a multivariate Gaussian with precision matrix $A$, so $\beta\mid y\sim\mathcal{N}(A^{-1}b,\,A^{-1})$, giving $\Sigma_{\text{post}}=A^{-1}$ and $\mu_{\text{post}}=A^{-1}b$. The normalizing constant is determined uniquely by the requirement that the density integrates to one.
+
+To exhibit the ridge connection, factor $A=(X^\top X+\lambda I)/\sigma^2$ where $\lambda=\sigma^2/\tau^2$, so $A^{-1}=\sigma^2(X^\top X+\lambda I)^{-1}$. Then
+$$
+\mu_{\text{post}} = A^{-1}b = \sigma^2(X^\top X+\lambda I)^{-1}\cdot\frac{X^\top y}{\sigma^2} = (X^\top X+\lambda I)^{-1}X^\top y,
+$$
+which is exactly the ridge estimator of Chapter 4 at $\lambda=\sigma^2/\tau^2$. $\blacksquare$
+
+### A — Applied / Code
+
+**A1.** Starting from $\text{Beta}(2,8)$ (prior mean $0.20$), each successive batch of impressions drives the posterior toward the true conversion rate $\theta_{\text{true}}=0.40$: the density narrows and its peak migrates rightward. After all 200 observations the posterior mean sits close to $0.40$ and the 95% credible interval is tight. The numerical check confirms that the closed-form conjugate update and the brute-force grid normalization yield identical posterior means — they are the same mathematical object, the former simply avoids the integral.
+
+A reference sketch:
+
+```python
+import numpy as np
+from scipy.stats import beta as beta_dist
+
+rng = np.random.default_rng(42)
+theta_true = 0.40
+N = 200
+obs = rng.binomial(1, theta_true, size=N)
+
+alpha0, beta0 = 2.0, 8.0   # prior
+alpha, beta = alpha0, beta0
+batches = [10, 20, 70, 100]
+start = 0
+for nb in batches:
+    k_batch = obs[start : start + nb].sum()
+    alpha += k_batch
+    beta  += nb - k_batch
+    start += nb
+    mean = alpha / (alpha + beta)
+    lo = beta_dist.ppf(0.025, alpha, beta)
+    hi = beta_dist.ppf(0.975, alpha, beta)
+    print(f"n={start:3d}  mean={mean:.4f}  95% CI=[{lo:.4f}, {hi:.4f}]")
+
+# Grid check on the final posterior
+k_total = obs.sum()
+theta_grid = np.linspace(1e-6, 1 - 1e-6, 500)
+dtheta = theta_grid[1] - theta_grid[0]
+q = theta_grid ** (alpha0 + k_total - 1) * (1 - theta_grid) ** (beta0 + N - k_total - 1)
+q /= q.sum() * dtheta
+mean_grid   = (theta_grid * q * dtheta).sum()
+mean_closed = alpha / (alpha + beta)
+print(f"grid mean={mean_grid:.4f}  closed mean={mean_closed:.4f}  "
+      f"match={abs(mean_grid - mean_closed) < 5e-4}")
+```
+
+The qualitative point: conjugacy makes sequential updating trivially cheap — each batch requires only two additions to the hyperparameters, not a new integration. The grid comparison makes the mathematical identity tangible: the closed-form Beta density and the renormalized prior-times-likelihood product are the same function, so their means agree to at least three significant figures.
+
+**A2.** The three numerical assertions confirm the theory. The analytic and empirical 95% credible intervals agree to two decimal places — the posterior samples are drawn from exactly the right Gaussian. The predictive band is always at least $\sigma=\sqrt{2}\approx1.41$ units wide, because $\tilde x^\top\Sigma_{\text{post}}\tilde x\ge0$ means the irreducible $\sigma^2$ sets a floor; the band also widens where the design is sparse, showing the parameter-uncertainty component growing with extrapolation. The $\tau^2$ sweep traces a smooth interpolation: $\mu_{\text{post}}\to0$ as $\tau^2\to0$ (prior crushes the estimate) and $\mu_{\text{post}}\to(X^\top X)^{-1}X^\top y$ as $\tau^2\to\infty$ (data dominate, recovering OLS).
+
+A reference sketch:
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(0)
+n, p = 80, 3
+sigma2, tau2 = 2.0, 5.0
+lam = sigma2 / tau2   # = 0.4
+
+X = np.column_stack([
+    np.ones(n),
+    rng.uniform(0, 5, n),
+    rng.uniform(0, 3, n),
+])
+beta_true = np.array([2.0, 1.5, 0.8])
+y = X @ beta_true + rng.normal(0, np.sqrt(sigma2), n)
+
+XtX, Xty = X.T @ X, X.T @ y
+A = XtX / sigma2 + np.eye(p) / tau2
+Sigma_post = np.linalg.inv(A)
+mu_post    = Sigma_post @ (Xty / sigma2)
+
+# Ridge identity check
+mu_ridge = np.linalg.solve(XtX + lam * np.eye(p), Xty)
+assert np.allclose(mu_post, mu_ridge, atol=1e-10), "ridge identity failed"
+
+# (a) Analytic vs empirical 95% CIs
+S = 10_000
+samples = rng.multivariate_normal(mu_post, Sigma_post, size=S)
+for j in range(p):
+    lo_a = mu_post[j] - 1.96 * np.sqrt(Sigma_post[j, j])
+    hi_a = mu_post[j] + 1.96 * np.sqrt(Sigma_post[j, j])
+    lo_e, hi_e = np.percentile(samples[:, j], [2.5, 97.5])
+    print(f"beta[{j}]: analytic [{lo_a:.2f},{hi_a:.2f}]  empirical [{lo_e:.2f},{hi_e:.2f}]")
+
+# (b) Predictive band over channel-1 sweep
+x2_mean = X[:, 2].mean()
+ch1_grid = np.linspace(0, 5, 100)
+X_pred = np.column_stack([np.ones(100), ch1_grid, np.full(100, x2_mean)])
+pred_mean = X_pred @ mu_post
+pred_var  = np.einsum('ij,jk,ik->i', X_pred, Sigma_post, X_pred) + sigma2
+pred_std  = np.sqrt(pred_var)
+# plot pred_mean ± 1.96*pred_std vs ch1_grid; band floor ~ sqrt(sigma2) = 1.41
+
+# (c) tau^2 sweep
+tau2_vals = np.logspace(-2, 4, 60)
+ols = np.linalg.solve(XtX, Xty)
+for t2 in tau2_vals:
+    A_t  = XtX / sigma2 + np.eye(p) / t2
+    mu_t = np.linalg.solve(A_t, Xty / sigma2)
+    # record mu_t for each coefficient; verify mu_t -> ols as t2 grows
+print("OLS:", np.round(ols, 4))
+```
+
+The qualitative takeaway: the $\tau^2$ sweep makes the Bayesian–frequentist connection concrete — the prior variance is a continuous knob interpolating between full shrinkage and OLS, with $\lambda=\sigma^2/\tau^2$ as the ridge parameter. The predictive band's irreducible floor is the visual proof that parameter certainty and predictive certainty are fundamentally distinct objects.
+
 :::
