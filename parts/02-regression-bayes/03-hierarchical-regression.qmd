@@ -18,7 +18,133 @@ The answer is **partial pooling** — the principled middle ground — and it is
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The three rungs below build the pooling taxonomy, derive the closed-form shrinkage formula, and establish the frequentist guarantee that makes pooling universally preferable to unpooled estimation. The through-line: complete pooling and no pooling are the degenerate limits of one hierarchical model; partial pooling is Chapter 5's "precisions add" rule operating one level up, across groups rather than within them; and James–Stein proves that shrinking toward any common center strictly lowers total squared error for every possible configuration of true group effects.
+
+### Rung 1 — Three stances: complete, no, and partial pooling
+
+To fix ideas, work with a scalar per-geography parameter. Let $\theta_g$ be a single channel's effect in geography $g$, for $g = 1, \ldots, G$. Each geography contributes $n_g$ observations with known noise variance $\sigma^2$, so the sufficient statistic is the group sample mean $\bar y_g$, distributed as
+
+$$
+\bar y_g \mid \theta_g \;\sim\; \mathcal{N}\!\left(\theta_g,\; \frac{\sigma^2}{n_g}\right).
+$$
+
+The hierarchical prior on the true group effects is
+
+$$
+\theta_g \;\sim\; \mathcal{N}(\mu,\, \tau^2),
+$$
+
+with $\mu$ the population mean and $\tau^2$ the between-geography variance. This two-level structure encompasses three distinct stances depending on $\tau^2$.
+
+**Complete pooling** is the limit $\tau^2 \to 0$. As $\tau^2$ shrinks to zero the prior concentrates at $\mu$, forcing every group effect to the single shared value $\theta_g = \mu$. A national MMM model that fits one TV coefficient across all fifty DMAs operates under complete pooling: one estimate, low variance, but systematically biased whenever geographies genuinely differ.
+
+**No pooling** is the limit $\tau^2 \to \infty$. As $\tau^2 \to \infty$ the prior flattens to uninformative, so each group is estimated in isolation: the posterior mean collapses to the group sample mean $\hat\theta_g = \bar y_g$. Fitting fifty independent regressions, each confined to its own DMA, is the no-pooling extreme. There is no bias from misspecified homogeneity, but for small-$n_g$ geographies the sample mean $\bar y_g$ has sampling variance $\sigma^2/n_g$ that grows without bound as $n_g$ shrinks.
+
+**Partial pooling** occupies the interior: $0 < \tau^2 < \infty$. The prior is informative enough to draw group estimates toward the population mean, but not so tight that it erases genuine group differences. Each geography's shrinkage weight adjusts in proportion to how much local data it provides, and that weight is what the rest of this section derives.
+
+The tension between the two extremes is exactly Chapter 4's bias–variance decomposition of the mean-squared error. For any estimator $\hat\theta_g$,
+
+$$
+\mathbb{E}[(\hat\theta_g - \theta_g)^2] \;=\; \bigl(\mathbb{E}[\hat\theta_g] - \theta_g\bigr)^2 + \operatorname{Var}(\hat\theta_g).
+$$
+
+Complete pooling minimizes variance at the cost of bias squared; no pooling eliminates bias at the cost of variance. Rung 2 delivers the estimator that balances the two, per geography, and its shrinkage weight $\lambda_g$ is the precise quantitative answer to the Motivation's "by exactly how much?"
+
+### Rung 2 — Partial pooling as precision-weighted shrinkage
+
+The Gaussian two-level model of Rung 1 is exactly the Gaussian conjugate setup of Chapter 5 Rung 3, applied separately to each group. The likelihood $\bar y_g \mid \theta_g \sim \mathcal{N}(\theta_g, \sigma^2/n_g)$ contributes **data precision** $n_g/\sigma^2$; the prior $\theta_g \sim \mathcal{N}(\mu, \tau^2)$ contributes **prior precision** $1/\tau^2$. Chapter 5's "precisions add" applies directly.
+
+> **Theorem (partial-pooling shrinkage).** For the Gaussian hierarchical model with known $\sigma^2$, $\mu$, and $\tau^2$, where $\bar y_g \mid \theta_g \sim \mathcal{N}(\theta_g, \sigma^2/n_g)$ and $\theta_g \sim \mathcal{N}(\mu, \tau^2)$, the posterior mean of $\theta_g$ is
+>
+> $$
+> \hat\theta_g \;=\; \lambda_g\,\bar y_g + (1 - \lambda_g)\,\mu, \qquad \lambda_g \;=\; \frac{n_g/\sigma^2}{n_g/\sigma^2 + 1/\tau^2}.
+> $$
+
+**Proof.** Apply Chapter 5 Rung 3 with prior mean $\mu_0 = \mu$, prior variance $\tau^2$, and data precision $n_g/\sigma^2$ (the contribution of $n_g$ observations each with variance $\sigma^2$, so the sufficient statistic $\bar y_g$ carries precision $n_g/\sigma^2$). By "precisions add," the posterior mean of $\theta_g$ is the precision-weighted average
+
+$$
+\hat\theta_g \;=\; \frac{(n_g/\sigma^2)\,\bar y_g + (1/\tau^2)\,\mu}{n_g/\sigma^2 + 1/\tau^2}.
+$$
+
+Define $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$, so that $1 - \lambda_g = (1/\tau^2)/(n_g/\sigma^2 + 1/\tau^2)$. Multiplying through identifies the two terms in the numerator as $\lambda_g(n_g/\sigma^2 + 1/\tau^2)\bar y_g$ and $(1-\lambda_g)(n_g/\sigma^2 + 1/\tau^2)\mu$; dividing by the common denominator gives
+
+$$
+\hat\theta_g \;=\; \lambda_g\,\bar y_g + (1 - \lambda_g)\,\mu.
+$$
+
+$\blacksquare$
+
+The limits of $\lambda_g$ recover the Rung 1 stances exactly. As $n_g \to \infty$ the data precision dominates and $\lambda_g \to 1$, so $\hat\theta_g \to \bar y_g$ — no pooling, trust the local data. As $n_g \to 0$, or equivalently $\tau^2 \to 0$, the prior precision dominates and $\lambda_g \to 0$, so $\hat\theta_g \to \mu$ — complete pooling, trust the population mean. For finite $n_g$ and finite $\tau^2$, $\lambda_g \in (0, 1)$ and the posterior mean sits strictly between the local estimate and the grand mean. Every geography receives its own $\lambda_g$ determined by the ratio of its data precision to the prior precision — the formula answers "by exactly how much" in terms of quantities the data determine.
+
+### Rung 3 — James–Stein: shrinkage dominates in finite samples
+
+Rung 2 showed that the Bayesian posterior mean shrinks group estimates toward the population center. A critic might note that this shrinkage is optimal only when the hierarchical prior is correctly specified. The James–Stein theorem removes that objection entirely: shrinking toward any fixed center strictly reduces **total** mean-squared error across all groups simultaneously, for every possible configuration of true group effects, with no assumptions beyond the Gaussian observation model. This is a frequentist guarantee, and it is why pooling wins.
+
+Work in the canonical equal-variance setup: observe one vector $z \in \mathbb{R}^G$ with
+
+$$
+z \;\sim\; \mathcal{N}(\theta,\, \sigma^2 I_G),
+$$
+
+where $\theta \in \mathbb{R}^G$ is unknown, $\sigma^2$ is known, and $G \ge 3$. The MLE is $\hat\theta^{\text{MLE}} = z$ with total risk $\mathbb{E}\lVert z - \theta\rVert^2 = G\sigma^2$. The **James–Stein estimator** shrinks $z$ toward the origin:
+
+$$
+\hat\theta^{\text{JS}} \;=\; \left(1 - \frac{(G-2)\sigma^2}{\lVert z\rVert^2}\right) z.
+$$
+
+In practice one shrinks toward the grand mean $\bar z$ rather than zero; the algebra is identical after centering.
+
+> **Theorem (James–Stein dominance).** [@casella2002; @hoff2009] For $G \ge 3$, the James–Stein estimator $\hat\theta^{\text{JS}}$ satisfies $\mathbb{E}\lVert\hat\theta^{\text{JS}} - \theta\rVert^2 < G\sigma^2 = \mathbb{E}\lVert z - \theta\rVert^2$ for every $\theta \in \mathbb{R}^G$.
+
+**Proof via Stein's unbiased risk estimate (SURE).** Write $\hat\theta^{\text{JS}} = z + g(z)$ with
+
+$$
+g(z) \;=\; -\frac{(G-2)\sigma^2}{\lVert z\rVert^2}\,z.
+$$
+
+**Stein's lemma** states that for $z \sim \mathcal{N}(\theta, \sigma^2 I_G)$ and any weakly differentiable $g : \mathbb{R}^G \to \mathbb{R}^G$,
+
+$$
+\mathbb{E}\lVert z + g(z) - \theta\rVert^2 \;=\; G\sigma^2 + \mathbb{E}\!\left[2\sigma^2\,\nabla\!\cdot g(z) + \lVert g(z)\rVert^2\right],
+$$
+
+where $\nabla\!\cdot g = \sum_{i=1}^G \partial g_i/\partial z_i$. It suffices to show that $2\sigma^2\,\nabla\!\cdot g + \lVert g\rVert^2 < 0$.
+
+**Computing $\lVert g(z)\rVert^2$.** Since $g(z) = -c\,z$ with scalar $c = (G-2)\sigma^2/\lVert z\rVert^2$,
+
+$$
+\lVert g(z)\rVert^2 \;=\; c^2\lVert z\rVert^2 \;=\; \frac{(G-2)^2\sigma^4}{\lVert z\rVert^4}\cdot\lVert z\rVert^2 \;=\; \frac{(G-2)^2\sigma^4}{\lVert z\rVert^2}.
+$$
+
+**Computing $\nabla\!\cdot g$.** Differentiating $g_i(z) = -(G-2)\sigma^2\,z_i/\lVert z\rVert^2$ with respect to $z_i$ gives
+
+$$
+\frac{\partial g_i}{\partial z_i} \;=\; -(G-2)\sigma^2\!\left(\frac{1}{\lVert z\rVert^2} - \frac{2z_i^2}{\lVert z\rVert^4}\right).
+$$
+
+Summing over all $i$ and using $\sum_i z_i^2 = \lVert z\rVert^2$:
+
+$$
+\nabla\!\cdot g \;=\; -(G-2)\sigma^2\!\left(\frac{G}{\lVert z\rVert^2} - \frac{2\lVert z\rVert^2}{\lVert z\rVert^4}\right) \;=\; -(G-2)\sigma^2\cdot\frac{G-2}{\lVert z\rVert^2} \;=\; -\frac{(G-2)^2\sigma^2}{\lVert z\rVert^2}.
+$$
+
+**Combining.** Substituting both pieces into the SURE expression:
+
+$$
+2\sigma^2\,\nabla\!\cdot g + \lVert g\rVert^2 \;=\; -\frac{2(G-2)^2\sigma^4}{\lVert z\rVert^2} + \frac{(G-2)^2\sigma^4}{\lVert z\rVert^2} \;=\; -\frac{(G-2)^2\sigma^4}{\lVert z\rVert^2}.
+$$
+
+Therefore
+
+$$
+\mathbb{E}\lVert\hat\theta^{\text{JS}} - \theta\rVert^2 \;=\; G\sigma^2 - (G-2)^2\sigma^4\,\mathbb{E}\!\left[\frac{1}{\lVert z\rVert^2}\right].
+$$
+
+For $G \ge 3$ the factor $(G-2)^2 > 0$, and the expectation $\mathbb{E}[1/\lVert z\rVert^2]$ is strictly positive and finite because $z \sim \mathcal{N}(\theta, \sigma^2 I_G)$ with $G \ge 3$ places no probability mass at the origin in the relevant sense (the $\chi^2_G$-distributed norm squared has a well-defined reciprocal expectation for $G \ge 3$). The risk is therefore strictly less than $G\sigma^2$ for every $\theta$.
+
+$\blacksquare$
+
+The connection to Rung 2 is direct. The James–Stein factor $1 - (G-2)\sigma^2/\lVert z\rVert^2$ is the **empirical-Bayes** counterpart of $\lambda_g$: it estimates the population precision $1/\tau^2$ from the data using the observed spread $\lVert z\rVert^2$ rather than treating $\tau^2$ as a known hyperparameter. Rung 2 set the shrinkage by a known $\tau^2$; James–Stein recovers the same shrinkage structure from the data alone. Both point in the same direction — toward the center, by an amount governed by the ratio of observation noise to between-group spread — and the dominance theorem guarantees that this direction is right not on average over priors, but for every single $\theta$ [@gelmanhill2006].
 
 ## Worked Examples
 
