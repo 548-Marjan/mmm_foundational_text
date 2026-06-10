@@ -314,4 +314,168 @@ for n in (1, 5, 30, 200):
 
 The qualitative point: regardless of the skewed parent, standardizing the sample mean produces histograms that converge to the same standard Gaussian as $n$ increases.
 
+## Chapter 4 — Linear Regression
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** The interval $[1.514,\,2.048]$ is a *random* object: its endpoints are functions of the sampled data, while the true $\beta_{\text{TV}}$ is a fixed (if unknown) constant. The "95%" describes the long-run behavior of the *procedure* — over hypothetically repeated samples from $\hat\beta\sim\mathcal N(\beta,\sigma^2(X^\top X)^{-1})$, the random intervals constructed this way would contain the fixed $\beta_{\text{TV}}$ about 95% of the time. The misreading "there is a 95% probability that $\beta_{\text{TV}}\in[1.514,\,2.048]$" is wrong because, once the data are observed, the interval is fixed and $\beta_{\text{TV}}$ is fixed, so $\beta_{\text{TV}}$ is either in it or not — there is no remaining randomness to assign a probability to. The 95% refers to the coverage frequency of the random interval, not to a probability statement about the constant $\beta_{\text{TV}}$. (A genuine probability statement about $\beta_{\text{TV}}$ requires the Bayesian credible interval of the next chapter.)
+
+**C2.** The standard error is $\operatorname{se}(\hat\beta_j)=\hat\sigma\sqrt{[(X^\top X)^{-1}]_{jj}}$, so it is the diagonal entry $[(X^\top X)^{-1}]_{jj}$ that blows up under collinearity. When two channels are nearly duplicate columns, $X^\top X$ is close to singular: it has an eigenvalue near zero, so its inverse has an eigenvalue near infinity, inflating the relevant diagonal entries. Yet the *fitted* values $\hat y=X\hat\beta$ project $y$ onto the column space, which is essentially unchanged by the near-duplication, so $R^2$ stays excellent. The model can predict the combined effect of "TV + search" very well while being unable to apportion it between the two — a great joint fit is fully compatible with terrible individual precision.
+
+**C3.** The deliberate bias buys a large reduction in variance: shrinking the coefficients toward zero with $(X^\top X+\lambda I)^{-1}X^\top y$ stabilizes the near-singular inverse, so the estimator's total mean-squared error can fall well below OLS even though it no longer centers on $\beta$. As $\lambda$ grows the bias increases monotonically while the variance shrinks, giving a U-shaped MSE curve with an optimal interior $\lambda$. Choosing $\lambda$ is exactly choosing a Gaussian prior $\beta\sim\mathcal N(0,\tau^2 I)$: the ridge estimate is the MAP estimate of that model with the identification $\lambda=\sigma^2/\tau^2$. Then $\lambda\to 0$ ($\tau^2\to\infty$) is a flat, uninformative prior that recovers OLS, while $\lambda\to\infty$ ($\tau^2\to 0$) is a prior spike at zero that crushes every coefficient to $0$.
+
+### B — By Hand
+
+**B1.** With $X=\begin{bmatrix}1&1\\1&2\\1&3\\1&4\end{bmatrix}$ and $y=(2,2,4,5)^\top$, form the normal-equation pieces
+$$
+X^\top X = \begin{bmatrix}4&10\\10&30\end{bmatrix},
+\qquad
+X^\top y = \begin{bmatrix}13\\38\end{bmatrix}.
+$$
+The determinant is $4\cdot30-10\cdot10=20$, so
+$$
+(X^\top X)^{-1} = \frac{1}{20}\begin{bmatrix}30&-10\\-10&4\end{bmatrix} = \begin{bmatrix}1.5&-0.5\\-0.5&0.2\end{bmatrix}.
+$$
+Therefore
+$$
+\hat\beta = (X^\top X)^{-1}X^\top y = \begin{bmatrix}1.5&-0.5\\-0.5&0.2\end{bmatrix}\begin{bmatrix}13\\38\end{bmatrix} = \begin{bmatrix}0.5\\1.1\end{bmatrix},
+$$
+an intercept $\hat\beta_0=0.5$ and slope $\hat\beta_1=1.1$. The fitted values are $X\hat\beta=(1.6,2.7,3.8,4.9)^\top$, so the residuals are $(0.4,-0.7,0.2,0.1)^\top$ and
+$$
+\text{RSS} = 0.4^2+(-0.7)^2+0.2^2+0.1^2 = 0.70.
+$$
+With $n=4$, $p=2$, the noise estimate is $\hat\sigma^2=\text{RSS}/(n-p)=0.70/2=0.35$. Indexing the slope as $j=1$ with $[(X^\top X)^{-1}]_{11}=0.2$,
+$$
+\operatorname{se}(\hat\beta_1) = \hat\sigma\sqrt{[(X^\top X)^{-1}]_{11}} = \sqrt{0.35\cdot 0.2} = \sqrt{0.07} \approx 0.2646.
+$$
+
+**B2.** With $R_j^2=r^2=0.95^2=0.9025$ for either predictor,
+$$
+\text{VIF}_j = \frac{1}{1-R_j^2} = \frac{1}{1-0.9025} = \frac{1}{0.0975} \approx 10.26.
+$$
+The collinearity inflates each coefficient's variance by a factor of about $10.26$ relative to an orthogonal design. Standard errors scale as $\sqrt{\text{VIF}_j}$, so they are inflated by $\sqrt{10.26}\approx 3.20$ — confidence intervals roughly three times wider than they would be with uncorrelated predictors.
+
+**B3.** With $X^\top X=\begin{bmatrix}4&2\\2&4\end{bmatrix}$, $X^\top y=(6,4)^\top$, and $\lambda=2$, form
+$$
+X^\top X+\lambda I = \begin{bmatrix}6&2\\2&6\end{bmatrix},
+\qquad
+(X^\top X+\lambda I)^{-1} = \frac{1}{32}\begin{bmatrix}6&-2\\-2&6\end{bmatrix} = \begin{bmatrix}0.1875&-0.0625\\-0.0625&0.1875\end{bmatrix},
+$$
+using $\det=6\cdot6-2\cdot2=32$. Then
+$$
+\hat\beta_{\text{ridge}} = (X^\top X+\lambda I)^{-1}X^\top y = \begin{bmatrix}0.1875&-0.0625\\-0.0625&0.1875\end{bmatrix}\begin{bmatrix}6\\4\end{bmatrix} = \begin{bmatrix}0.875\\0.375\end{bmatrix}.
+$$
+For comparison, the OLS estimate ($\lambda=0$) is $(X^\top X)^{-1}X^\top y=\tfrac{1}{12}\begin{bmatrix}4&-2\\-2&4\end{bmatrix}\begin{bmatrix}6\\4\end{bmatrix}=(4/3,\,1/3)^\top\approx(1.333,\,0.333)$. The penalty has pulled the larger coefficient down from $1.333$ to $0.875$ while barely moving the smaller one — ridge shrinks coefficients toward zero, with the strongest effect where the design carries the least independent information.
+
+### P — Prove It
+
+**P1.** *Claim.* Under $y=X\beta+\varepsilon$ with fixed $X$ of full column rank and $\mathbb{E}[\varepsilon]=0$, the OLS estimator $\hat\beta=(X^\top X)^{-1}X^\top y$ satisfies $\mathbb{E}[\hat\beta]=\beta$.
+
+*Proof.* Substitute the model $y=X\beta+\varepsilon$ into the estimator:
+$$
+\hat\beta = (X^\top X)^{-1}X^\top(X\beta+\varepsilon) = (X^\top X)^{-1}(X^\top X)\beta + (X^\top X)^{-1}X^\top\varepsilon = \beta + (X^\top X)^{-1}X^\top\varepsilon,
+$$
+where full column rank guarantees $X^\top X$ is invertible. Take expectations. Because $X$ is fixed (non-random) and expectation is linear, the matrix $(X^\top X)^{-1}X^\top$ pulls outside:
+$$
+\mathbb{E}[\hat\beta] = \beta + (X^\top X)^{-1}X^\top\,\mathbb{E}[\varepsilon].
+$$
+The assumption $\mathbb{E}[\varepsilon]=0$ kills the second term, leaving $\mathbb{E}[\hat\beta]=\beta$. $\blacksquare$
+
+**P2.** *Claim (Gauss–Markov).* Under $\mathbb{E}[\varepsilon]=0$, $\operatorname{Cov}(\varepsilon)=\sigma^2 I$, with $X$ fixed and full column rank, the OLS estimator $\hat\beta=(X^\top X)^{-1}X^\top y$ has the smallest covariance among all linear unbiased estimators: for any unbiased $\tilde\beta=Cy$, the matrix $\operatorname{Cov}(\tilde\beta)-\operatorname{Cov}(\hat\beta)$ is positive semidefinite.
+
+*Proof.* Write $C=(X^\top X)^{-1}X^\top+D$ for some fixed matrix $D$. Then, using $y=X\beta+\varepsilon$,
+$$
+\mathbb{E}[\tilde\beta] = \mathbb{E}[Cy] = C\,\mathbb{E}[y] = C X\beta = \big[(X^\top X)^{-1}X^\top X + DX\big]\beta = \beta + DX\beta.
+$$
+For $\tilde\beta$ to be unbiased for *every* $\beta$, we need $DX\beta=0$ for all $\beta$, which forces $DX=0$. Now compute the covariance. Since $\operatorname{Cov}(y)=\sigma^2 I$ and $C$ is fixed, $\operatorname{Cov}(\tilde\beta)=\sigma^2 C C^\top$. Expanding with $A=(X^\top X)^{-1}X^\top$ and using $DX=0$ (hence $A D^\top=(X^\top X)^{-1}X^\top D^\top=(X^\top X)^{-1}(DX)^\top=0$ and likewise $DA^\top=0$),
+$$
+C C^\top = (A+D)(A+D)^\top = AA^\top + AD^\top + DA^\top + DD^\top = AA^\top + DD^\top.
+$$
+Because $AA^\top=(X^\top X)^{-1}X^\top X(X^\top X)^{-1}=(X^\top X)^{-1}$, this gives
+$$
+\operatorname{Cov}(\tilde\beta) = \sigma^2(X^\top X)^{-1} + \sigma^2 DD^\top = \operatorname{Cov}(\hat\beta) + \sigma^2 DD^\top.
+$$
+The matrix $\sigma^2 DD^\top$ is positive semidefinite (for any $v$, $v^\top DD^\top v=\lVert D^\top v\rVert^2\ge0$), so $\operatorname{Cov}(\tilde\beta)-\operatorname{Cov}(\hat\beta)=\sigma^2 DD^\top\succeq 0$, with equality exactly when $D=0$, i.e. $\tilde\beta=\hat\beta$. $\blacksquare$
+
+**P3.** *Claim.* If $y\mid\beta\sim\mathcal N(X\beta,\sigma^2 I)$ with prior $\beta\sim\mathcal N(0,\tau^2 I)$, the MAP estimate of $\beta$ equals the ridge estimator $(X^\top X+\lambda I)^{-1}X^\top y$ with $\lambda=\sigma^2/\tau^2$.
+
+*Proof.* By Bayes' rule the posterior satisfies $p(\beta\mid y)\propto p(y\mid\beta)\,p(\beta)$, so the MAP estimate maximizes the log-posterior $\log p(y\mid\beta)+\log p(\beta)$, dropping constants in $\beta$. The Gaussian likelihood contributes $-\tfrac{1}{2\sigma^2}\lVert y-X\beta\rVert^2$ and the Gaussian prior contributes $-\tfrac{1}{2\tau^2}\lVert\beta\rVert^2$, so maximizing the log-posterior is equivalent to minimizing
+$$
+J(\beta) = \frac{1}{\sigma^2}\lVert y-X\beta\rVert^2 + \frac{1}{\tau^2}\lVert\beta\rVert^2.
+$$
+Differentiate and set the gradient to zero:
+$$
+\nabla_\beta J(\beta) = -\frac{2}{\sigma^2}X^\top(y-X\beta) + \frac{2}{\tau^2}\beta = 0.
+$$
+Multiplying through by $\sigma^2/2$ gives $X^\top X\beta - X^\top y + \tfrac{\sigma^2}{\tau^2}\beta=0$, i.e. with $\lambda=\sigma^2/\tau^2$,
+$$
+(X^\top X+\lambda I)\,\hat\beta = X^\top y
+\qquad\Longrightarrow\qquad
+\hat\beta = (X^\top X+\lambda I)^{-1}X^\top y.
+$$
+The matrix $X^\top X+\lambda I$ is positive definite for $\lambda>0$, so the stationary point is the unique global minimizer of the strictly convex $J$. This is exactly the ridge estimator with $\lambda=\sigma^2/\tau^2$. $\blacksquare$
+
+### A — Applied / Code
+
+**A1.** Holding $X$ fixed and resampling $y=X\beta_{\text{true}}+\varepsilon$, each refit is a draw from $\hat\beta\sim\mathcal N\big(\beta_{\text{true}},\sigma^2(X^\top X)^{-1}\big)$, so the search coefficient has theoretical standard deviation $\sigma\sqrt{[(X^\top X)^{-1}]_{jj}}$. As the target column correlation $\rho$ increases, $X^\top X$ moves toward singularity, $[(X^\top X)^{-1}]_{jj}$ grows, and the empirical histogram of $\hat\beta_{\text{search}}$ visibly widens — its sample standard deviation tracking the theoretical value at each $\rho$.
+
+A reference sketch:
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(0)
+n, sigma = 200, 1.0
+beta_true = np.array([0.0, 2.0, 1.0])   # intercept, TV, search
+j = 2                                    # index of the search coefficient
+
+for rho in (0.0, 0.9, 0.99):
+    tv = rng.standard_normal(n)
+    noise = rng.standard_normal(n)
+    search = rho * tv + np.sqrt(1 - rho**2) * noise   # corr(tv, search) ~ rho
+    X = np.column_stack([np.ones(n), tv, search])
+    XtX_inv = np.linalg.inv(X.T @ X)
+    theo_sd = sigma * np.sqrt(XtX_inv[j, j])
+
+    B = 5_000
+    fits = np.empty(B)
+    for b in range(B):
+        y = X @ beta_true + sigma * rng.standard_normal(n)
+        fits[b] = (XtX_inv @ X.T @ y)[j]
+    print(rho, fits.std(), theo_sd)   # empirical ~ theoretical, both grow with rho
+```
+
+The qualitative point: collinearity does not bias OLS, it *destabilizes* it — the search coefficient stays centered on its true value but its sampling spread balloons as $\rho\to1$, exactly as $\sigma\sqrt{[(X^\top X)^{-1}]_{jj}}$ predicts.
+
+**A2.** On a strongly collinear design, OLS is unbiased but high-variance, so its recovery error $\lVert\hat\beta-\beta_{\text{true}}\rVert^2$ is large. Ridge introduces bias that grows with $\lambda$ but slashes variance, so averaged over many simulated datasets the MSE-versus-$\lambda$ curve is U-shaped: it dips below the OLS value (the $\lambda=0$ reference) over an interval of positive $\lambda$ before rising again as over-shrinkage dominates. There is therefore a $\lambda>0$ at which ridge MSE $<$ OLS MSE.
+
+A reference sketch:
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(0)
+n, sigma = 50, 1.0
+tv = rng.standard_normal(n)
+search = 0.99 * tv + np.sqrt(1 - 0.99**2) * rng.standard_normal(n)
+X = np.column_stack([np.ones(n), tv, search])
+beta_true = np.array([0.0, 2.0, 1.0])
+
+XtX = X.T @ X
+lambdas = np.r_[0.0, np.logspace(-2, 2, 40)]
+B = 2_000
+mse = np.zeros_like(lambdas)
+for b in range(B):
+    y = X @ beta_true + sigma * rng.standard_normal(n)
+    Xty = X.T @ y
+    for k, lam in enumerate(lambdas):
+        bhat = np.linalg.solve(XtX + lam * np.eye(3), Xty)
+        mse[k] += ((bhat - beta_true) ** 2).sum()
+mse /= B
+print("OLS MSE:", mse[0], " best ridge:", mse[1:].min(),
+      " at lambda:", lambdas[1:][mse[1:].argmin()])
+```
+
+The qualitative takeaway: the U-shaped curve is the bias–variance tradeoff made visible — a little bias (small $\lambda$) is a bargain when it removes a lot of variance, but too much shrinkage eventually pushes the estimate so far from $\beta_{\text{true}}$ that bias dominates and MSE climbs back above OLS.
+
 :::
