@@ -569,3 +569,27 @@ $$
 $$
 
 and assert programmatically that $\mu_{\text{post}}$ equals the ridge estimate $(X^\top X + \lambda I)^{-1}X^\top y$ to machine precision. (a) Draw $S = 10{,}000$ posterior samples $\beta^{(s)} \sim \mathcal{N}(\mu_{\text{post}},\Sigma_{\text{post}})$ and report, for each coefficient $j$, the analytic 95% credible interval $\mu_{\text{post},j} \pm 1.96\sqrt{[\Sigma_{\text{post}}]_{jj}}$ alongside the empirical 2.5th and 97.5th percentiles of the samples; confirm the two sets of bounds agree to two decimal places. (b) Sweep channel-1 spend over 100 equally-spaced grid points in $[0,5]$ while holding channel-2 spend at its training-set mean; at each grid point $\tilde x$, compute the predictive mean $\tilde x^\top\mu_{\text{post}}$ and predictive standard deviation $\sqrt{\tilde x^\top\Sigma_{\text{post}}\,\tilde x + \sigma^2}$; plot the mean curve with a $\pm 1.96$ predictive band alongside the training scatter. (c) Sweep $\tau^2$ over 60 log-spaced values from $10^{-2}$ to $10^4$; at each value recompute $\mu_{\text{post}}$ and plot all three coefficient traces as a function of $\tau^2$ on a log-$x$-axis, overlaying the OLS solution $(X^\top X)^{-1}X^\top y$ as horizontal dashed lines; confirm that the traces converge to OLS as $\tau^2 \to \infty$ and collapse toward zero as $\tau^2 \to 0$.
+
+## Summary
+
+This chapter promoted Chapter 4's ridge point estimate to a full posterior distribution and read the consequences off of it. If you can state each concept in a sentence and reproduce each identity from memory, you are ready for the sampling machinery of Part III, which exists precisely to recover these objects when conjugacy fails.
+
+**Key concepts**
+
+- **Estimation becomes conditioning.** Bayesian inference returns the entire posterior $p(\beta\mid y)\propto p(y\mid\beta)\,p(\beta)$, not a single number; point estimates (the ridge MAP, the posterior mean) are summaries of that object, and the evidence $p(y)$ is just the normalizing constant.
+- **Conjugacy makes the update algebra.** A conjugate prior keeps prior and posterior in the same family, so the posterior is found by **kernel-matching** — recognizing the distributional form of $p(y\mid\beta)\,p(\beta)$ — without evaluating any integral. Prior parameters read as **pseudo-counts**: a prior is data you pretend you already saw.
+- **The Gaussian conjugate: precisions add.** For a Normal prior and Normal likelihood, the posterior precision is the sum of prior and data precisions, and the posterior mean is a **precision-weighted average** of the prior mean and the sample mean — the data swamps the prior as $n\to\infty$.
+- **Bayesian linear regression is the keystone, and ridge was its mode.** A Gaussian prior plus Gaussian likelihood give $\beta\mid y\sim\mathcal N(\mu_{\text{post}},\Sigma_{\text{post}})$ whose mean **is** the Chapter 4 ridge estimator. Ridge computed the center of a distribution without knowing it was one; the new object is $\Sigma_{\text{post}}$, the joint coefficient uncertainty.
+- **Credible $\neq$ confidence.** A credible interval is a **direct probability statement** about $\beta$ given the data — the answer practitioners intuitively want — licensed only because the prior makes $\beta$ random. The frequentist confidence interval is a long-run property of the procedure, not a probability about the fixed parameter.
+- **Honest forecasts decompose uncertainty.** The posterior predictive variance splits into **parameter uncertainty** $\tilde x^\top\Sigma_{\text{post}}\tilde x$ (shrinks with data) plus **irreducible noise** $\sigma^2$ (does not); a plug-in forecast reports only the center and understates risk.
+- **The conjugacy wall points to MCMC.** Non-negativity priors on media effects, and the adstock/saturation transforms of real MMM, are non-conjugate and make the log-posterior non-quadratic, so no closed form survives — which is exactly why Part III builds Markov chain Monte Carlo to sample posteriors we cannot write down.
+
+**Key identities**
+
+- Bayes' update: $p(\beta\mid y)\propto p(y\mid\beta)\,p(\beta)$, with evidence $p(y)=\int p(y\mid\beta)\,p(\beta)\,d\beta$.
+- Beta–Binomial conjugacy: prior $\text{Beta}(\alpha,\beta)$ with $k$ successes in $n$ trials $\to$ posterior $\text{Beta}(\alpha+k,\,\beta+n-k)$; posterior mean $(\alpha+k)/(\alpha+\beta+n)$.
+- Gaussian conjugate (precisions add): $1/\sigma_{\text{post}}^2 = 1/\tau^2 + n/\sigma^2$, with $\mu_{\text{post}}=\sigma_{\text{post}}^2\big(\mu_0/\tau^2 + n\bar y/\sigma^2\big)$.
+- Regression posterior covariance: $\Sigma_{\text{post}} = \big(X^\top X/\sigma^2 + I/\tau^2\big)^{-1}$.
+- Posterior mean = ridge: $\mu_{\text{post}} = (X^\top X + \lambda I)^{-1}X^\top y$, with $\lambda=\sigma^2/\tau^2$ under $\beta\sim\mathcal N(0,\tau^2 I)$.
+- Gaussian credible interval: $\mu_{\text{post},j} \pm z_{1-\alpha/2}\sqrt{[\Sigma_{\text{post}}]_{jj}}$.
+- Posterior predictive: $\tilde y\mid y \sim \mathcal N\big(\tilde x^\top\mu_{\text{post}},\ \tilde x^\top\Sigma_{\text{post}}\,\tilde x + \sigma^2\big)$.
