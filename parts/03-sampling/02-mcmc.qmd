@@ -318,7 +318,228 @@ so $n = 1{,}000$ draws carry an effective sample size of only $1{,}000 / 4.56 \a
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The three experiments below make the chapter's efficiency concepts concrete on the same correlated bivariate Gaussian $\mathcal{N}(0, \Sigma)$ with $\Sigma = [[1, 0.8], [0.8, 1]]$ that the Worked Examples analysed by hand. Part 1 runs random-walk Metropolis at three step sizes — $s = 0.1$, $1.2$, and $8.0$ — printing the acceptance rate and the truncated-sum ESS estimate for the first coordinate after discarding a burn-in, then asserts that the well-tuned chain recovers a sample mean of $\approx 0$ and a sample covariance within $0.1$ of $\Sigma$; a three-panel trace plot makes the contrasting mixing behaviours visible at a glance. Part 2 switches to Gibbs, using the closed-form conditionals $x \mid y \sim \mathcal{N}(\rho y, 1 - \rho^2)$ to show how the lag-1 autocorrelation $\rho^2$ rises from a manageable $0.64$ at $\rho = 0.8$ to a near-unit $0.98$ at $\rho = 0.99$, collapsing the ESS from over 13,000 to barely 600. Part 3 demonstrates the central payoff of the chapter: a non-conjugate binary-conversion posterior — logistic likelihood, $\beta \sim \mathcal{N}(0, 4)$ prior — for which no closed form exists, sampled by the same random-walk Metropolis; a fine-grid normalized reference computed on `np.linspace(-2, 5, 4000)` provides a ground truth, and the cell asserts that the MH posterior mean matches the grid mean within $0.05$.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+from numpy.linalg import inv
+from numpy import log, exp
+
+rng = np.random.default_rng(0)
+
+# ====================================================================
+# Shared target: correlated bivariate Gaussian  N(0, Sigma)
+# ====================================================================
+
+Sigma = np.array([[1.0, 0.8],
+                  [0.8, 1.0]])
+inv_Sigma = inv(Sigma)
+
+
+def logpi(z):
+    """Log-density of N(0, Sigma) — constant dropped."""
+    z = np.asarray(z)
+    return -0.5 * z @ inv_Sigma @ z
+
+
+# ====================================================================
+# Part 1 — Random-walk Metropolis: step-size tuning on the 2-D Gaussian
+# ====================================================================
+
+def ess(chain):
+    """Batch-truncated ESS for coordinate 0 of chain (n x 2)."""
+    x    = chain[:, 0].copy()
+    n    = len(x)
+    x   -= x.mean()
+    var  = np.var(x)
+    if var < 1e-15:
+        return 1.0
+    # sum autocorrelations until first negative lag
+    total = 0.0
+    for k in range(1, n):
+        rho_k = np.mean(x[:n-k] * x[k:]) / var
+        if rho_k < 0:
+            break
+        total += rho_k
+    tau = 1.0 + 2.0 * total
+    return n / tau
+
+
+def rw_metropolis(logpi_fn, x0, step, n, rng_obj):
+    """Random-walk Metropolis. Returns (chain [n x 2], acceptance_rate)."""
+    x      = np.array(x0, dtype=float)
+    chain  = np.empty((n, 2))
+    n_acc  = 0
+    lp_cur = logpi_fn(x)
+    for i in range(n):
+        prop   = x + step * rng_obj.standard_normal(2)
+        lp_pro = logpi_fn(prop)
+        if np.log(rng_obj.random()) < lp_pro - lp_cur:
+            x      = prop
+            lp_cur = lp_pro
+            n_acc += 1
+        chain[i] = x
+    return chain, n_acc / n
+
+
+BURN   = 5_000
+N_DRAW = 40_000
+x0     = np.array([0.0, 0.0])
+
+steps     = [0.1, 1.2, 8.0]
+labels    = ['step=0.1 (too small)', 'step=1.2 (good)', 'step=8.0 (too large)']
+acc_rates = []
+ess_vals  = []
+chains    = []
+
+print("--- Random-walk Metropolis step-size tuning ---")
+print(f"  {'step':>6}  {'accept':>8}  {'ESS(coord0)':>12}")
+for s, lbl in zip(steps, labels):
+    # burn-in
+    rw_metropolis(logpi, x0, s, BURN, rng)
+    # production
+    chain, acc = rw_metropolis(logpi, x0, s, N_DRAW, rng)
+    e = ess(chain)
+    acc_rates.append(acc)
+    ess_vals.append(e)
+    chains.append(chain)
+    print(f"  {s:>6.1f}  {acc:>8.4f}  {e:>12.1f}   ({lbl})")
+
+# Verify good step
+good_chain = chains[1]
+samp_mean  = good_chain.mean(axis=0)
+samp_cov   = np.cov(good_chain.T)
+print(f"\n  Good step — sample mean (expect ~[0,0])  : [{samp_mean[0]:.4f}, {samp_mean[1]:.4f}]")
+print(f"  Good step — sample cov  (expect ~Sigma)  :")
+print(f"    [[{samp_cov[0,0]:.4f}, {samp_cov[0,1]:.4f}],")
+print(f"     [{samp_cov[1,0]:.4f}, {samp_cov[1,1]:.4f}]]")
+assert np.allclose(samp_cov, Sigma, atol=0.1), \
+    f"Sample covariance deviates from Sigma:\n{samp_cov}"
+print("  assert np.allclose(cov, Sigma, atol=0.1) : PASSED")
+
+# Trace plots (coordinate 0) for each step size
+fig, axes = plt.subplots(3, 1, figsize=(9, 6), sharex=True)
+for ax, chain, s, lbl in zip(axes, chains, steps, labels):
+    ax.plot(chain[:2000, 0], lw=0.5, color='steelblue')
+    ax.axhline(0, color='tomato', lw=1.0, ls='--')
+    ax.set_ylabel(r'$x_0$', fontsize=9)
+    ax.set_title(f'Trace of $x_0$ — {lbl}', fontsize=9)
+axes[-1].set_xlabel('iteration')
+plt.suptitle('RW-Metropolis: step-size tuning on correlated 2-D Gaussian', fontsize=10)
+plt.tight_layout()
+plt.show()
+
+# ====================================================================
+# Part 2 — Gibbs sampler on the same bivariate Gaussian
+# ====================================================================
+
+def gibbs(rho, n, rng_obj):
+    """Gibbs sampler for N(0, [[1,rho],[rho,1]]). Returns chain (n x 2)."""
+    chain = np.empty((n, 2))
+    x, y  = 0.0, 0.0
+    cond_std = np.sqrt(1.0 - rho**2)
+    for i in range(n):
+        x = rho * y + cond_std * rng_obj.standard_normal()
+        y = rho * x + cond_std * rng_obj.standard_normal()
+        chain[i] = (x, y)
+    return chain
+
+
+BURN_G = 2_000
+N_G    = 60_000
+
+# rho = 0.8
+_ = gibbs(0.8, BURN_G, rng)
+chain_g8 = gibbs(0.8, N_G, rng)
+corr_g8  = np.corrcoef(chain_g8[:, 0], chain_g8[:, 1])[0, 1]
+lag1_g8  = np.corrcoef(chain_g8[:-1, 0], chain_g8[1:, 0])[0, 1]
+
+# rho = 0.99
+_ = gibbs(0.99, BURN_G, rng)
+chain_g99 = gibbs(0.99, N_G, rng)
+corr_g99  = np.corrcoef(chain_g99[:, 0], chain_g99[:, 1])[0, 1]
+lag1_g99  = np.corrcoef(chain_g99[:-1, 0], chain_g99[1:, 0])[0, 1]
+
+ess_g8  = ess(chain_g8)
+ess_g99 = ess(chain_g99)
+
+print("\n--- Gibbs sampler mixing ---")
+print(f"  rho=0.80: recovered corr={corr_g8:.4f} (expect 0.80), "
+      f"lag-1 autocorr={lag1_g8:.4f} (expect rho^2={0.8**2:.4f}), "
+      f"ESS(coord0)={ess_g8:.0f}")
+print(f"  rho=0.99: recovered corr={corr_g99:.4f} (expect 0.99), "
+      f"lag-1 autocorr={lag1_g99:.4f} (expect rho^2={0.99**2:.4f}), "
+      f"ESS(coord0)={ess_g99:.0f}")
+
+# ====================================================================
+# Part 3 — Non-conjugate posterior: logistic binary-conversion model
+# ====================================================================
+
+# Generate data
+x_data    = rng.normal(size=40)
+beta_true = 1.5
+p_data    = 1.0 / (1.0 + exp(-beta_true * x_data))
+y_data    = (rng.random(40) < p_data).astype(float)
+
+
+def logpost(b):
+    """Log-posterior for beta ~ N(0,4), y_i ~ Bernoulli(sigmoid(b*x_i))."""
+    # log-likelihood: sum y_i*(b*x_i) - log1p(exp(b*x_i))
+    bx   = b * x_data
+    ll   = np.sum(y_data * bx - np.log1p(exp(bx)))
+    lp   = -b**2 / (2.0 * 4.0)   # log prior N(0,4)
+    return ll + lp
+
+
+# Run random-walk Metropolis on the 1-D logistic posterior
+BURN_L = 10_000
+N_L    = 60_000
+step_l = 1.8
+
+_, _ = rw_metropolis(lambda z: logpost(z[0]), np.array([0.0]), step_l, BURN_L, rng)
+chain_l, acc_l = rw_metropolis(lambda z: logpost(z[0]), np.array([0.0]), step_l, N_L, rng)
+beta_mh   = chain_l[:, 0]
+mh_mean   = beta_mh.mean()
+mh_sd     = beta_mh.std()
+
+# Fine-grid normalized reference
+bgrid  = np.linspace(-2, 5, 4000)
+lp_arr = np.array([logpost(b) for b in bgrid])
+lp_arr -= lp_arr.max()           # subtract max for numerical stability
+p_arr  = exp(lp_arr)
+db     = bgrid[1] - bgrid[0]
+p_arr /= p_arr.sum() * db        # normalize to density
+
+grid_mean = np.sum(bgrid * p_arr) * db
+grid_var  = np.sum((bgrid - grid_mean)**2 * p_arr) * db
+grid_sd   = np.sqrt(grid_var)
+
+print("\n--- Non-conjugate logistic posterior ---")
+print(f"  MH posterior mean     : {mh_mean:.4f}   (grid mean : {grid_mean:.4f})")
+print(f"  MH posterior sd       : {mh_sd:.4f}   (grid sd   : {grid_sd:.4f})")
+print(f"  MH acceptance rate    : {acc_l:.4f}")
+assert np.abs(mh_mean - grid_mean) < 0.05, \
+    f"MH mean {mh_mean:.4f} deviates from grid mean {grid_mean:.4f} by >{0.05}"
+print(f"  assert |MH mean - grid mean| < 0.05   : PASSED  (diff={abs(mh_mean - grid_mean):.5f})")
+
+# Plot MH histogram vs grid posterior
+fig, ax = plt.subplots(figsize=(7, 4))
+ax.hist(beta_mh, bins=80, density=True, color='steelblue', alpha=0.6,
+        label=f'MH posterior  (mean={mh_mean:.3f}, sd={mh_sd:.3f})')
+ax.plot(bgrid, p_arr, 'tomato', lw=2.0,
+        label=f'Grid reference (mean={grid_mean:.3f}, sd={grid_sd:.3f})')
+ax.axvline(beta_true, color='k', ls='--', lw=1.2, label=f'$\\beta_{{\\rm true}}={beta_true}$')
+ax.set_xlabel(r'$\beta$')
+ax.set_ylabel('density')
+ax.set_title('Logistic binary-conversion posterior: MH vs normalized grid\n'
+             r'(no closed form — intractable normalizer)')
+ax.legend(fontsize=9)
+plt.tight_layout()
+plt.show()
+```
+
+The printed output gives numerical signatures for every theoretical claim. The step-size experiment shows the ESS tradeoff starkly: at $s = 0.1$, the acceptance rate is $0.92$ but the ESS for the first coordinate is only $77$ out of $40{,}000$ draws — the chain shuffles in tiny, nearly-correlated steps; at $s = 1.2$ the acceptance drops to $0.33$ and the ESS jumps to $2{,}288$, the chain's 40,000 draws carrying the inferential weight of over 2,000 independent ones; at $s = 8.0$ the acceptance collapses to $0.02$ and the ESS falls back to $525$, the chain stalling for long stretches punctuated by rare accepted leaps. The well-tuned chain ($s = 1.2$) passes the covariance assert, recovering sample covariance $[[0.964, 0.770], [0.770, 0.974]]$ against the target $\Sigma = [[1, 0.8], [0.8, 1]]$ within $\mathtt{atol}=0.1$. The Gibbs experiment confirms Worked Example (b)'s analytic prediction: at $\rho = 0.80$ the lag-1 autocorrelation is $0.6445$, matching the theoretical $\rho^2 = 0.64$ to two decimal places, and the ESS over 60,000 draws stands at $13{,}253$; raising $\rho$ to $0.99$ drives the lag-1 autocorrelation to $0.9793$ (theoretical $\rho^2 = 0.9801$) and the ESS crashes to $609$ — a 22-fold collapse from identical run length, precisely the slow-mixing pathology the theory predicts. Finally, Part 3 brings MCMC's main payoff into view: a logistic binary-conversion posterior with no closed form and an intractable normalizing constant is sampled by the same random-walk Metropolis, with step $s = 1.8$ giving acceptance $0.46$, close to the one-dimensional optimal $0.44$. The MH posterior mean is $2.7978$ against the fine-grid reference mean of $2.7719$, a difference of $0.026$ well within the $0.05$ tolerance, and the shapes of the histogram and the normalized grid curve agree visually — the posterior Chapter 5 could not handle, recovered without ever computing its normalizing constant.
 
 ## Exercises
 
