@@ -610,3 +610,25 @@ $$
 **A1.** *Attribution and the removal effect.* Build a customer-journey absorbing Markov chain with at least three touchpoint channels (for example Display, Search, Email) plus Convert and Null absorbing states; choose plausible transition probabilities so that every transient row sums to 1. Form the transient block $Q$ and absorbing block $R$, compute the fundamental matrix $N = (I - Q)^{-1}$ and absorption probabilities $B = NR$, and report the baseline conversion probability from the start state. Implement a `removal_effect(channel)` routine that deletes one channel — rerouting its inbound probability mass to Null — recomputes the conversion probability, and returns the fractional drop $(\text{base} - \text{without})/\text{base}$. Rank the channels by removal effect and check that the ranking is consistent with the chain's structure (channels lying on more high-probability conversion paths should carry more credit). Comment on why the removal effects need not sum to one.
 
 **A2.** *Convergence, ergodicity, and a Metropolis preview.* For an irreducible aperiodic chain $P$ of your choice (e.g. a $3\times 3$ chain with all-positive entries): (i) iterate $\pi_t = \pi_0 P^t$ from several starting distributions and plot $\lVert \pi_t - \pi \rVert_1$ on a logarithmic vertical axis against the geometric envelope $|\lambda_2|^t$, confirming the empirical decay rate matches $\log|\lambda_2|$. (ii) Simulate one long trajectory and plot the running time-average of an indicator $f(x) = \mathbf{1}[x = x_0]$, confirming it converges to $\mathbb{E}_\pi[f] = \pi_{x_0}$. (iii) Implement a **Metropolis** sampler for a chosen *unnormalized* discrete target $w$ (positive weights): propose a uniformly random other state and accept with probability $\min(1,\ w_j/w_i)$; run it long enough that the empirical visit frequencies converge to $w/\sum_k w_k$ within a small tolerance. Confirm that only the unnormalized weights $w$ — never their sum — enter the acceptance ratio, the property that makes the method applicable to unnormalized posteriors in Chapter 8.
+
+## Summary
+
+This chapter built the theory of Markov chains that makes MCMC work, and in doing so paid Chapter 6's deferred promise that the Gibbs sampler converges to the posterior. If you can state each concept in a sentence and reproduce each identity from memory, you are ready for the sampler constructions of Chapter 8.
+
+**Key concepts**
+
+- **Markov chains and transition matrices.** A chain on a finite state space is governed by a row-stochastic matrix $P$ via the Markov property (the future depends on the past only through the present); distributions evolve by left-multiplication and $n$-step transitions are powers of $P$ (Chapman–Kolmogorov).
+- **Classification sets the hypotheses.** Irreducibility (every state reachable from every other) and aperiodicity (no forced cycle) are exactly the conditions under which a chain converges to a unique stationary distribution; absorbing chains are the complementary regime, analyzed through the fundamental matrix.
+- **Stationarity and detailed balance.** A stationary $\pi$ solves $\pi P = \pi$ (a left eigenvector for eigenvalue 1); **detailed balance** $\pi_i P_{ij} = \pi_j P_{ji}$ is a stronger, *local* condition that implies stationarity and — because it uses only the ratio $\pi_j/\pi_i$ — lets a sampler target an unnormalized posterior. This is the MCMC design lever.
+- **Convergence and the spectral gap.** For an irreducible aperiodic chain $P^n \to \mathbf{1}\pi$ geometrically, at a rate set by the subdominant eigenvalue $\lambda_2$; the **spectral gap** $1 - |\lambda_2|$ is the precise meaning of "how long is long enough," and a tiny gap is the diagnosis of a slowly mixing sampler.
+- **The ergodic theorem.** Time averages along a *single* trajectory converge to expectations under $\pi$, so a posterior mean can be estimated from one long, dependent MCMC run — the law of large numbers for Markov chains.
+- **The MCMC flip.** Part II asked "given $P$, find $\pi$"; MCMC inverts this to "given a target $\pi$ (the posterior), engineer a $P$ — via detailed balance, irreducible and aperiodic — whose stationary distribution is $\pi$." Chapter 6's Gibbs cycle is exactly such a chain; Metropolis–Hastings (Chapter 8) is the general construction; the general-state-space versions (kernels, Harris recurrence) carry the same logic to continuous posteriors.
+
+**Key identities**
+
+- Markov property / evolution: $P(X_{t+1}=j\mid X_t=i,\text{past})=P_{ij}$, $\pi_{t+1}=\pi_t P$, $\pi_t=\pi_0 P^t$.
+- Chapman–Kolmogorov: $(P^{a+b})_{ij}=\sum_k (P^a)_{ik}(P^b)_{kj}$, so $P(X_{t+n}=j\mid X_t=i)=(P^n)_{ij}$.
+- Stationarity: $\pi P=\pi$; detailed balance: $\pi_i P_{ij}=\pi_j P_{ji}$.
+- Convergence: $P^n\to\mathbf{1}\pi$, $\lVert\pi_t-\pi\rVert\le C\,|\lambda_2|^t$, spectral gap $\gamma=1-|\lambda_2|$.
+- Ergodic theorem: $\dfrac1n\sum_{t=1}^n f(X_t)\to\mathbb{E}_\pi[f]=\sum_x f(x)\pi_x$.
+- Absorption (fundamental matrix): $N=(I-Q)^{-1}=\sum_{k\ge0}Q^k$, absorption probabilities $B=NR$.
