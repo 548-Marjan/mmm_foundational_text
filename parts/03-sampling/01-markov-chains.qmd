@@ -244,7 +244,136 @@ Chapter 8 builds the kernels; Chapter 9 (HMC and NUTS) makes them efficient by e
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+### Example (a) — Customer-journey attribution by hand
+
+The customer-journey chain from Rung 2 has three transient states — Start, Display, Search — and two absorbing states — Convert and Null. In absorbing block form, with states ordered Start, Display, Search, Convert, Null, the transition matrix partitions as $P = \bigl[\begin{smallmatrix}Q & R \\ 0 & I\end{smallmatrix}\bigr]$ with
+
+$$
+Q = \begin{bmatrix} 0 & 0.5 & 0.5 \\ 0 & 0 & 0.3 \\ 0 & 0 & 0 \end{bmatrix}, \qquad R = \begin{bmatrix} 0 & 0 \\ 0.2 & 0.5 \\ 0.4 & 0.6 \end{bmatrix}
+$$
+
+(columns of $R$ are Convert and Null). We compute the baseline conversion probability and then the removal-effect attribution for each touchpoint channel entirely by hand.
+
+**Conversion probability from Start, by backward substitution.** Start with the state nearest to absorption and work backward toward Start. Search has no transient successors, so its probability of reaching Convert is simply its direct transition weight:
+
+$$
+P(\text{Convert} \mid \text{Search}) = 0.4.
+$$
+
+Display passes directly to Convert with probability $0.2$, and passes to Search — which then converts at $0.4$ — with probability $0.3$:
+
+$$
+P(\text{Convert} \mid \text{Display}) = 0.2 + 0.3 \times 0.4 = 0.20 + 0.12 = 0.32.
+$$
+
+Start routes to Display and Search with equal probability $0.5$ each:
+
+$$
+P(\text{Convert} \mid \text{Start}) = 0.5 \times 0.32 + 0.5 \times 0.40 = 0.16 + 0.20 = 0.36.
+$$
+
+Equivalently, this is the $(1,1)$ entry of the absorption-probability matrix $B = NR$, where the fundamental matrix $N = (I-Q)^{-1}$ was computed in Rung 2 as
+
+$$
+N = \begin{bmatrix} 1 & 0.5 & 0.65 \\ 0 & 1 & 0.30 \\ 0 & 0 & 1 \end{bmatrix},
+$$
+
+giving the Convert column of $B$ as $(0.36,\, 0.32,\, 0.40)^\top$, in full agreement with the backward-substitution values. **Baseline conversion from Start $= 0.36$.**
+
+**Removal-effect attribution.** To measure a channel's contribution, delete it from the journey: any traffic that would have entered the removed channel is instead lost (absorbed into Null), and recompute the conversion probability from Start. The removal effect is the fractional drop in the baseline rate.
+
+**Remove Search.** Display can no longer forward traffic to Search, so its $0.3$ edge to Search becomes a dead end — only the direct $0.2$ edge to Convert survives:
+
+$$
+P(\text{Convert} \mid \text{Display, Search removed}) = 0.2.
+$$
+
+Start's own $0.5$ edge to Search is also lost. Repeating the backward substitution on the reduced chain,
+
+$$
+P(\text{Convert} \mid \text{Start, Search removed}) = 0.5 \times 0.2 + 0.5 \times 0 = 0.10.
+$$
+
+The removal effect of Search is
+
+$$
+\frac{0.36 - 0.10}{0.36} = \frac{0.26}{0.36} \approx 0.722.
+$$
+
+**Remove Display.** Start's $0.5$ edge to Display is lost (that traffic is absorbed into Null, contributing zero conversion); only the $0.5$ edge to Search — which converts at $0.4$ — survives:
+
+$$
+P(\text{Convert} \mid \text{Start, Display removed}) = 0.5 \times 0 + 0.5 \times 0.4 = 0.20.
+$$
+
+The removal effect of Display is
+
+$$
+\frac{0.36 - 0.20}{0.36} = \frac{0.16}{0.36} \approx 0.444.
+$$
+
+**Interpretation.** Collecting the results:
+
+| Channel | Conversion without it | Removal effect |
+|---------|----------------------|----------------|
+| Search  | 0.10                 | 0.722          |
+| Display | 0.20                 | 0.444          |
+
+Search carries the larger attribution credit ($\approx 72\%$) compared with Display ($\approx 44\%$). The two removal effects need not sum to $1$ — and in fact $0.722 + 0.444 = 1.167 > 1$ here — because they measure each channel's marginal indispensability independently rather than partitioning credit. Removing Search eliminates not only its own direct conversions but also the conversions that Display achieves by routing traffic onward through Search; the two channels share overlapping paths, and that overlap is attributed to both when each is assessed separately. This is a genuine Markov-chain MMM attribution computed from the fundamental matrix of Rung 2.
+
+### Example (b) — Convergence by hand (2-state chain)
+
+Consider the two-state chain on $\{1, 2\}$ with transition matrix
+
+$$
+P = \begin{bmatrix} 0.7 & 0.3 \\ 0.4 & 0.6 \end{bmatrix}.
+$$
+
+Every entry is positive, so the chain is irreducible and aperiodic; Rung 4 guarantees a unique stationary distribution and geometric convergence to it. All four key quantities are computed by hand.
+
+**Stationary distribution.** Solve $\pi P = \pi$ subject to $\pi_1 + \pi_2 = 1$. Expanding the first component,
+
+$$
+0.7\pi_1 + 0.4\pi_2 = \pi_1,
+$$
+
+which simplifies to $0.4\pi_2 = 0.3\pi_1$, giving the ratio $\pi_1 / \pi_2 = 4/3$. Normalizing with $\pi_1 + \pi_2 = 1$,
+
+$$
+\pi_1 = \frac{4}{7} \approx 0.5714, \qquad \pi_2 = \frac{3}{7} \approx 0.4286.
+$$
+
+**Eigenvalues.** For any row-stochastic matrix $\lambda_1 = 1$ always. For a $2 \times 2$ matrix the trace equals the sum of eigenvalues, so $\lambda_1 + \lambda_2 = \operatorname{tr}(P) = 0.7 + 0.6 = 1.3$, giving the subdominant eigenvalue
+
+$$
+\lambda_2 = \operatorname{tr}(P) - 1 = 0.3.
+$$
+
+The spectral gap is $\gamma = 1 - |\lambda_2| = 0.7$.
+
+**Detailed balance check.** Verify reversibility by computing the equilibrium flux between states $1$ and $2$ in each direction:
+
+$$
+\pi_1 P_{12} = \frac{4}{7} \times 0.3 = \frac{1.2}{7} \approx 0.1714, \qquad \pi_2 P_{21} = \frac{3}{7} \times 0.4 = \frac{1.2}{7} \approx 0.1714.
+$$
+
+The two fluxes are equal, so the chain satisfies detailed balance and is **reversible** with respect to $\pi$. By the Rung 3 theorem this simultaneously confirms that $\pi$ is stationary.
+
+**Convergence rate.** By Rung 4, $\lVert\pi_t - \pi\rVert \le C\,|\lambda_2|^t = C \cdot 0.3^t$. The large spectral gap $\gamma = 0.7$ implies very fast mixing: after only five steps,
+
+$$
+0.3^5 = 0.00243 \approx 0.0024,
+$$
+
+so the distribution is within roughly $0.24\%$ of stationary regardless of the starting state (up to the constant $C$ depending on the starting distribution). Starting from $\pi_0 = (1,\, 0)$ — the chain is known to be in state 1 — the first two steps are
+
+$$
+\pi_1 = \pi_0 P = (0.7,\ 0.3), \qquad \pi_2 = \pi_1 P = (0.61,\ 0.39),
+$$
+
+and already after two steps the distribution $(0.61, 0.39)$ closely approximates the stationary $(0.5714, 0.4286)$.
+
+**Interpretation.** This toy chain mixes almost instantly because $|\lambda_2| = 0.3$ is far below $1$. Real MCMC samplers struggle in the opposite regime: when $|\lambda_2|$ approaches $1$ the spectral gap $\gamma$ shrinks toward $0$, the convergence bound $C \cdot |\lambda_2|^t$ decays only slowly for any practical $t$, and the mixing time $t_{\mathrm{mix}}(\varepsilon) \sim \log(1/\varepsilon)/\gamma$ grows without bound. Long autocorrelations, poor $\hat{R}$ values, and sluggish trace plots are the chain's signal that its spectral gap is too small for the run length attempted — the precise regime that Chapters 9 and 10 address.
 
 ## Code Tie-in
 
