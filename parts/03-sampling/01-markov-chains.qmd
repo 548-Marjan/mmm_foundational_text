@@ -152,6 +152,96 @@ since $\sum_i P_{ji} = 1$ (row $j$ of $P$ sums to 1). As this holds for every $j
 
 **The MCMC payoff.** Detailed balance is a **local, checkable** condition: one scalar equation per ordered pair of states $(i,j)$, involving $\pi$ only through the ratio $\pi_j / \pi_i$. Rewriting the condition as $P_{ij}/P_{ji} = \pi_j/\pi_i$, any unknown normalizing constant in $\pi$ cancels from both sides. This is the decisive structural fact: engineering a chain reversible with respect to a target $\pi$ requires only the ability to evaluate $\pi$ pointwise up to a constant — exactly the situation in Bayesian inference, where the posterior is known as $p(\theta \mid y) \propto p(y \mid \theta)\,p(\theta)$ with an intractable denominator. By contrast, solving the global linear system $\pi P = \pi$ directly involves $m$ coupled equations in $m$ unknowns; detailed balance replaces this with $m(m-1)/2$ independent two-body conditions, each involving only one ratio $\pi_j/\pi_i$, and each solvable in closed form once the ratio is prescribed. Constructing the transition entries $P_{ij}$ from these ratios by accept–reject logic — so that detailed balance is satisfied by design — is precisely the Metropolis–Hastings algorithm of Chapter 8.
 
+### Rung 4 — Convergence to stationarity
+
+> **Theorem (convergence).** For an irreducible, aperiodic finite Markov chain with stationary distribution $\pi$, $P^n \to \mathbf{1}\pi$ entrywise as $n\to\infty$ (every row of $P^n$ converges to $\pi$), and hence $\pi_t = \pi_0 P^t \to \pi$ for every initial distribution $\pi_0$.
+
+Here $\mathbf{1}$ is the column vector of ones, so $\mathbf{1}\pi$ is the rank-one matrix every row of which is $\pi$.
+
+**Proof (diagonalizable case, via the Chapter 1 spectral decomposition).** By the **Perron–Frobenius theorem** for irreducible aperiodic stochastic matrices, $\lambda_1 = 1$ is an eigenvalue of $P$ that is **simple** (multiplicity one) and **strictly dominant**: every other eigenvalue satisfies $|\lambda_k| < 1$, $k = 2, \dots, m$ (order them $|\lambda_2| \ge |\lambda_3| \ge \dots$). The right eigenvector for $\lambda_1 = 1$ is $\mathbf{1}$ (since $P\mathbf{1} = \mathbf{1}$, each row summing to 1), and the left eigenvector is the stationary $\pi$ (since $\pi P = \pi$), normalized so that $\pi\mathbf{1} = 1$. Assume $P$ is diagonalizable; write the **spectral decomposition** (Chapter 1) in terms of right eigenvectors $r_k$ and left eigenvectors $\ell_k^\top$ with the biorthogonality condition $\ell_j^\top r_k = \delta_{jk}$:
+
+$$
+P = \sum_{k=1}^m \lambda_k\, r_k \ell_k^\top, \qquad r_1 = \mathbf{1},\ \ell_1^\top = \pi.
+$$
+
+Raising to the $n$-th power, the cross terms vanish by biorthogonality ($\ell_j^\top r_k = \delta_{jk}$), so
+
+$$
+P^n = \sum_{k=1}^m \lambda_k^n\, r_k \ell_k^\top = \mathbf{1}\pi + \sum_{k=2}^m \lambda_k^n\, r_k \ell_k^\top.
+$$
+
+Because $|\lambda_k| < 1$ for $k \ge 2$, every term in the remaining sum tends to $0$ as $n\to\infty$, giving $P^n \to \mathbf{1}\pi$. Consequently, for any initial distribution $\pi_0$ (a row vector with $\pi_0\mathbf{1} = 1$),
+
+$$
+\pi_0 P^n = \pi_0\mathbf{1}\pi + \sum_{k=2}^m \lambda_k^n\,(\pi_0 r_k)\ell_k^\top \longrightarrow \pi_0\mathbf{1}\,\pi = \pi.
+$$
+
+$\blacksquare$
+
+**Rate of convergence and the spectral gap.** The slowest-decaying term in the sum governs the approach to stationarity. With the **subdominant eigenvalue** $\lambda_2$ (largest modulus among $k \ge 2$),
+
+$$
+\lVert \pi_t - \pi \rVert \le C\,|\lambda_2|^{\,t}
+$$
+
+for a constant $C$ depending on the eigenvectors and the starting distribution. The **spectral gap** is
+
+$$
+\gamma = 1 - |\lambda_2|;
+$$
+
+a larger gap means faster geometric convergence. The **mixing time** $t_{\mathrm{mix}}(\varepsilon)$ is the number of steps required to bring $\lVert \pi_t - \pi \rVert$ below a prescribed tolerance $\varepsilon$; from the bound above, $t_{\mathrm{mix}}(\varepsilon) \sim \log(1/\varepsilon)/\gamma$. The non-diagonalizable case is handled by the same Perron–Frobenius dominance argument applied to the Jordan form — polynomial-times-$|\lambda_2|^n$ factors still vanish as $n \to \infty$ — or by a coupling argument; see [@norris1997] for both treatments. **MMM payoff.** The spectral gap is the precise mathematical meaning of "how long is long enough": a Gibbs or Metropolis chain with $|\lambda_2|$ near $1$ has a tiny spectral gap, mixes slowly, and must be run for many steps before its samples carry reliable information about the target. Long autocorrelations, poor $\hat{R}$ values, and sluggish trace plots are the chain's signal that its spectral gap is insufficient for the run length attempted — a point Chapter 10 returns to with practical diagnostics.
+
+### Rung 5 — The ergodic theorem
+
+> **Theorem (ergodic theorem for finite chains).** For an irreducible finite Markov chain with stationary distribution $\pi$ and any bounded function $f : S \to \mathbb{R}$, from any initial state,
+>
+> $$
+> \frac{1}{n}\sum_{t=1}^{n} f(X_t) \xrightarrow{\ n\to\infty\ } \mathbb{E}_\pi[f] = \sum_{x\in S} f(x)\,\pi_x \quad \text{almost surely.}
+> $$
+
+**Proof (renewal / return-time argument).** Fix a reference state $s \in S$; since the chain is finite and irreducible, $s$ is recurrent and is visited infinitely often. Let $0 \le T_0 < T_1 < T_2 < \cdots$ be the successive times at which the chain visits $s$. By the **strong Markov property**, the trajectory segments between consecutive visits — the **cycles** — are independent and identically distributed. Define the cycle lengths $\tau_k = T_k - T_{k-1}$ and the per-cycle sums
+
+$$
+S_k = \sum_{t=T_{k-1}}^{T_k - 1} f(X_t).
+$$
+
+The pairs $(\tau_k, S_k)$ are i.i.d. across $k$, and by positive recurrence the mean cycle length is finite: $\mathbb{E}[\tau] = 1/\pi_s < \infty$ (the expected return time to $s$ is the reciprocal of its stationary probability). Over the first $N$ complete cycles, the time average is the ratio of accumulated reward to accumulated time,
+
+$$
+\frac{\sum_{t=0}^{T_N - 1} f(X_t)}{T_N} = \frac{\frac{1}{N}\sum_{k=1}^N S_k}{\frac{1}{N}\sum_{k=1}^N \tau_k} \xrightarrow{\ \text{LLN}\ } \frac{\mathbb{E}[S]}{\mathbb{E}[\tau]},
+$$
+
+applying the ordinary strong law of large numbers to the i.i.d. numerators and denominators separately. The **renewal–reward identity** evaluates the limit: the expected number of visits to a state $x$ during one $s$-cycle equals $\pi_x / \pi_s = \pi_x\,\mathbb{E}[\tau]$, so
+
+$$
+\mathbb{E}[S] = \mathbb{E}\!\left[\sum_{x} f(x)\,(\text{visits to }x\text{ per cycle})\right] = \sum_x f(x)\,\pi_x\,\mathbb{E}[\tau],
+$$
+
+whence $\mathbb{E}[S]/\mathbb{E}[\tau] = \sum_x f(x)\pi_x = \mathbb{E}_\pi[f]$. Finally, a general time $n$ falls within some cycle; the leftover partial cycle contributes $O(1)$ terms and is negligible against the $\Theta(n)$ accumulated sum, so the full-trajectory average shares the same limit. $\blacksquare$
+
+**The law of large numbers for Markov chains.** This theorem licenses estimating a posterior expectation $\mathbb{E}_{p(\beta\mid y)}[f]$ by the time average $\frac{1}{n}\sum_{t=1}^n f(\beta^{(t)})$ over a **single** MCMC trajectory. The successive draws $\beta^{(1)}, \beta^{(2)}, \dots$ are highly correlated — the chain moves by small steps, and adjacent iterates share most of their information — yet the average still converges to the correct expectation. One important asymmetry between Rung 4 and Rung 5 is worth noting: aperiodicity is needed for the marginal convergence $\pi_t \to \pi$ of Rung 4; the time-average ergodic theorem here requires only irreducibility, because the renewal argument depends only on positive recurrence and not on the absence of periodicity.
+
+### Rung 6 — The flip: from analysis to MCMC
+
+Rungs 1–5 have taken the analytic stance: **given** $P$, deduce $\pi$, bound the convergence rate, and prove that time averages converge to integrals. MCMC inverts this program into **construction**. Given a **target** distribution $\pi$ — the Chapter 5 / Chapter 6 posterior $p(\beta \mid y)$, evaluable pointwise only up to its unknown normalizing constant — the task is to build a transition rule $P$ satisfying three properties simultaneously:
+
+1. $\pi$ is **stationary** for $P$, achieved by enforcing **detailed balance** $\pi_i P_{ij} = \pi_j P_{ji}$ (Rung 3); because this uses only the ratio $\pi_j/\pi_i$, the unknown normalizing constant cancels from both sides;
+2. $P$ is **irreducible and aperiodic**, so the **convergence theorem** (Rung 4) guarantees $\pi_t \to \pi$ from any start, at the geometric rate set by the spectral gap $\gamma = 1 - |\lambda_2|$;
+3. the **ergodic theorem** (Rung 5) then ensures that the trajectory average $\frac{1}{n}\sum_{t=1}^n f(X_t)$ is a consistent estimator of $\mathbb{E}_\pi[f]$ for any bounded $f$.
+
+The **Gibbs sampler** of Chapter 6 is exactly such a chain. One Gibbs sweep — resampling each parameter block from its full conditional given all others — defines a transition rule that leaves the posterior invariant: drawing $\beta_g \sim p(\beta_g \mid \text{rest})$ with the remaining parameters distributed according to $\pi$ keeps the joint distribution at $\pi$, so $\pi P_{\text{Gibbs}} = \pi$. With a complete sweep over all blocks rendering the transition irreducible and aperiodic over the parameter space, the convergence theorem (Rung 4) and the ergodic theorem (Rung 5) supply precisely the guarantees Chapter 6 deferred. The promise made there — that Gibbs iterates converge in distribution to the posterior and that their time averages estimate posterior expectations consistently — is now paid in full. **Metropolis–Hastings** (Chapter 8) is the general recipe for manufacturing a detailed-balance kernel from an arbitrary unnormalized target, allowing proposed moves of any shape to be accepted or rejected so that $\pi_i P_{ij} = \pi_j P_{ji}$ holds by construction.
+
+**General state spaces.** The customer-journey chain of this chapter and the Gibbs sampler of Chapter 6 both live on finite state spaces. Genuinely continuous posteriors — $\beta \in \mathbb{R}^p$ — require the general-state-space analogues [@robert2004; @norris1997]. The transition matrix becomes a **transition kernel** $P(x, \mathrm{d}y)$, a measure-valued function of $x$; detailed balance becomes the **reversibility condition**
+
+$$
+\pi(\mathrm{d}x)\,P(x, \mathrm{d}y) = \pi(\mathrm{d}y)\,P(y, \mathrm{d}x)
+$$
+
+(equality of measures on $S \times S$); the recurrence condition becomes **Harris recurrence**, a technical strengthening of the return-to-sets condition that replaces return to individual points; and the convergence and ergodic theorems carry over in their measure-theoretic forms with the same structural logic. The finite theory of this chapter is the conceptual skeleton — it provides every intuition and every proof idea. The continuous case adds technical hypotheses (measurability, Harris recurrence, $\phi$-irreducibility) but no new ideas.
+
+Chapter 8 builds the kernels; Chapter 9 (HMC and NUTS) makes them efficient by exploiting the gradient of $\log \pi$ to propose large moves with high acceptance probability and small autocorrelation; Chapter 10 closes the loop on verification, showing how $\hat{R}$, effective sample size, and trace-plot diagnostics assess in practice whether the spectral gap is large enough and the ergodic averages have converged. The theory of this chapter supplies the questions; the next three chapters supply the engineering answers.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
