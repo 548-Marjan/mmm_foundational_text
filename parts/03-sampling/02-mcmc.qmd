@@ -12,7 +12,103 @@ That asymmetry between evaluation and integration poses the chapter's central qu
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+Two questions set the agenda for this chapter's theory. First, why does Monte Carlo integration scale to high-dimensional posteriors while deterministic quadrature does not? Second, when the posterior cannot be sampled directly, how is a Markov chain engineered to sample it? Rung 1 answers the first and frames the second as the chapter's central construction problem; Rung 2 delivers that construction in the Metropolis–Hastings algorithm and its keystone reversibility proof.
+
+### Rung 1 — The Monte Carlo principle and why MCMC
+
+The Motivation closed with a precise question: given an unnormalized posterior that can be evaluated pointwise but not integrated, how do you draw samples from it? Before answering, it is worth understanding what those samples are for and why the task of drawing them is hard.
+
+**Monte Carlo estimation.** Suppose, hypothetically, you could draw $n$ independent samples $X_1,\dots,X_n \sim \pi$. The **Monte Carlo estimator** of $\mathbb{E}_\pi[f] = \int f(x)\,\pi(x)\,\mathrm{d}x$ is the sample mean,
+
+$$
+\hat\mu_n = \frac{1}{n}\sum_{i=1}^n f(X_i).
+$$
+
+Linearity of expectation gives $\mathbb{E}[\hat\mu_n] = \mathbb{E}_\pi[f]$ immediately — the estimator is **unbiased** for any $\pi$ and any integrable $f$. Its variance is $\operatorname{Var}(\hat\mu_n) = \sigma_f^2/n$ where $\sigma_f^2 = \operatorname{Var}_\pi(f)$, so the standard deviation of the error is
+
+$$
+\operatorname{std}(\hat\mu_n - \mathbb{E}_\pi[f]) = \frac{\sigma_f}{\sqrt{n}}.
+$$
+
+By the central limit theorem, $\sqrt{n}(\hat\mu_n - \mathbb{E}_\pi[f]) \xrightarrow{d} \mathcal{N}(0,\sigma_f^2)$, so the $1/\sqrt{n}$ rate is not merely a bound but an asymptotically sharp description of the estimator's behavior.
+
+**Dimension freedom.** The quantity $\sigma_f/\sqrt{n}$ depends on the variance of $f$ under $\pi$ and on $n$, and on **nothing else** — in particular, not on the dimension $p$ of the parameter space. This is the structural contrast with deterministic numerical quadrature. A tensor-product rule on a $p$-dimensional domain with $m$ grid points per axis evaluates the integrand at $m^p$ points and achieves an error of order $m^{-r}$ for an integrand with $r$ continuous derivatives; expressing the error in terms of the total number of evaluations $n = m^p$ gives $n^{-r/p}$, a rate that degrades exponentially as $p$ grows. Monte Carlo achieves $n^{-1/2}$ regardless of $p$. For a posterior over $G$ market-level regression vectors $\beta_1,\dots,\beta_G$ each of dimension $d$, the full parameter space has dimension $p = Gd$ — easily in the hundreds for a realistic hierarchical MMM — and the quadrature curse is immediately prohibitive. The $1/\sqrt{n}$ rate is the reason sampling is the tool of choice for high-dimensional Bayesian computation.
+
+**The obstacle: sampling from a complex posterior.** The Monte Carlo argument presupposes i.i.d. draws from $\pi$. Obtaining such draws from an arbitrary posterior is a different matter. The simplest method — **inverse-CDF sampling** — requires the closed-form quantile function $\pi^{-1}$, which does not exist in more than one dimension. **Rejection sampling** draws from a proposal $q$ that dominates $\pi$ (i.e.\ $\pi(x) \le M\,q(x)$ for all $x$) and accepts with probability $\pi(x)/(M\,q(x))$; the expected acceptance probability is $1/M$, but finding a tight envelope requires knowing $\pi$ globally, and in $p$ dimensions the constant $M$ necessarily grows exponentially in $p$ as $q$ and $\pi$ diverge in their concentration — the curse of dimensionality applied to sampling. For the hierarchical MMM posterior, with its long ridge of correlated $(\beta_g, \mu_\beta)$ values, rejection sampling is entirely impractical.
+
+**The resolution: dependent sampling via Markov chains.** The key observation is that the Monte Carlo estimator $\hat\mu_n$ is justified by independence of the draws, and that Chapter 7's ergodic theorem removes the independence requirement entirely. Let $X_1, X_2, \dots$ be an irreducible Markov chain with stationary distribution $\pi$. Then
+
+$$
+\frac{1}{n}\sum_{t=1}^n f(X_t) \xrightarrow{\ \text{a.s.}\ } \mathbb{E}_\pi[f]
+$$
+
+regardless of the dependence among the iterates, regardless of the starting point, and for any bounded $f$. The $1/\sqrt{n}$ Monte Carlo rate is replaced by a slightly slower rate that also involves the **effective sample size** $n_{\mathrm{eff}} = n/(1 + 2\sum_{k \ge 1}\rho_k)$, which accounts for the autocorrelations $\rho_k$ between draws $k$ steps apart — a cost of dependence that later sections of this chapter quantify — but the essential conclusion stands: the law of large numbers holds for Markov-chain output. The entire problem therefore reduces to **constructing a transition kernel $P(x,\cdot)$ whose stationary distribution is exactly $\pi$**. Chapter 7's detailed-balance theorem identifies the key design tool: a kernel satisfying $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all state pairs has $\pi$ as its stationary distribution, and the condition uses $\pi$ only through the ratio $\pi(y)/\pi(x)$, so the intractable normalizing constant cancels. Rung 2 delivers the construction.
+
+### Rung 2 — Metropolis–Hastings
+
+The Metropolis–Hastings algorithm is a recipe for building a transition kernel $P(x,\cdot)$ that satisfies detailed balance with respect to $\pi$ by construction, using nothing more than pointwise evaluations of the unnormalized density $\tilde\pi$.
+
+**The algorithm.** At step $t$, the chain is at state $x = X_t$. Draw a **proposal** $y \sim q(\cdot \mid x)$, where $q(y \mid x)$ is a probability density that the practitioner specifies freely. Compute the **acceptance probability**
+
+$$
+\alpha(x,y) = \min\!\left(1,\ \frac{\pi(y)\,q(x\mid y)}{\pi(x)\,q(y\mid x)}\right),
+$$
+
+then set
+
+$$
+X_{t+1} = \begin{cases} y & \text{with probability } \alpha(x,y), \\ x & \text{with probability } 1 - \alpha(x,y). \end{cases}
+$$
+
+For $x \ne y$, the off-diagonal transition density of the resulting kernel is
+
+$$
+P(x,y) = q(y \mid x)\,\alpha(x,y),
+$$
+
+and there is a complementary **rejection mass** at $x$ itself — the diagonal term — equal to the total probability of rejection from state $x$: $P(x,\{x\}) = 1 - \int P(x,y)\,\mathrm{d}y$.
+
+> **Theorem (Metropolis–Hastings is reversible).** The Metropolis–Hastings kernel satisfies detailed balance with respect to $\pi$: $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all $x \ne y$. Hence, by Chapter 7's detailed-balance theorem, $\pi$ is a stationary distribution of the chain.
+
+**Proof.** Fix $x \ne y$. Substitute $P(x,y) = q(y\mid x)\,\alpha(x,y)$ and apply the elementary **min identity**: for any $a, b > 0$,
+
+$$
+a\,\min(1,\,b/a) = \min(a,\,b).
+$$
+
+Set $a = \pi(x)\,q(y\mid x)$ and $b = \pi(y)\,q(x\mid y)$. Then
+
+$$
+\pi(x)\,P(x,y) = \pi(x)\,q(y\mid x)\,\min\!\left(1,\frac{\pi(y)\,q(x\mid y)}{\pi(x)\,q(y\mid x)}\right) = \min\!\bigl(\pi(x)\,q(y\mid x),\;\pi(y)\,q(x\mid y)\bigr).
+$$
+
+The right-hand side is **symmetric in $x$ and $y$**: swapping $x \leftrightarrow y$ leaves $\min(a,b)$ unchanged. Performing the identical computation starting from $\pi(y)P(y,x)$,
+
+$$
+\pi(y)\,P(y,x) = \pi(y)\,q(x\mid y)\,\min\!\left(1,\frac{\pi(x)\,q(y\mid x)}{\pi(y)\,q(x\mid y)}\right) = \min\!\bigl(\pi(y)\,q(x\mid y),\;\pi(x)\,q(y\mid x)\bigr),
+$$
+
+which is the identical quantity. Therefore $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all $x \ne y$; the diagonal term satisfies detailed balance trivially ($\pi(x)P(x,x) = \pi(x)P(x,x)$). By Chapter 7's detailed-balance-implies-stationarity theorem, $\pi$ is stationary. $\blacksquare$
+
+**The normalizer cancels.** The acceptance probability $\alpha(x,y)$ involves $\pi$ only through the ratio $\pi(y)/\pi(x)$. If the target has the form $\pi(x) = \tilde\pi(x)/Z$ for an intractable normalizing constant $Z$, then
+
+$$
+\frac{\pi(y)}{\pi(x)} = \frac{\tilde\pi(y)/Z}{\tilde\pi(x)/Z} = \frac{\tilde\pi(y)}{\tilde\pi(x)},
+$$
+
+and $Z$ cancels identically. The Metropolis–Hastings algorithm therefore runs entirely on the **unnormalized** posterior $\tilde\pi(\beta) = p(y \mid \beta)\,p(\beta)$ — the likelihood times the prior, both cheap to evaluate at any $\beta$ — which is precisely the situation the Motivation identified: a formula evaluable pointwise but not integrable or normalizable.
+
+**Special cases.** When the proposal is **symmetric**, $q(y\mid x) = q(x\mid y)$, the proposal-density ratio cancels and the acceptance probability reduces to the original **Metropolis** rule:
+
+$$
+\alpha(x,y) = \min\!\left(1,\ \frac{\pi(y)}{\pi(x)}\right).
+$$
+
+The two standard instances are the **random-walk Metropolis** sampler, which sets $y = x + \varepsilon$ with $\varepsilon$ drawn from a symmetric density — e.g.\ $\varepsilon \sim \mathcal{N}(0,s^2 I)$, so $q(y\mid x) = q(x\mid y)$ because the density depends only on $\|y - x\|$ — and the **independence sampler**, which proposes $y \sim q(y)$ independently of the current state and applies the full Metropolis–Hastings ratio. Random-walk Metropolis is the default starting point in practice; its efficiency, measured by the acceptance rate and the resulting autocorrelation, depends critically on the step-size $s$ relative to the posterior's scale — a theme developed in detail when the effective sample size is introduced.
+
+**Convergence inherited from Chapter 7.** The Metropolis–Hastings chain is a Markov chain, and Chapters 7's convergence theorem and ergodic theorem apply whenever the chain is irreducible and aperiodic. A sufficient condition is that the proposal $q(y\mid x)$ has positive density on the support of $\pi$ for every $x$: any state $y$ in the support of $\pi$ can then be proposed from any $x$ and accepted with positive probability $\alpha(x,y) > 0$, giving irreducibility; aperiodicity follows because the chain has positive probability of staying at $x$ (rejection) at any step. Under these conditions the marginal distribution of $X_t$ converges in total variation to $\pi$ at a geometric rate set by the spectral gap, and the time-averages $\frac{1}{n}\sum_{t=1}^n f(X_t)$ converge almost surely to $\mathbb{E}_\pi[f]$ [@robert2004].
+
+The Metropolis–Hastings algorithm is the construction Chapter 7 promised but did not give. Given any posterior $\pi(\beta) \propto p(y \mid \beta)\,p(\beta)$ that can be evaluated pointwise, it produces — through nothing more than a proposal draw, a ratio evaluation, and a Bernoulli accept–reject — a Markov chain whose stationary distribution is exactly $\pi$, whose convergence is guaranteed by Chapter 7's theorems, and whose time-averages are consistent estimators of posterior expectations. This is the keystone that locks MCMC into place.
 
 ## Worked Examples
 
