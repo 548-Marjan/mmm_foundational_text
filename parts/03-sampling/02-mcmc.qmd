@@ -584,3 +584,24 @@ and hence the effective sample size $\text{ESS}=n/\tau$. (Answer: $\tau=1+2\cdot
 **A1.** *Tune a random-walk Metropolis sampler.* Implement random-walk Metropolis for a target of your choice — e.g. the correlated 2-D Gaussian $\mathcal N(0,[[1,0.8],[0.8,1]])$, or a Bayesian linear-regression posterior. Sweep the proposal step size across a grid; for each, record the acceptance rate and an effective-sample-size estimate (from the summed autocorrelations of a monitored coordinate, truncated at the first negative lag). Plot acceptance rate and ESS versus step size, identify the efficient regime (acceptance roughly $0.2$–$0.5$), and validate that the good-step sample mean and covariance match the known target. Comment on how the ESS-maximizing step relates to the heuristic optimal acceptance rate.
 
 **A2.** *Gibbs mixing and a non-conjugate posterior.* (i) Implement Gibbs for the bivariate normal with the closed-form conditionals $x\mid y\sim\mathcal N(\rho y,1-\rho^2)$; for $\rho\in\{0.5,0.9,0.99\}$ measure the lag-1 autocorrelation and ESS of a coordinate, confirming the autocorrelation tracks $\rho^2$ and ESS collapses as $\rho\to1$. (ii) Sample a **non-conjugate** 1-D posterior with no closed form — e.g. a logistic / binary-conversion coefficient $\beta$ with $y_i\sim\text{Bernoulli}(\sigma(\beta x_i))$ and prior $\beta\sim\mathcal N(0,\tau^2)$, or a channel effect with a half-normal (non-negativity) prior — using random-walk Metropolis on the unnormalized log-posterior. Validate the MCMC histogram against a fine-grid normalized reference, confirming the sampler recovers a posterior Chapter 5 could not handle in closed form.
+
+## Summary
+
+This chapter built the two algorithms that construct the chains Chapter 7 proved sufficient, turning a posterior you can only evaluate pointwise into one you can sample. If you can state each concept in a sentence and reproduce each identity from memory, you are ready for the gradient-based samplers of Chapter 9.
+
+**Key concepts**
+
+- **Monte Carlo, and why MCMC.** The sample-mean estimator $\hat\mu_n$ has a **dimension-free** $\sigma_f/\sqrt n$ error — the reason sampling beats quadrature in high dimensions — but we cannot draw i.i.d. from a complex posterior. The fix is to draw *dependent* samples from a Markov chain whose stationary distribution is $\pi$; Chapter 7's ergodic theorem makes the time-average converge anyway.
+- **Metropolis–Hastings.** Propose $y\sim q(\cdot\mid x)$, accept with probability $\alpha(x,y)$; the resulting kernel satisfies detailed balance with respect to $\pi$, so $\pi$ is stationary. Because $\pi$ enters only through the ratio $\pi(y)/\pi(x)$, the **unknown normalizer cancels** — MCMC runs on the unnormalized posterior $p(y\mid\beta)p(\beta)$, exactly the intractable case from Chapter 5.
+- **Gibbs is a special case.** Sampling each block from its full conditional $p(x_i\mid x_{-i})$ leaves $\pi$ invariant and is Metropolis–Hastings with acceptance probability identically 1 — and it *is* Chapter 6's hierarchical sampler, now justified. When a conditional has no closed form, use Metropolis-within-Gibbs.
+- **Efficiency is governed by autocorrelation.** Dependent draws carry less information; the **effective sample size** $\text{ESS}=n/(1+2\sum_k\rho_k)$ measures how many independent draws a run is worth, and the random-walk step size trades acceptance against autocorrelation (heuristic optima ~0.234 in high dimensions, ~0.44 in one).
+- **Random-walk mixing has limits.** After burn-in, a blind random walk needs $O(d)$ tiny steps and crawls on strongly correlated posteriors — the lag-1 autocorrelation of the bivariate-Gaussian Gibbs coordinate is $\rho^2\to1$. Collinear channel spends produce exactly this ridge, which is why Chapter 9 turns to gradient-guided Hamiltonian Monte Carlo.
+
+**Key identities**
+
+- Monte Carlo estimator: $\hat\mu_n=\frac1n\sum_i f(X_i)$, standard error $\sigma_f/\sqrt n$ (i.i.d.) or $\sigma_f/\sqrt{\text{ESS}}$ (MCMC).
+- Metropolis–Hastings acceptance: $\alpha(x,y)=\min\!\big(1,\frac{\pi(y)\,q(x\mid y)}{\pi(x)\,q(y\mid x)}\big)$; symmetric proposal $\Rightarrow\ \alpha=\min(1,\pi(y)/\pi(x))$.
+- Detailed balance of MH: $\pi(x)\,q(y\mid x)\,\alpha(x,y)=\min\!\big(\pi(x)q(y\mid x),\,\pi(y)q(x\mid y)\big)$, symmetric in $x\leftrightarrow y$.
+- Gibbs update: draw $x_i\sim p(x_i\mid x_{-i})$; acceptance probability $\equiv1$.
+- Bivariate-normal conditional: $x\mid y\sim\mathcal N(\rho y,\,1-\rho^2)$; coordinate lag-1 autocorrelation $\rho^2$.
+- Effective sample size: $\text{ESS}=n/(1+2\sum_{k\ge1}\rho_k)$, with integrated autocorrelation time $\tau=1+2\sum_{k\ge1}\rho_k$.
