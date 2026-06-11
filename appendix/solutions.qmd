@@ -1269,4 +1269,296 @@ assert np.allclose(freq, p_star, atol=0.015)
 
 The Metropolis acceptance ratio $\min(1, w_j/w_i)$ uses only the unnormalized weights: the common denominator $Z = \sum_k w_k$ appears in both $\pi_j = w_j/Z$ and $\pi_i = w_i/Z$ and cancels identically. This cancellation is not a computational convenience — it is the structural property that makes Metropolis–Hastings the standard inference engine for Bayesian posteriors whose normalizing constant is an intractable integral over parameter space.
 
+## Chapter 8 — Markov Chain Monte Carlo
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** The **Monte Carlo principle** applies the law of large numbers to i.i.d. draws $X_1,\dots,X_n \sim \pi$: the sample-mean estimator
+
+$$
+\hat\mu_n = \frac{1}{n}\sum_{i=1}^n f(X_i)
+$$
+
+is unbiased ($\mathbb{E}[\hat\mu_n] = \mathbb{E}_\pi[f]$) with standard deviation of the error equal to $\sigma_f/\sqrt{n}$, where $\sigma_f^2 = \operatorname{Var}_\pi(f)$.
+
+**Why the rate is dimension-free.** The quantity $\sigma_f/\sqrt{n}$ depends only on the variance of $f$ under $\pi$ and on the sample size $n$ — not on the dimension $p$ of the parameter space. Deterministic quadrature on a $p$-dimensional domain achieves error $O(n^{-r/p})$ for an integrand with $r$ continuous derivatives, a rate that deteriorates exponentially as $p$ grows. A hierarchical MMM posterior over hundreds of channel coefficients renders tensor-product quadrature entirely impractical, while Monte Carlo retains its $n^{-1/2}$ rate regardless of $p$.
+
+**The obstacle.** Drawing i.i.d. from a complex posterior requires either the closed-form quantile function — unavailable in more than one dimension — or a rejection envelope $\pi(x) \le M\,q(x)$ with a tractable bounding constant $M$. In high dimensions $M$ grows exponentially in $p$ as the proposal $q$ and the target $\pi$ diverge in their concentration, making rejection sampling prohibitive. The posteriors of Chapter 5 — non-conjugate likelihoods, half-normal priors, adstock nonlinearities — have no closed-form sampler.
+
+**Why dependent draws still work.** Chapter 7's **ergodic theorem** states that for any irreducible Markov chain with stationary distribution $\pi$, the time average
+
+$$
+\frac{1}{n}\sum_{t=1}^n f(X_t) \xrightarrow{\ \text{a.s.}\ } \mathbb{E}_\pi[f]
+$$
+
+almost surely, regardless of the dependence among iterates and regardless of the starting point. The task therefore reduces to constructing a chain whose stationary distribution is exactly the target posterior — the problem Metropolis–Hastings solves.
+
+**C2.** The Metropolis–Hastings acceptance probability is
+
+$$
+\alpha(x,y) = \min\!\left(1,\, \frac{\pi(y)\,q(x\mid y)}{\pi(x)\,q(y\mid x)}\right).
+$$
+
+$\pi$ enters through the ratio $\pi(y)/\pi(x)$. If $\pi(\beta) = \tilde\pi(\beta)/Z$ for an intractable normalizing constant $Z$, then
+
+$$
+\frac{\pi(y)}{\pi(x)} = \frac{\tilde\pi(y)/Z}{\tilde\pi(x)/Z} = \frac{\tilde\pi(y)}{\tilde\pi(x)},
+$$
+
+and $Z$ cancels identically. The algorithm runs entirely on the unnormalized posterior $\tilde\pi(\beta) = p(y\mid\beta)\,p(\beta)$ — a likelihood evaluation times a prior evaluation, both available at any $\beta$ — without ever computing the integral $Z = \int p(y\mid\beta)\,p(\beta)\,\mathrm{d}\beta$. This cancellation is the single property that makes MCMC applicable to the intractable posteriors of Chapter 5.
+
+**The symmetric (Metropolis) case.** When $q(y\mid x) = q(x\mid y)$ — for example, a Gaussian random walk $y = x + \varepsilon$ with $\varepsilon \sim \mathcal{N}(0, s^2 I)$, which satisfies $q(y\mid x) = q(x\mid y)$ because the density depends only on $\|y-x\|$ — the proposal ratio drops out, simplifying to $\alpha(x,y) = \min(1,\pi(y)/\pi(x))$.
+
+**When it does not drop out.** For an asymmetric proposal — for example, an independence sampler with a non-symmetric $q(y)$, or a log-normal random walk where $q(y\mid x) \ne q(x\mid y)$ — the ratio $q(x\mid y)/q(y\mid x) \ne 1$ and must be included in the acceptance step. Omitting it would break detailed balance and produce a chain whose stationary distribution is not $\pi$.
+
+**C3.** In a Gibbs update of block $i$, the proposal is $q(x'\mid x) = p(x_i'\mid x_{-i})$, the exact full conditional of block $i$. Substituting into the Metropolis–Hastings ratio and applying $\pi(x_i,x_{-i}) = p(x_i\mid x_{-i})\,\pi(x_{-i})$:
+
+$$
+\frac{\pi(x_i',x_{-i})\,p(x_i\mid x_{-i})}{\pi(x_i,x_{-i})\,p(x_i'\mid x_{-i})} = \frac{p(x_i'\mid x_{-i})\,\pi(x_{-i})\,p(x_i\mid x_{-i})}{p(x_i\mid x_{-i})\,\pi(x_{-i})\,p(x_i'\mid x_{-i})} = 1,
+$$
+
+so $\alpha \equiv 1$: every Gibbs proposal is accepted with certainty. The Chapter 6 hierarchical sampler cycles through conjugate full conditionals for $\beta_g$, $\mu_\beta$, $\Sigma_\beta$, and $\sigma^2$ — it is exactly a Gibbs sampler, now justified by this invariance result together with Chapter 7's ergodic theorem.
+
+**Metropolis-within-Gibbs** handles the case where one block lacks a tractable full conditional: that block's Gibbs draw is replaced by a Metropolis–Hastings step targeting its full conditional. Each update — whether a direct Gibbs draw or a Metropolis step targeting the same conditional — leaves $\pi$ invariant, so the composition of all updates is again invariance-preserving.
+
+**Efficiency measures.** The **acceptance rate** quantifies how aggressively the chain explores: too high signals tiny, nearly-correlated steps; too low signals frequent stalls through repeated rejections. The **lag-$k$ autocorrelation** $\rho_k = \operatorname{Corr}(f(X_t), f(X_{t+k}))$ measures how much information is shared between draws $k$ steps apart. The **effective sample size**
+
+$$
+\text{ESS} = \frac{n}{1 + 2\displaystyle\sum_{k \ge 1}\rho_k}
+$$
+
+converts $n$ correlated draws into the equivalent number of independent draws; the denominator $\tau$ (the integrated autocorrelation time) inflates the MCMC standard error by $\sqrt{\tau}$ relative to the i.i.d. case.
+
+**Why random-walk Metropolis mixes slowly on collinear posteriors.** When channel-spend data are collinear, the likelihood constrains only certain combinations of channel coefficients, and the posterior concentrates along a narrow ridge in coefficient space. An isotropic random-walk proposal must choose between steps small enough to stay on the ridge (high acceptance but tiny displacement, high $\rho_k$) and steps large enough to traverse the ridge (low acceptance, chain stalls). Both extremes inflate $\tau$ and collapse ESS. As the posterior correlation $\rho \to 1$, the Gibbs coordinate's lag-1 autocorrelation approaches $\rho^2 \to 1$, the integrated autocorrelation time diverges, and ESS collapses for any fixed $n$ — the geometric obstruction that motivates Hamiltonian Monte Carlo.
+
+### B — By Hand
+
+**B1.** For the unnormalized target $\tilde\pi(x) = e^{-x^2/2}$ with a symmetric random-walk proposal, the Metropolis acceptance probability reduces to
+
+$$
+\alpha(x,y) = \min\!\left(1,\, e^{-(y^2-x^2)/2}\right).
+$$
+
+**(a) $x = 0 \to y = 1.5$ (proposed move to lower density).** The exponent is $-(1.5^2 - 0^2)/2 = -2.25/2 = -1.125$:
+
+$$
+\alpha(0,\,1.5) = \min\!\left(1,\, e^{-1.125}\right) = e^{-1.125} \approx 0.3247.
+$$
+
+Since $\tilde\pi(1.5) = e^{-1.125} < \tilde\pi(0) = 1$, the proposed point has lower density and the move is accepted only probabilistically.
+
+**(b) $x = 2 \to y = 1$ (proposed move to higher density).** The exponent is $-(1^2 - 2^2)/2 = 3/2 = 1.5 > 0$:
+
+$$
+\alpha(2,\,1) = \min\!\left(1,\, e^{1.5}\right) = 1,
+$$
+
+since $e^{1.5} \approx 4.48 > 1$. The proposed point has higher density; every uphill move is accepted with certainty.
+
+**(c) $x = -1 \to y = -2$ (proposed move away from the mode).** The exponent is $-((-2)^2 - (-1)^2)/2 = -(4-1)/2 = -1.5$:
+
+$$
+\alpha(-1,\,-2) = \min\!\left(1,\, e^{-1.5}\right) = e^{-1.5} \approx 0.2231.
+$$
+
+The chain ventures further into the tail and accepts this downhill move about $22\%$ of the time.
+
+**B2.** **Forward move $x = 2 \to y = 1$.** With unnormalized target $\tilde\pi(x) = e^{-x}$ on $x > 0$ and proposal densities $q(1\mid 2) = 0.5$, $q(2\mid 1) = 0.2$:
+
+$$
+\alpha(2,\,1) = \min\!\left(1,\; \frac{e^{-1}\cdot 0.2}{e^{-2}\cdot 0.5}\right) = \min\!\left(1,\; 0.4e\right) = \min(1,\, 1.0873) = 1.
+$$
+
+The proposed point $y = 1$ has higher density than $x = 2$, and the proposal correction $q(2\mid 1)/q(1\mid 2) = 0.2/0.5 = 0.4$ only partially offsets this; the combined ratio still exceeds 1, so the uphill move is accepted with certainty.
+
+**Reverse move $x = 1 \to y = 2$.** The density ratio is now downhill and the proposal ratio flips:
+
+$$
+\alpha(1,\,2) = \min\!\left(1,\; \frac{e^{-2}\cdot 0.5}{e^{-1}\cdot 0.2}\right) = \min\!\left(1,\; \frac{2.5}{e}\right) = \min(1,\, 0.9197) = 0.9197.
+$$
+
+**Effect of the asymmetry.** Under a symmetric proposal the reverse move would have $\alpha = \min(1, e^{-2}/e^{-1}) = e^{-1} \approx 0.3679$. The asymmetry factor $q(1\mid 2)/q(2\mid 1) = 0.5/0.2 = 2.5$ multiplies the density ratio, raising the acceptance from $0.368$ to $0.920$. Intuitively, the proposal is biased toward lower-$x$ values (proposing a downward step from $x=2$ is more probable than proposing an upward step from $x=1$), so the Hastings correction rewards this move and the chain can make upward excursions with substantially higher probability than the density ratio alone would allow.
+
+**B3.** The integrated autocorrelation time sums the geometric series:
+
+$$
+\tau = 1 + 2\sum_{k=1}^{\infty} 0.6^k = 1 + 2\cdot\frac{0.6}{1 - 0.6} = 1 + 2\cdot\frac{0.6}{0.4} = 1 + 3 = 4.
+$$
+
+The effective sample size is
+
+$$
+\text{ESS} = \frac{n}{\tau} = \frac{10{,}000}{4} = 2{,}500.
+$$
+
+**Interpretation.** The chain of $10{,}000$ draws is worth only $2{,}500$ independent ones. The MCMC standard error is $\sigma_f/\sqrt{2{,}500}$, which equals $\sigma_f/50$. The corresponding i.i.d. standard error from the same $10{,}000$ draws would be $\sigma_f/\sqrt{10{,}000} = \sigma_f/100$. The ratio is $\sqrt{\tau} = \sqrt{4} = 2$: correlated sampling doubles the error relative to the i.i.d. benchmark of equal length.
+
+### P — Prove It
+
+**P1.** *Claim.* For the Metropolis–Hastings kernel $P(x,y) = q(y\mid x)\,\alpha(x,y)$ with $\alpha(x,y) = \min\!\big(1,\frac{\pi(y)q(x\mid y)}{\pi(x)q(y\mid x)}\big)$, we have $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all $x \ne y$.
+
+*Proof.* Set $a = \pi(x)\,q(y\mid x)$ and $b = \pi(y)\,q(x\mid y)$. Applying the identity $a\min(1,b/a) = \min(a,b)$:
+
+$$
+\pi(x)P(x,y) = \pi(x)\,q(y\mid x)\,\min\!\left(1,\frac{\pi(y)\,q(x\mid y)}{\pi(x)\,q(y\mid x)}\right) = \min\!\bigl(\pi(x)\,q(y\mid x),\;\pi(y)\,q(x\mid y)\bigr).
+$$
+
+The right-hand side is symmetric in $x \leftrightarrow y$: swapping $x$ and $y$ leaves $\min(a,b)$ unchanged. Performing the identical computation starting from $\pi(y)P(y,x)$:
+
+$$
+\pi(y)P(y,x) = \pi(y)\,q(x\mid y)\,\min\!\left(1,\frac{\pi(x)\,q(y\mid x)}{\pi(y)\,q(x\mid y)}\right) = \min\!\bigl(\pi(y)\,q(x\mid y),\;\pi(x)\,q(y\mid x)\bigr),
+$$
+
+which is the identical quantity. Therefore $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all $x \ne y$; the diagonal satisfies detailed balance trivially. By Chapter 7's detailed-balance-implies-stationarity theorem, $\pi$ is stationary for this kernel. $\blacksquare$
+
+**P2.** *Claim.* (i) The Gibbs full-conditional update $x_i' \sim p(\cdot\mid x_{-i})$ with $x_{-i}' = x_{-i}$ leaves $\pi$ invariant. (ii) This update is Metropolis–Hastings with acceptance probability identically $1$.
+
+*Proof of (i).* The density of the updated state $(x_i', x_{-i})$ is obtained by averaging the old $x_i$ out of the joint and applying the conditional draw:
+
+$$
+\int \pi(x_i, x_{-i})\,p(x_i'\mid x_{-i})\,\mathrm{d}x_i = p(x_i'\mid x_{-i})\int \pi(x_i, x_{-i})\,\mathrm{d}x_i = p(x_i'\mid x_{-i})\,\pi(x_{-i}) = \pi(x_i', x_{-i}).
+$$
+
+The first equality extracts $p(x_i'\mid x_{-i})$ from the integral, since it does not depend on $x_i$. The second applies $\int\pi(x_i,x_{-i})\,\mathrm{d}x_i = \pi(x_{-i})$. The third uses the definition of the conditional density: $p(x_i'\mid x_{-i})\,\pi(x_{-i}) = \pi(x_i',x_{-i})$. Thus the updated state has density $\pi$.
+
+*Proof of (ii).* Cast the update as Metropolis–Hastings with proposal $q(x'\mid x) = p(x_i'\mid x_{-i})$. Substituting into the Hastings ratio and applying $\pi(x_i,x_{-i}) = p(x_i\mid x_{-i})\,\pi(x_{-i})$:
+
+$$
+\frac{\pi(x_i',x_{-i})\,p(x_i\mid x_{-i})}{\pi(x_i,x_{-i})\,p(x_i'\mid x_{-i})} = \frac{p(x_i'\mid x_{-i})\,\pi(x_{-i})\,p(x_i\mid x_{-i})}{p(x_i\mid x_{-i})\,\pi(x_{-i})\,p(x_i'\mid x_{-i})} = 1.
+$$
+
+Every factor in numerator and denominator cancels exactly, so $\alpha \equiv 1$ and every Gibbs proposal is accepted. $\blacksquare$
+
+**P3.** **(a) Symmetric-proposal special case.** Impose $q(y\mid x) = q(x\mid y)$ in the general Hastings ratio. The proposal densities cancel:
+
+$$
+\alpha(x,y) = \min\!\left(1,\; \frac{\pi(y)\,q(x\mid y)}{\pi(x)\,q(y\mid x)}\right) = \min\!\left(1,\; \frac{\pi(y)}{\pi(x)}\right),
+$$
+
+recovering the original Metropolis rule. $\blacksquare$
+
+**(b) Full conditional of the bivariate normal.** Let $(x,y)^\top \sim \mathcal{N}\!\bigl(0,\Sigma\bigr)$ with
+
+$$
+\Sigma = \begin{bmatrix} 1 & \rho \\ \rho & 1 \end{bmatrix}.
+$$
+
+The joint density is proportional to $\exp\!\big(-\frac{1}{2(1-\rho^2)}(x^2 - 2\rho xy + y^2)\big)$. Collecting all terms in $x$:
+
+$$
+-\frac{1}{2(1-\rho^2)}\bigl(x^2 - 2\rho y\,x\bigr) = -\frac{1}{2(1-\rho^2)}\bigl(x - \rho y\bigr)^2 + \text{const}(y),
+$$
+
+where the constant absorbs the term $\rho^2y^2/(1-\rho^2)$. This is the kernel of a Gaussian in $x$ with mean $\rho y$ and variance $1 - \rho^2$. Equivalently, by the Gaussian conditioning formula with $\Sigma_{xy} = \rho$ and $\Sigma_{yy} = 1$:
+
+$$
+\mathbb{E}[x\mid y] = \Sigma_{xy}\,\Sigma_{yy}^{-1}\,y = \rho y, \qquad \operatorname{Var}(x\mid y) = \Sigma_{xx} - \Sigma_{xy}\,\Sigma_{yy}^{-1}\,\Sigma_{yx} = 1 - \rho^2.
+$$
+
+Therefore $x \mid y \sim \mathcal{N}(\rho y,\, 1-\rho^2)$. $\blacksquare$
+
+### A — Applied / Code
+
+**A1.** The acceptance rate falls monotonically with step size: a very small step ($s = 0.1$) accepts nearly every proposal but each accepted move is tiny, so consecutive draws are nearly identical and autocorrelation is high; a very large step ($s = 8.0$) proposes bold jumps that usually land in low-density regions and are rejected, leaving the chain stalled and again heavily autocorrelated. ESS is unimodal in step size, peaking in the acceptance band of roughly $0.2$–$0.5$: in this regime the chain moves far enough to reduce autocorrelation without suffering excessive rejection. At the optimal step size the sample mean converges to the target mean and the sample covariance closely matches the target $\Sigma$. The ESS-maximizing step corresponds to the optimal acceptance rate heuristic ($\approx 0.234$ in high dimensions, $\approx 0.44$ in one dimension) derived from optimal-scaling theory.
+
+```python
+import numpy as np
+from numpy.linalg import inv
+
+rng = np.random.default_rng(0)
+Sigma = np.array([[1.0, 0.8], [0.8, 1.0]])
+inv_S = inv(Sigma)
+
+def logpi(z):
+    return -0.5 * z @ inv_S @ z
+
+def rw_metropolis(logpi_fn, x0, step, n, rng_obj):
+    x = np.array(x0, dtype=float)
+    chain = np.empty((n, len(x0)))
+    n_acc = 0; lp = logpi_fn(x)
+    for i in range(n):
+        prop = x + step * rng_obj.standard_normal(len(x0))
+        lp_p = logpi_fn(prop)
+        if np.log(rng_obj.random()) < lp_p - lp:
+            x = prop; lp = lp_p; n_acc += 1
+        chain[i] = x
+    return chain, n_acc / n
+
+def ess(chain):
+    x = chain[:, 0] - chain[:, 0].mean()
+    var = np.var(x); total = 0.0
+    for k in range(1, len(x)):
+        rho_k = np.mean(x[:-k] * x[k:]) / var
+        if rho_k < 0:
+            break
+        total += rho_k
+    return len(x) / (1 + 2 * total)
+
+for s in [0.1, 0.5, 1.2, 3.0, 8.0]:
+    chain, acc = rw_metropolis(logpi, [0., 0.], s, 20_000, rng)
+    print(f"step={s:.1f}  accept={acc:.3f}  ESS={ess(chain):.0f}")
+```
+
+**Takeaway.** ESS peaks near the step size that yields $25$–$45\%$ acceptance; both extremes inflate the MCMC standard error $\sigma_f/\sqrt{\text{ESS}}$ relative to the i.i.d. floor $\sigma_f/\sqrt{n}$, and the good-step chain recovers the target mean and covariance to within numerical tolerance.
+
+**A2.** **(i) Gibbs mixing.** The lag-1 autocorrelation of each Gibbs coordinate tracks $\rho^2$: for $\rho \in \{0.5, 0.9, 0.99\}$ the theoretical values are $0.25$, $0.81$, and $0.9801$, confirmed empirically. The integrated autocorrelation time $\tau = 1 + 2\rho^2/(1-\rho^2)$ gives ESS as approximately $60\%$, $10\%$, and $1\%$ of $n$ respectively. At $\rho = 0.99$ the ESS from $60{,}000$ nominal draws collapses to a few hundred, confirming the slow-mixing pathology the theory predicts.
+
+**(ii) Non-conjugate posterior.** Random-walk Metropolis applied to the unnormalized log-posterior of a logistic binary-conversion model samples the posterior without ever computing its normalizing constant. The MCMC histogram matches a fine-grid normalized reference, validating that the sampler recovers the correct posterior shape and mean — demonstrating the key practical payoff: a posterior Chapter 5 could not handle in closed form, now accessible through pointwise log-posterior evaluations alone.
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(42)
+
+# --- (i) Gibbs mixing on bivariate normal N(0, [[1,rho],[rho,1]]) ---
+def gibbs(rho, n, rng_obj):
+    chain = np.empty((n, 2)); x = y = 0.0
+    csd = np.sqrt(1.0 - rho**2)
+    for i in range(n):
+        x = rho * y + csd * rng_obj.standard_normal()
+        y = rho * x + csd * rng_obj.standard_normal()
+        chain[i] = (x, y)
+    return chain
+
+for rho in [0.5, 0.9, 0.99]:
+    ch = gibbs(rho, 60_000, rng)
+    lag1 = np.corrcoef(ch[:-1, 0], ch[1:, 0])[0, 1]
+    x = ch[:, 0] - ch[:, 0].mean(); var = np.var(x); total = 0.0
+    for k in range(1, len(x)):
+        rk = np.mean(x[:-k] * x[k:]) / var
+        if rk < 0:
+            break
+        total += rk
+    e = len(x) / (1 + 2 * total)
+    print(f"rho={rho}  lag-1={lag1:.4f}  (theory rho^2={rho**2:.4f})  ESS={e:.0f}")
+
+# --- (ii) Non-conjugate 1-D logistic posterior ---
+x_data = rng.normal(size=40); beta_true = 1.5
+y_data = (rng.random(40) < 1 / (1 + np.exp(-beta_true * x_data))).astype(float)
+
+def logpost(b):
+    bx = b * x_data
+    return np.sum(y_data * bx - np.log1p(np.exp(bx))) - b**2 / 8.0
+
+def mh_scalar(logp, x0, step, n, rng_obj):
+    x = x0; chain = np.empty(n); lp = logp(x)
+    for i in range(n):
+        prop = x + step * rng_obj.standard_normal()
+        lp_p = logp(prop)
+        if np.log(rng_obj.random()) < lp_p - lp:
+            x = prop; lp = lp_p
+        chain[i] = x
+    return chain
+
+chain_mh = mh_scalar(logpost, 0.0, 1.8, 60_000, rng)
+bgrid = np.linspace(-2, 5, 4000)
+lp_g = np.array([logpost(b) for b in bgrid]); lp_g -= lp_g.max()
+p_g = np.exp(lp_g); db = bgrid[1] - bgrid[0]; p_g /= p_g.sum() * db
+grid_mean = np.sum(bgrid * p_g) * db
+print(f"MH mean={chain_mh.mean():.4f}  grid mean={grid_mean:.4f}")
+assert abs(chain_mh.mean() - grid_mean) < 0.1
+```
+
+**Takeaway.** The Gibbs autocorrelation rises steeply with $\rho$ and ESS collapses — confirming the $\rho^2$ lag-1 formula and the slow-mixing ridge geometry that motivates Hamiltonian Monte Carlo. For the non-conjugate logistic posterior, MCMC recovers the correct posterior without ever computing the normalizing constant, demonstrating that the intractability identified in Chapter 5 is fully resolved by Metropolis–Hastings.
+
 :::
