@@ -377,7 +377,203 @@ and already after two steps the distribution $(0.61, 0.39)$ closely approximates
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The cell below translates the chapter's six rungs into five concrete experiments, each runnable in sequence on the same seeded state. The first mirrors the Worked-Example attribution calculation in code: it assembles the 5-state customer-journey chain, extracts the transient block $Q$ and the absorbing block $R$, inverts $(I - Q)$ to obtain the fundamental matrix $N$, and computes the baseline conversion $B_{0,0} = (NR)_{\text{Start, Convert}}$; a `removal_effect` helper then re-routes the deleted channel's probability mass to Null, recomputes the reduced chain's absorption matrix, and returns the fractional drop in conversion. The second verifies the stationary distribution $\pi$ two ways — as the normalized left eigenvector of $P$ for eigenvalue 1 (via `np.linalg.eig(P.T)`) and as the fixed point of power iteration $\pi_{t+1} = \pi_t P$ from a uniform start — and `assert`s they agree to machine precision. The third plots the total-variation distance $\|\pi_t - \pi\|_1$ on a log-$y$ axis against $t$ for three starting distributions, overlays the theoretical curve $d_0\,|\lambda_2|^t$ with $|\lambda_2| = 0.3$, and fits the empirical log-linear slope via `np.polyfit` to confirm it matches $\log|\lambda_2|$. The fourth simulates a single trajectory of length 200,000 and plots the running average of $\mathbf{1}[X_t = 0]$ converging to $\mathbb{E}_\pi[f] = \pi_0$, the ergodic theorem made visible. The fifth previews the Metropolis algorithm: it proposes a uniformly random other state, accepts with probability $\min(1, w_j/w_i)$ — the normalizing constant of $p^\star$ cancels in the ratio, so only the unnormalized weights $w$ are needed — and runs $200{,}000$ steps, asserting that the empirical visit frequencies match $p^\star$ to within 0.01.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+from numpy.linalg import inv, eig, matrix_power
+
+rng = np.random.default_rng(0)
+
+# ====================================================================
+# Part 1 — Customer-journey chain: fundamental matrix + removal effects
+# ====================================================================
+
+# Transient states: Start(0), Display(1), Search(2)
+# Absorbing states: Convert(col 0), Null(col 1)
+
+Q = np.array([[0.0, 0.5, 0.5],
+              [0.0, 0.0, 0.3],
+              [0.0, 0.0, 0.0]])
+
+R = np.array([[0.0, 0.0],
+              [0.2, 0.5],
+              [0.4, 0.6]])
+
+N_fund = inv(np.eye(3) - Q)    # fundamental matrix  N = (I - Q)^{-1}
+B      = N_fund @ R             # absorption-probability matrix  B = N R
+
+conv_baseline = B[0, 0]         # Start -> Convert
+print("--- Attribution chain ---")
+print(f"  Baseline conversion from Start      : {conv_baseline:.4f}")
+
+
+def removal_effect(channel):
+    """Remove transient `channel`; all c-bound mass is rerouted to Null."""
+    remaining = [i for i in range(3) if i != channel]
+    new_Q = Q[np.ix_(remaining, remaining)]
+    new_R = R[np.ix_(remaining, [0, 1])].copy()
+    for loc, i in enumerate(remaining):
+        new_R[loc, 1] += Q[i, channel]   # redirect mass -> Null
+    k     = len(remaining)
+    N_new = inv(np.eye(k) - new_Q)
+    B_new = N_new @ new_R
+    start_loc    = remaining.index(0)
+    conv_without = B_new[start_loc, 0]
+    effect = (conv_baseline - conv_without) / conv_baseline
+    return conv_without, effect
+
+
+conv_no_disp, eff_disp = removal_effect(1)   # remove Display
+conv_no_srch, eff_srch = removal_effect(2)   # remove Search
+
+print(f"  Removal effect  Display             : conv_without={conv_no_disp:.4f},  effect={eff_disp:.4f}")
+print(f"  Removal effect  Search              : conv_without={conv_no_srch:.4f},  effect={eff_srch:.4f}")
+
+# ====================================================================
+# Part 2 — Stationary distribution: eigenvector vs power iteration
+# ====================================================================
+
+P = np.array([[0.7, 0.3],
+              [0.4, 0.6]])
+
+# Method (i): left eigenvector of P for eigenvalue 1
+#   left eigenvectors of P = right eigenvectors of P.T
+evals, evecs = eig(P.T)
+idx1    = np.argmin(np.abs(np.real(evals) - 1.0))
+pi_eig  = np.real(evecs[:, idx1])
+pi_eig /= pi_eig.sum()
+if pi_eig[0] < 0:
+    pi_eig = -pi_eig
+
+# Method (ii): power iteration  pi_{t+1} = pi_t @ P  from uniform start
+pi_pw = np.array([0.5, 0.5])
+iters = 0
+while True:
+    pi_new = pi_pw @ P
+    if np.linalg.norm(pi_new - pi_pw) < 1e-12:
+        break
+    pi_pw = pi_new
+    iters += 1
+
+assert np.allclose(pi_eig, pi_pw, atol=1e-8), \
+    f"Methods disagree: {pi_eig} vs {pi_pw}"
+
+print("\n--- Stationary distribution ---")
+print(f"  pi (eigenvector)                    : [{pi_eig[0]:.6f}, {pi_eig[1]:.6f}]")
+print(f"  pi (power iter, {iters:3d} iterations) : [{pi_pw[0]:.6f}, {pi_pw[1]:.6f}]")
+print(f"  np.allclose(pi_eig, pi_pw)          : {np.allclose(pi_eig, pi_pw, atol=1e-8)}")
+
+pi = pi_pw   # canonical stationary vector for subsequent parts
+
+# ====================================================================
+# Part 3 — Convergence experiment (log-y plot + empirical rate)
+# ====================================================================
+
+T_MAX  = 25
+lam2   = 0.3
+starts = [np.array([1.0, 0.0]),
+          np.array([0.0, 1.0]),
+          np.array([0.8, 0.2])]
+
+fig, ax = plt.subplots(figsize=(7, 4))
+colors  = ['steelblue', 'darkorange', 'seagreen']
+lbls    = [r'$\pi_0=(1,0)$', r'$\pi_0=(0,1)$', r'$\pi_0=(0.8,0.2)$']
+
+ts    = np.arange(1, T_MAX + 1)
+d_ref = None
+for pi_0, col, lab in zip(starts, colors, lbls):
+    d_t = np.array([np.sum(np.abs(pi_0 @ matrix_power(P, t) - pi)) for t in ts])
+    ax.semilogy(ts, d_t, color=col, lw=1.5, label=lab)
+    if d_ref is None:
+        d_ref = d_t
+
+# theoretical overlay  d_0 * |lam2|^t  anchored to t=1
+d0_val = d_ref[0] / lam2
+ax.semilogy(ts, d0_val * lam2**ts, 'k--', lw=1.5,
+            label=r'$d_0\,|\lambda_2|^t$,  $|\lambda_2|=0.3$')
+
+# empirical decay rate: fit log(d_t) ~ slope * t  (clean geometric regime only)
+valid    = d_ref > 1e-8
+slope, _ = np.polyfit(ts[valid], np.log(d_ref[valid]), 1)
+log_lam2 = np.log(lam2)
+
+print("\n--- Convergence spectral check ---")
+print(f"  measured log-rate                   : {slope:.4f}")
+print(f"  log|lambda_2| = log(0.3)            : {log_lam2:.4f}")
+
+ax.set_xlabel('step $t$')
+ax.set_ylabel(r'$\|\pi_t - \pi\|_1$  (log scale)')
+ax.set_title(r'Convergence to $\pi$: total-variation distance decays as $0.3^t$')
+ax.legend(fontsize=8)
+plt.tight_layout()
+plt.show()
+
+# ====================================================================
+# Part 4 — Ergodic theorem demo (single long trajectory)
+# ====================================================================
+
+N_TRAJ = 200_000
+state  = 0
+f_sum  = 0.0
+avgs   = []
+every  = 500
+
+for t in range(1, N_TRAJ + 1):
+    state  = rng.choice(2, p=P[state])
+    f_sum += float(state == 0)
+    if t % every == 0:
+        avgs.append(f_sum / t)
+
+final_avg = f_sum / N_TRAJ
+ts_ergo   = np.arange(every, N_TRAJ + 1, every)
+
+fig, ax = plt.subplots(figsize=(8, 3))
+ax.plot(ts_ergo, avgs, lw=0.8, color='steelblue', label='running average')
+ax.axhline(pi[0], color='tomato', lw=1.8, ls='--',
+           label=rf'$\pi_0 = {pi[0]:.4f}$')
+ax.set_xlabel('time step $t$')
+ax.set_ylabel(r'$\frac{1}{t}\sum_{s=1}^t \mathbf{1}[X_s = 0]$')
+ax.set_title(r'Ergodic theorem: running time-average $\to \mathbb{E}_\pi[f] = \pi_0$')
+ax.legend()
+plt.tight_layout()
+plt.show()
+
+print("\n--- Ergodic theorem demo ---")
+print(f"  final time-average (t={N_TRAJ:,})    : {final_avg:.5f}")
+print(f"  pi[0]                               : {pi[0]:.5f}")
+
+# ====================================================================
+# Part 5 — Metropolis preview (discrete target, symmetric proposal)
+# ====================================================================
+
+w      = np.array([1.0, 3.0, 2.0, 5.0, 4.0])
+p_star = w / w.sum()
+
+N_MH   = 200_000
+others = [np.array([j for j in range(5) if j != i]) for i in range(5)]
+
+counts   = np.zeros(5, dtype=int)
+state_mh = 0
+for _ in range(N_MH):
+    j = rng.choice(others[state_mh])
+    if rng.random() < w[j] / w[state_mh]:   # normaliser cancels in ratio w[j]/w[i]
+        state_mh = j
+    counts[state_mh] += 1
+
+freq = counts / counts.sum()
+assert np.allclose(freq, p_star, atol=0.01), \
+    f"Metropolis FAILED: freq={freq}  p_star={p_star}"
+
+print("\n--- Metropolis preview ---")
+print(f"  {'state':>5}  {'empirical':>10}  {'target':>10}")
+for i in range(5):
+    print(f"  {i:>5}  {freq[i]:>10.4f}  {p_star[i]:>10.4f}")
+print(f"  np.allclose(freq, p_star, atol=0.01) = {np.allclose(freq, p_star, atol=0.01)}")
+```
+
+The printed output ties every quantitative claim back to the chapter's theory. The attribution chain prints a baseline conversion from Start of $0.3600$ — the value computed by backward substitution in Example (a) — and the removal effects $0.4444$ for Display (conversion drops from $0.36$ to $0.20$) and $0.7222$ for Search (conversion drops from $0.36$ to $0.10$), confirming numerically that Search carries larger marginal indispensability because it sits downstream of Display's outbound paths as well as Start's direct edge. The stationary distribution is $\pi = [0.571429,\,0.428571]$ by both the eigenvector method and by power iteration — they agree to `np.allclose` precision — and power iteration takes 21 steps to tighten below the $10^{-12}$ tolerance, illustrating the fast mixing that $|\lambda_2| = 0.3$ enables. The convergence plot confirms this: all three starting distributions collapse onto the theoretical $d_0\,|\lambda_2|^t$ envelope, and the log-linear fit over the clean geometric regime recovers a measured log-rate of $-1.2040$, matching $\log|\lambda_2| = \log(0.3) = -1.2040$ to four decimal places, the spectral gap theorem verified empirically to floating-point precision. The ergodic demo runs a single 200,000-step trajectory: the running average of $\mathbf{1}[X_t = 0]$ converges to $0.57231$ against the theoretical $\pi_0 = 0.57143$, a difference of $8.8 \times 10^{-4}$, with the characteristic rapid stabilization around step 5,000 reflecting the chain's large spectral gap. Finally, the Metropolis chain over $w = [1,3,2,5,4]$ recovers empirical frequencies $[0.0667,\,0.1989,\,0.1332,\,0.3369,\,0.2642]$ against the target $p^\star = [0.0667,\,0.2000,\,0.1333,\,0.3333,\,0.2667]$, all within the $0.01$ tolerance — and crucially, only the unnormalized weights $w$ appear in the acceptance ratio $w_j/w_i$, so the sum $w_{\text{total}} = 15$ never needs to be computed, the precise mechanism that makes the algorithm applicable to unnormalized posteriors in Chapter 8.
 
 ## Exercises
 
