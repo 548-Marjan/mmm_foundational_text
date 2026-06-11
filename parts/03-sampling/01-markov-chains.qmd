@@ -12,7 +12,145 @@ The chapter's organizing insight is the **flip** that defines MCMC as a discipli
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The three rungs below build the theory from the ground up: what a Markov chain is and how its probability mass flows forward through time, how states and chains are classified by their communication and return structure, and why a local pairwise condition — detailed balance — is both sufficient for stationarity and the lever that makes MCMC tractable. The through-line is the customer-journey attribution chain introduced in the Motivation, whose absorbing structure provides the running illustration, and whose role inverts in Part III: instead of analyzing a given chain, we will construct one whose stationary distribution is exactly the target posterior.
+
+### Rung 1 — Markov chains and transition matrices
+
+Let $S = \{1, \dots, m\}$ be a finite **state space**. A **discrete-time Markov chain** is a sequence of $S$-valued random variables $X_0, X_1, X_2, \dots$ satisfying the **Markov property**: the future is independent of the past given the present,
+
+$$
+P(X_{t+1}=j \mid X_t=i, X_{t-1}, \dots, X_0) = P(X_{t+1}=j \mid X_t=i) = P_{ij}.
+$$
+
+The numbers $P_{ij}$ are the **one-step transition probabilities**. Collecting them into an $m \times m$ matrix $P$ whose $(i,j)$ entry is $P_{ij}$ gives the **row-stochastic transition matrix**:
+
+$$
+P_{ij} \ge 0 \quad \text{for all } i,j, \qquad \sum_{j=1}^m P_{ij} = 1 \quad \text{for all } i.
+$$
+
+**Distribution evolution.** Let $\pi_t$ be the row probability vector with $(\pi_t)_i = P(X_t = i)$. Conditioning on the state at time $t$,
+
+$$
+P(X_{t+1} = j) = \sum_i P(X_t=i)\,P_{ij} = (\pi_t P)_j,
+$$
+
+so $\pi_{t+1} = \pi_t P$. Applying this recursion $t$ times, $\pi_t = \pi_0 P^t$. The distribution is therefore a **left** eigenvector of $P$ for eigenvalue 1 in the stationary case — a point made precise in Rung 3.
+
+**Chapman–Kolmogorov.** Write $(P^n)_{ij}$ for the $n$-step probability $P(X_{t+n}=j \mid X_t=i)$. For any integers $a, b \ge 0$,
+
+$$
+(P^{a+b})_{ij} = \sum_k (P^a)_{ik}\,(P^b)_{kj},
+$$
+
+which is exactly matrix multiplication. The identity follows by conditioning on the intermediate state $X_{t+a} = k$: the Markov property splits the $(a+b)$-step path at $k$, and summing over all possible $k$ yields the formula. Inducting on $a+b$ establishes that $P(X_{t+n}=j \mid X_t=i) = (P^n)_{ij}$ for every $n \ge 0$.
+
+**The customer-journey chain.** Order the five states as Start ($1$), Display ($2$), Search ($3$), Convert ($4$), Null ($5$). The transition probabilities from the Motivation — Start branches equally to Display and Search; Display continues to Search with probability $0.3$, converts with probability $0.2$, and abandons with probability $0.5$; Search converts with probability $0.4$ and abandons with probability $0.6$; Convert and Null are absorbing — assemble into the row-stochastic matrix
+
+$$
+P = \begin{bmatrix}
+0   & 0.5 & 0.5 & 0   & 0   \\
+0   & 0   & 0.3 & 0.2 & 0.5 \\
+0   & 0   & 0   & 0.4 & 0.6 \\
+0   & 0   & 0   & 1   & 0   \\
+0   & 0   & 0   & 0   & 1
+\end{bmatrix}.
+$$
+
+Every row sums to $1$; every entry is non-negative. Running $\pi_t = \pi_0 P^t$ from $\pi_0 = (1,0,0,0,0)$ traces the probability mass as it drains from Start through the touchpoint states and eventually pools at Convert or Null. This is the chain whose attribution we compute in the Worked Examples, and whose classification structure the next rung develops.
+
+### Rung 2 — Classification of states and chains
+
+Given a transition matrix $P$, the long-run behavior of the chain depends on its **communication structure** and the **return properties** of individual states.
+
+**Accessibility and communication.** State $j$ is **accessible** from state $i$, written $i \to j$, if $(P^n)_{ij} > 0$ for some $n \ge 0$: the chain can reach $j$ from $i$ in a finite number of steps. States $i$ and $j$ **communicate**, written $i \leftrightarrow j$, if $i \to j$ and $j \to i$. Communication is an equivalence relation whose equivalence classes are the **communicating classes** of the chain. A chain is **irreducible** if it consists of a single communicating class — every state is accessible from every other.
+
+**Period.** The **period** of state $i$ is
+
+$$
+d(i) = \gcd\{n \ge 1 : (P^n)_{ii} > 0\},
+$$
+
+the greatest common divisor of all possible return times. A state with $d(i) = 1$ is **aperiodic**. In an irreducible chain all states share the same period; a chain is aperiodic when every state is aperiodic.
+
+**Recurrence and transience.** State $i$ is **recurrent** if the chain returns to $i$ with probability 1 when started from $i$; otherwise $i$ is **transient**. An **absorbing state** satisfies $P_{ii} = 1$: once entered, it is never left. In a finite irreducible chain, every state is recurrent.
+
+**Classification of the customer-journey chain.** Once absorbed into Convert or Null the chain never returns to Start, Display, or Search. Convert and Null are absorbing states; Start, Display, and Search are transient. The chain has three communicating classes — $\{\text{Convert}\}$, $\{\text{Null}\}$, and the transient set $\{\text{Start, Display, Search}\}$ — and is therefore **not irreducible**.
+
+**Absorbing block form.** Reordering states as transient first — Start, Display, Search, then Convert, Null — places $P$ in the canonical form
+
+$$
+P = \begin{bmatrix} Q & R \\ 0 & I \end{bmatrix},
+$$
+
+where $Q$ is the $3 \times 3$ transient-to-transient submatrix,
+
+$$
+Q = \begin{bmatrix} 0 & 0.5 & 0.5 \\ 0 & 0 & 0.3 \\ 0 & 0 & 0 \end{bmatrix},
+$$
+
+$R$ is the $3 \times 2$ transient-to-absorbing submatrix,
+
+$$
+R = \begin{bmatrix} 0 & 0 \\ 0.2 & 0.5 \\ 0.4 & 0.6 \end{bmatrix},
+$$
+
+$0$ is the $2 \times 3$ zero block (absorbing states never return to transient states), and $I$ is the $2 \times 2$ identity (absorbing states stay put).
+
+**Fundamental matrix and absorption probabilities.** Because every transient state is eventually abandoned, $(Q^k)_{ij} \to 0$ as $k \to \infty$, so the Neumann series converges:
+
+$$
+N = (I - Q)^{-1} = \sum_{k \ge 0} Q^k.
+$$
+
+The matrix $N$ is the **fundamental matrix**: entry $N_{ij}$ is the expected number of visits to transient state $j$ before absorption, starting from transient state $i$. The **absorption probability matrix** is
+
+$$
+B = N R,
+$$
+
+with entry $B_{ia}$ giving the probability of being absorbed into absorbing state $a$ when starting from transient state $i$. For the customer-journey chain, direct computation yields
+
+$$
+N = \begin{bmatrix} 1 & 0.5 & 0.65 \\ 0 & 1 & 0.30 \\ 0 & 0 & 1.00 \end{bmatrix}, \qquad B = \begin{bmatrix} 0.36 & 0.64 \\ 0.32 & 0.68 \\ 0.40 & 0.60 \end{bmatrix},
+$$
+
+where the columns of $B$ correspond to Convert and Null in that order. A journey starting from Start converts with probability $0.36$ — this is the baseline conversion rate that the removal-effect attribution in the Worked Examples will perturb channel by channel.
+
+**Irreducibility and aperiodicity as the complementary regime.** The customer-journey chain is absorbed in finite time; it has no stationary distribution on the full state space in the usual sense. The convergence theorem of Rung 4 applies to the complementary regime: **irreducible and aperiodic** finite chains. These are exactly the conditions one engineers when building a Gibbs sampler or a Metropolis–Hastings kernel. The attribution chain and the MCMC chain are structural opposites: the first drains into absorbing states; the second is designed to wander indefinitely through parameter space while averaging to $\pi$.
+
+### Rung 3 — Stationary distributions and detailed balance
+
+**Stationary distributions.** A probability row vector $\pi$ with $\pi_i \ge 0$ and $\sum_i \pi_i = 1$ is a **stationary distribution** for $P$ if
+
+$$
+\pi P = \pi.
+$$
+
+Equivalently, $\pi$ is a **left eigenvector** of $P$ for eigenvalue 1. If the chain's distribution at time $t$ is $\pi_t = \pi$, then $\pi_{t+1} = \pi_t P = \pi$: the distribution does not evolve. Whether $\pi_t \to \pi$ as $t \to \infty$ from an arbitrary start is the convergence question taken up in Rung 4.
+
+> **Theorem (existence and uniqueness, Perron–Frobenius).** [@strang2016] An irreducible finite Markov chain has a unique stationary distribution $\pi$, and $\pi_i > 0$ for every $i \in S$.
+
+Irreducibility is essential: a reducible chain may have multiple stationary distributions, one supported on each closed communicating class, and there is no way to select among them without additional information about the starting point.
+
+**Detailed balance (reversibility).** A probability vector $\pi$ satisfies **detailed balance** for $P$ if
+
+$$
+\pi_i P_{ij} = \pi_j P_{ji} \quad \text{for all } i, j.
+$$
+
+The left side is the equilibrium flux from state $i$ to state $j$; the right side is the flux from $j$ to $i$. Equality of these fluxes is the **reversibility** condition: time-reversed dynamics under $\pi$ look statistically identical to the forward dynamics. A chain satisfying detailed balance with respect to $\pi$ is called **reversible** with respect to $\pi$.
+
+> **Theorem (detailed balance $\Rightarrow$ stationarity).** If a probability vector $\pi$ satisfies $\pi_i P_{ij} = \pi_j P_{ji}$ for all $i, j$, then $\pi P = \pi$, i.e.\ $\pi$ is stationary for $P$.
+
+**Proof.** Compute the $j$th entry of $\pi P$, apply detailed balance term by term, then use row-stochasticity:
+
+$$
+(\pi P)_j = \sum_i \pi_i P_{ij} = \sum_i \pi_j P_{ji} = \pi_j \sum_i P_{ji} = \pi_j,
+$$
+
+since $\sum_i P_{ji} = 1$ (row $j$ of $P$ sums to 1). As this holds for every $j$, $\pi P = \pi$. $\blacksquare$
+
+**The MCMC payoff.** Detailed balance is a **local, checkable** condition: one scalar equation per ordered pair of states $(i,j)$, involving $\pi$ only through the ratio $\pi_j / \pi_i$. Rewriting the condition as $P_{ij}/P_{ji} = \pi_j/\pi_i$, any unknown normalizing constant in $\pi$ cancels from both sides. This is the decisive structural fact: engineering a chain reversible with respect to a target $\pi$ requires only the ability to evaluate $\pi$ pointwise up to a constant — exactly the situation in Bayesian inference, where the posterior is known as $p(\theta \mid y) \propto p(y \mid \theta)\,p(\theta)$ with an intractable denominator. By contrast, solving the global linear system $\pi P = \pi$ directly involves $m$ coupled equations in $m$ unknowns; detailed balance replaces this with $m(m-1)/2$ independent two-body conditions, each involving only one ratio $\pi_j/\pi_i$, and each solvable in closed form once the ratio is prescribed. Constructing the transition entries $P_{ij}$ from these ratios by accept–reject logic — so that detailed balance is satisfied by design — is precisely the Metropolis–Hastings algorithm of Chapter 8.
 
 ## Worked Examples
 
