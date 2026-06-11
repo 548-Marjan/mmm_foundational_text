@@ -545,8 +545,42 @@ The printed output gives numerical signatures for every theoretical claim. The s
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** State the **Monte Carlo principle**: for i.i.d. draws $X_i\sim\pi$, the estimator $\hat\mu_n=\frac1n\sum_i f(X_i)$ has standard error $\sigma_f/\sqrt n$. Explain why this rate is **dimension-free** and why that makes sampling preferable to deterministic quadrature for a high-dimensional MMM posterior (e.g. a hierarchical model with hundreds of coefficients). Then explain the obstacle — we cannot draw i.i.d. from a complex posterior — and why **dependent** draws from a Markov chain with stationary distribution $\pi$ nonetheless yield a consistent estimator of $\mathbb{E}_\pi[f]$. Name the Chapter 7 theorem that licenses this.
+
+**C2.** Write out the Metropolis–Hastings acceptance probability $\alpha(x,y)=\min\!\big(1,\frac{\pi(y)q(x\mid y)}{\pi(x)q(y\mid x)}\big)$. Explain precisely why $\pi$ enters only through the ratio $\pi(y)/\pi(x)$, and why that means the **unknown normalizing constant** $Z$ of a posterior $\pi(\beta)=p(y\mid\beta)p(\beta)/Z$ never needs to be computed — the single property that makes MCMC applicable to the intractable posteriors of Chapter 5. Then state the condition on the proposal under which the ratio $q(x\mid y)/q(y\mid x)$ drops out (the symmetric / Metropolis case), and give an example proposal for which it does **not** drop out.
+
+**C3.** Explain why the **Gibbs sampler** is the special case of Metropolis–Hastings whose proposals — drawn from the full conditionals $p(x_i\mid x_{-i})$ — are accepted with probability 1, and how this identifies Chapter 6's hierarchical sampler as a Gibbs sampler. Describe what **Metropolis-within-Gibbs** does when one block lacks a closed-form full conditional. Then explain what the **acceptance rate**, the **autocorrelation** $\rho_k$, and the **effective sample size** $\text{ESS}=n/(1+2\sum_k\rho_k)$ each measure, and why random-walk Metropolis mixes slowly on the strongly correlated posteriors produced by collinear channel spends — the pathology that motivates Hamiltonian Monte Carlo.
+
 ### B -- By Hand
+
+**B1.** For the unnormalized target $\pi(x)\propto e^{-x^2/2}$ with a **symmetric** random-walk proposal, the Metropolis acceptance probability is $\alpha(x,y)=\min(1,\,e^{-(y^2-x^2)/2})$. Compute $\alpha$ for each proposed move and state whether it is accepted with certainty or only probabilistically: (a) $x=0\to y=1.5$; (b) $x=2\to y=1$; (c) $x=-1\to y=-2$. (Answers: (a) $e^{-1.125}\approx0.3247$; (b) the move is to higher density, ratio $>1$, so $\alpha=1$; (c) $e^{-1.5}\approx0.2231$.)
+
+**B2.** An **asymmetric** proposal, where the $q$-ratio does not cancel. The target is the unnormalized $\pi(x)\propto e^{-x}$ on $x>0$ (an unnormalized $\text{Exponential}(1)$). The chain is at $x=2$ and proposes $y=1$, with proposal densities $q(y\mid x)=q(1\mid 2)=0.5$ and $q(x\mid y)=q(2\mid 1)=0.2$. Compute the full Hastings ratio and acceptance probability
+$$
+\alpha(2,1)=\min\!\left(1,\ \frac{\pi(1)\,q(2\mid 1)}{\pi(2)\,q(1\mid 2)}\right)=\min\!\left(1,\ \frac{e^{-1}\cdot 0.2}{e^{-2}\cdot 0.5}\right),
+$$
+and confirm $\alpha=1$ (the move is uphill in $\pi$, and the proposal correction only reinforces it). Then compute the acceptance probability of the **reverse** move — at $x=1$, propose $y=2$, with $q(2\mid 1)=0.2$ and $q(1\mid 2)=0.5$ —
+$$
+\alpha(1,2)=\min\!\left(1,\ \frac{\pi(2)\,q(1\mid 2)}{\pi(1)\,q(2\mid 1)}\right)=\min\!\left(1,\ \frac{e^{-2}\cdot 0.5}{e^{-1}\cdot 0.2}\right),
+$$
+report its value, and explain how the proposal asymmetry changes the answer relative to a symmetric proposal.
+
+**B3.** A chain of $n=10{,}000$ draws has geometric autocorrelations $\rho_k=0.6^k$ for $k\ge1$. Compute the integrated autocorrelation time
+$$
+\tau=1+2\sum_{k\ge1}0.6^k=1+2\cdot\frac{0.6}{1-0.6},
+$$
+and hence the effective sample size $\text{ESS}=n/\tau$. (Answer: $\tau=1+2\cdot1.5=4$, $\text{ESS}=10{,}000/4=2{,}500$.) Interpret: how many independent draws is this correlated chain worth, and by what factor is the MCMC standard error $\sigma_f/\sqrt{\text{ESS}}$ larger than the i.i.d. $\sigma_f/\sqrt n$?
 
 ### P -- Prove It
 
+**P1.** Prove that the **Metropolis–Hastings kernel satisfies detailed balance** with respect to $\pi$: for $x\ne y$ with $P(x,y)=q(y\mid x)\alpha(x,y)$ and $\alpha(x,y)=\min\big(1,\frac{\pi(y)q(x\mid y)}{\pi(x)q(y\mid x)}\big)$, show $\pi(x)P(x,y)=\pi(y)P(y,x)$. Use the identity $a\min(1,b/a)=\min(a,b)$ with $a=\pi(x)q(y\mid x)$, $b=\pi(y)q(x\mid y)$, and the symmetry of $\min(a,b)$ under $x\leftrightarrow y$. Conclude (citing Chapter 7) that $\pi$ is stationary.
+
+**P2.** Prove that a **Gibbs full-conditional update leaves $\pi$ invariant**: for the update that draws $x_i'\sim p(\cdot\mid x_{-i})$ and keeps $x_{-i}$ fixed, show that if the current state is distributed as $\pi$ then so is the updated state, by marginalizing $x_i$ out of the joint and re-applying the conditional ($\int\pi(x_i,x_{-i})\,p(x_i'\mid x_{-i})\,dx_i=\pi(x_i',x_{-i})$). Then prove **Gibbs is Metropolis–Hastings with acceptance probability $1$** by substituting the proposal $q(x'\mid x)=p(x_i'\mid x_{-i})$ into the Hastings ratio and showing it equals 1.
+
+**P3.** (a) Derive the **symmetric-proposal Metropolis special case** $\alpha(x,y)=\min(1,\pi(y)/\pi(x))$ from the general Hastings ratio by imposing $q(y\mid x)=q(x\mid y)$. (b) Derive the **full conditional** $x\mid y\sim\mathcal N(\rho y,\,1-\rho^2)$ for the bivariate normal $\mathcal N\!\big(0,\big[\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\big]\big)$ — either by completing the square in $x$ in the joint density, or by the Gaussian conditioning formula $\mathbb E[x\mid y]=\Sigma_{xy}\Sigma_{yy}^{-1}y$, $\operatorname{Var}(x\mid y)=\Sigma_{xx}-\Sigma_{xy}\Sigma_{yy}^{-1}\Sigma_{yx}$.
+
 ### A -- Applied / Code
+
+**A1.** *Tune a random-walk Metropolis sampler.* Implement random-walk Metropolis for a target of your choice — e.g. the correlated 2-D Gaussian $\mathcal N(0,[[1,0.8],[0.8,1]])$, or a Bayesian linear-regression posterior. Sweep the proposal step size across a grid; for each, record the acceptance rate and an effective-sample-size estimate (from the summed autocorrelations of a monitored coordinate, truncated at the first negative lag). Plot acceptance rate and ESS versus step size, identify the efficient regime (acceptance roughly $0.2$–$0.5$), and validate that the good-step sample mean and covariance match the known target. Comment on how the ESS-maximizing step relates to the heuristic optimal acceptance rate.
+
+**A2.** *Gibbs mixing and a non-conjugate posterior.* (i) Implement Gibbs for the bivariate normal with the closed-form conditionals $x\mid y\sim\mathcal N(\rho y,1-\rho^2)$; for $\rho\in\{0.5,0.9,0.99\}$ measure the lag-1 autocorrelation and ESS of a coordinate, confirming the autocorrelation tracks $\rho^2$ and ESS collapses as $\rho\to1$. (ii) Sample a **non-conjugate** 1-D posterior with no closed form — e.g. a logistic / binary-conversion coefficient $\beta$ with $y_i\sim\text{Bernoulli}(\sigma(\beta x_i))$ and prior $\beta\sim\mathcal N(0,\tau^2)$, or a channel effect with a half-normal (non-negativity) prior — using random-walk Metropolis on the unnormalized log-posterior. Validate the MCMC histogram against a fine-grid normalized reference, confirming the sampler recovers a posterior Chapter 5 could not handle in closed form.
