@@ -204,7 +204,117 @@ The Theory section has now traced the full arc from the Monte Carlo principle, t
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+### Example (a) — Metropolis acceptance by hand
+
+The target is the unnormalized standard normal density,
+
+$$
+\tilde\pi(x) = e^{-x^2/2},
+$$
+
+with the normalizing constant $1/\sqrt{2\pi}$ deliberately dropped to show that the normalizer never enters any calculation. A symmetric random-walk proposal — draw $y = x + \varepsilon$ from any density satisfying $q(y\mid x) = q(x\mid y)$ — reduces the Metropolis–Hastings ratio to the original **Metropolis rule** (Rung 2):
+
+$$
+\alpha(x,y) = \min\!\left(1,\ \frac{\tilde\pi(y)}{\tilde\pi(x)}\right) = \min\!\left(1,\ e^{-(y^2-x^2)/2}\right).
+$$
+
+Three proposed moves are computed entirely by hand. In each case the exponent $-(y^2 - x^2)/2$ is all that is needed.
+
+**Move 1: $x = 0 \to y = 1$ (proposed move to lower density).** The exponent is $-(1^2 - 0^2)/2 = -0.5$:
+
+$$
+\alpha(0,\,1) = \min\!\left(1,\ e^{-0.5}\right) = e^{-0.5} \approx 0.6065.
+$$
+
+The proposed point has lower density than the current state ($\tilde\pi(1) = e^{-1/2} < \tilde\pi(0) = 1$), so the ratio is below 1 and the move is accepted with probability $0.6065$; otherwise the chain stays at $0$.
+
+**Move 2: $x = 1 \to y = 0.5$ (proposed move to higher density).** Now $y^2 = 0.25 < x^2 = 1$, so the exponent $-(0.25 - 1)/2 = 0.375$ is positive:
+
+$$
+\alpha(1,\,0.5) = \min\!\left(1,\ e^{0.375}\right) = 1,
+$$
+
+since $e^{0.375} \approx 1.455 > 1$. A move toward higher density is always accepted.
+
+**Move 3: $x = 0.5 \to y = 2$ (proposed far into the tail).** The exponent is $-(4 - 0.25)/2 = -1.875$:
+
+$$
+\alpha(0.5,\,2) = \min\!\left(1,\ e^{-1.875}\right) = e^{-1.875} \approx 0.1534.
+$$
+
+The density at $y = 2$ is far smaller than at $x = 0.5$, and the chain accepts this distant tail move only about $15\%$ of the time.
+
+**Summary.**
+
+| Move | $x$ | $y$ | Density ratio | $\alpha(x,y)$ |
+|------|-----|------|---------------|---------------|
+| 1    | 0   | 1    | $e^{-0.5} \approx 0.6065$ | 0.6065 |
+| 2    | 1   | 0.5  | $e^{0.375} \approx 1.455$ | 1 (always accept) |
+| 3    | 0.5 | 2    | $e^{-1.875} \approx 0.1534$ | 0.1534 |
+
+**Interpretation.** Three properties are visible at once. Uphill moves — proposals to states of higher unnormalized density — are always accepted; the chain freely explores toward the mode. Downhill moves are accepted in proportion to the density ratio, so the chain does visit the tails but spends less time there, weighting its visits in proportion to $\tilde\pi$. And crucially, the constant $1/\sqrt{2\pi}$ never appeared: it would have divided out of every ratio $\tilde\pi(y)/\tilde\pi(x)$ identically, leaving nothing behind. By the detailed-balance proof of Rung 2, the long-run frequency with which the chain visits any region $A$ converges to $\int_A \pi(x)\,\mathrm{d}x$ — the properly normalized probability under $\pi$ — without the normalizer ever being computed.
+
+### Example (b) — Gibbs sampling for the correlated bivariate normal
+
+The target is the zero-mean bivariate normal $\mathcal{N}(0, \Sigma)$ with
+
+$$
+\Sigma = \begin{bmatrix} 1 & \rho \\ \rho & 1 \end{bmatrix}, \qquad \rho = 0.8,
+$$
+
+so each variable has unit variance and the two share correlation $0.8$ — the regime typical of nearly collinear channel-spend data in MMM. The Gibbs sampler alternates: draw $x$ from its full conditional given the current $y$, then draw $y$ from its full conditional given the new $x$.
+
+**Deriving the full conditionals.** For $\mathcal{N}(0,\Sigma)$ with unit marginal variances and correlation $\rho$, the standard Gaussian conditioning formula gives
+
+$$
+\mathbb{E}[x \mid y] = \Sigma_{xy}\,\Sigma_{yy}^{-1}\,y = \frac{\rho}{1}\,y = \rho y,
+$$
+
+$$
+\operatorname{Var}(x \mid y) = \Sigma_{xx} - \Sigma_{xy}\,\Sigma_{yy}^{-1}\,\Sigma_{yx} = 1 - \rho^2.
+$$
+
+By symmetry the same formula holds for $y \mid x$, so the two full conditionals are
+
+$$
+x \mid y \;\sim\; \mathcal{N}(\rho y,\ 1-\rho^2), \qquad y \mid x \;\sim\; \mathcal{N}(\rho x,\ 1-\rho^2).
+$$
+
+With $\rho = 0.8$ the conditional variance is $1 - 0.64 = 0.36$ and the conditional standard deviation is $\sqrt{0.36} = 0.6$. Every draw from a full conditional takes the form $\rho \times (\text{conditioning value}) + 0.6\,Z$ for $Z \sim \mathcal{N}(0,1)$.
+
+**Two Gibbs sweeps by hand.** Start at $(x_0, y_0) = (2, 2)$ — well away from the stationary mean of zero. To trace the deterministic skeleton of the chain, suppose each $Z$ happens to equal $0$, so each draw lands exactly at its conditional mean. (In a real sampler, each draw would add $0.6 \times Z$ for a genuinely random $Z$; the mean march below is the noiseless skeleton.)
+
+**Sweep 1.**
+
+Draw $x_1$ from $\mathcal{N}(0.8 \times 2,\ 0.36) = \mathcal{N}(1.6,\ 0.36)$. With $Z = 0$: $x_1 = 1.6$.
+
+Draw $y_1$ from $\mathcal{N}(0.8 \times 1.6,\ 0.36) = \mathcal{N}(1.28,\ 0.36)$. With $Z = 0$: $y_1 = 1.28$.
+
+**Sweep 2.**
+
+Draw $x_2$ from $\mathcal{N}(0.8 \times 1.28,\ 0.36) = \mathcal{N}(1.024,\ 0.36)$. With $Z = 0$: $x_2 = 1.024$.
+
+Draw $y_2$ from $\mathcal{N}(0.8 \times 1.024,\ 0.36) = \mathcal{N}(0.8192,\ 0.36)$. With $Z = 0$: $y_2 = 0.8192$.
+
+**Tracking the march toward the origin.**
+
+| Step | Conditional mean of $x$ | Conditional mean of $y$ |
+|------|-------------------------|-------------------------|
+| 0 (start) | 2 | 2 |
+| After sweep 1 | 1.6 | 1.28 |
+| After sweep 2 | 1.024 | 0.8192 |
+
+Each half-step multiplies the current mean by $\rho = 0.8$: the sequence of conditional means is $2 \to 1.6 \to 1.28 \to 1.024 \to 0.8192$, a geometric series with ratio $0.8$ converging to the stationary mean of $0$. The higher the correlation $\rho$, the closer the ratio to $1$ and the slower the march.
+
+**The mixing penalty.** The lag-1 autocorrelation of either coordinate along the Gibbs chain equals $\rho^2 = 0.64$. Substituting into the integrated autocorrelation time, and using the geometric-series sum $\sum_{k \ge 1} (\rho^2)^k = \rho^2/(1-\rho^2)$,
+
+$$
+\tau = 1 + 2\sum_{k \ge 1} \rho^{2k} = 1 + \frac{2\rho^2}{1 - \rho^2} = 1 + \frac{2 \times 0.64}{0.36} \approx 4.56,
+$$
+
+so $n = 1{,}000$ draws carry an effective sample size of only $1{,}000 / 4.56 \approx 219$. As $\rho \to 1$, the lag-1 autocorrelation $\rho^2 \to 1$, the autocorrelation time $\tau \to \infty$, and the effective sample size collapses to near zero for any finite run length.
+
+**The MMM connection.** Collinear channel-spend data (Chapter 4) produce posteriors where the coefficients of nearly co-moving channels are strongly correlated — the posterior concentrates along a ridge in coefficient space. A Gibbs sampler or random-walk Metropolis chain on such a posterior faces $\rho$ close to $1$, a lag-1 autocorrelation $\rho^2$ close to $1$, and an autocorrelation time $\tau$ large relative to any practical run length. The chain crawls along the ridge, generating a trace plot that drifts rather than mixes and a nominally large $n$ that resolves to a disappointingly small ESS. Gradient-informed proposals — the subject of Chapter 9's Hamiltonian Monte Carlo — exploit the direction of the posterior ridge directly, proposing along it rather than across it, and recover a practical ESS by sidestepping the geometry that defeats the simpler samplers.
 
 ## Code Tie-in
 
