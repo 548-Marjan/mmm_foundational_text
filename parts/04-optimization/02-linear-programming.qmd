@@ -13,3 +13,103 @@ That shadow price is where this chapter quietly reunites with the last one. A bu
 And we should be honest about the boundary too. Linear programming owns the linear and piecewise-linear-concave world *exactly* — there, a global optimum with a certificate. Genuinely smooth response curves, and the non-concave S-shapes that real channels exhibit, lie just outside its reach; those are the job of Chapter 13 and SLSQP. Knowing where LP stops is as valuable as knowing what it guarantees.
 
 The roadmap follows that logic. We put problems into **standard form**; study the **geometry of polyhedra and vertices**; prove the **Fundamental Theorem** that an optimum lives at a vertex; develop the **simplex method** that finds it; build **LP duality and complementary slackness**; read off **shadow prices**; cast the **budget problem as an LP**; and finally mark the boundary where linear programming ends and Chapter 13 begins.
+
+## Theory & Proofs
+
+The theory climbs a ladder, each rung resting on the one below. We begin with **standard form**, the canonical mold every linear program can be poured into; then the **polyhedral geometry** of the feasible set, where we pin down what a *vertex* is algebraically; then the **Fundamental Theorem**, which guarantees that an optimum sits at one of those vertices; then the **simplex method** that walks the vertices to find it; then **LP duality and complementary slackness**, the symmetry that certifies optimality; then the **shadow prices** duality hands us; then the **budget problem cast as an LP**, where those shadow prices reunite with Chapter 11's equal-marginal rule; and finally the **boundary** where linearity fails and LP must yield to Chapter 13. This part of the chapter builds the first two rungs — standard form and the vertex–BFS correspondence — on which everything above is balanced.
+
+### Rung 1 — Standard form
+
+Linear programs arrive in the wild wearing many costumes: maximize or minimize, with constraints that are equalities, $\le$ inequalities, or $\ge$ inequalities, and variables that may or may not be sign-restricted. Before any theory can bite, we need a single canonical mold into which every one of these can be poured without changing its solution. That mold is **standard form**, and the small algebra of converting into it is what makes the geometry and the simplex method that follow apply universally.
+
+**Definition (standard form).** A linear program is in **standard form** if it reads
+
+$$
+\min\ c^\top x \quad \text{subject to} \quad Ax = b,\ \ x \ge 0,
+$$
+
+with $A \in \mathbb{R}^{m\times n}$, $b \in \mathbb{R}^m$, and $c \in \mathbb{R}^n$. The constraints are pure equalities together with nonnegativity of every variable. A closely related **canonical inequality form** keeps the inequalities explicit,
+
+$$
+\min\ c^\top x \quad \text{subject to} \quad Ax \ge b,\ \ x \ge 0,
+$$
+
+and the two are interchangeable by the conversions below [@bertsimas1997].
+
+**Maximization to minimization.** A maximization is a minimization in disguise, because flipping the sign of the objective flips which point is extreme without moving the feasible set:
+
+$$
+\max_x\ c^\top x = -\min_x\ \bigl(-c^\top x\bigr),
+$$
+
+and the maximizer of the left side is exactly the minimizer of the right. So it costs nothing to state every result for minimization.
+
+**Slack and surplus variables.** Inequalities become equalities by introducing one fresh nonnegative variable per constraint. A $\le$ constraint absorbs a **slack** variable $s \ge 0$ that takes up the difference,
+
+$$
+a^\top x \le b \quad\Longleftrightarrow\quad a^\top x + s = b,\ \ s \ge 0,
+$$
+
+while a $\ge$ constraint sheds a **surplus** variable $s \ge 0$ that records the overshoot,
+
+$$
+a^\top x \ge b \quad\Longleftrightarrow\quad a^\top x - s = b,\ \ s \ge 0.
+$$
+
+Applying these conversions constraint by constraint — and replacing any free variable $x_j$ by the difference $x_j^+ - x_j^-$ of two nonnegative parts — shows that **every linear program can be written in standard form**, with the same optimal value and a transparent correspondence between solutions.
+
+**The feasible set is a polyhedron.** The feasible region of a standard-form LP,
+
+$$
+\mathcal{P} = \{\, x \in \mathbb{R}^n : Ax = b,\ x \ge 0 \,\},
+$$
+
+is a **polyhedron**: an intersection of the hyperplanes carved out by the rows of $Ax = b$ with the halfspaces $\{x_j \ge 0\}$. Each hyperplane and each halfspace is convex, and the intersection of convex sets is convex (Chapter 11, Rung 1), so $\mathcal{P}$ is convex. From here on we assume $A$ has **full row rank** $m$; any redundant equality row is a linear combination of the others and can be dropped without changing $\mathcal{P}$, so this costs no generality.
+
+### Rung 2 — Vertices and basic feasible solutions
+
+The Fundamental Theorem of the next rung will promise that an optimum sits at a *vertex* of the polyhedron $\mathcal{P}$ — a corner where the feasible region comes to a point. That promise is only useful if we can compute with vertices, and "corner of a polyhedron" is a geometric picture, not an algebraic recipe. This rung supplies the recipe. It shows that the geometric vertices are exactly the **basic feasible solutions** — points obtained by selecting $m$ columns of $A$, zeroing the rest, and solving — which turns the search for corners into linear algebra the simplex method can mechanize.
+
+**Definition (vertex / extreme point).** A feasible point $x \in \mathcal{P}$ is a **vertex** (or **extreme point**) of $\mathcal{P}$ if it is not a convex combination of two *other* feasible points — that is, whenever $x = \tfrac12(u + v)$ with $u, v \in \mathcal{P}$, it must follow that $u = v = x$. Geometrically, a vertex cannot sit strictly inside any segment joining two distinct feasible points; it is a genuine corner.
+
+**Definition (basic feasible solution).** Let $A \in \mathbb{R}^{m\times n}$ have rank $m$. Choose $m$ linearly independent columns of $A$, indexed by a set $B$ — a **basis** — and call the remaining $n - m$ columns **nonbasic**. Write $A_B$ for the invertible $m \times m$ submatrix of basic columns. Set every nonbasic variable to $0$ and solve the resulting square system for the basic variables,
+
+$$
+A_B\, x_B = b \quad\Longrightarrow\quad x_B = A_B^{-1} b.
+$$
+
+The resulting point $x$ (with nonbasic entries zero) is a **basic solution**; if in addition $x_B \ge 0$, it is a **basic feasible solution (BFS)**.
+
+**Theorem.** A point $x$ is a vertex of $\mathcal{P} = \{x : Ax = b,\ x \ge 0\}$ if and only if $x$ is a basic feasible solution.
+
+**Proof.** We argue both directions.
+
+*(BFS $\Rightarrow$ vertex).* Let $x$ be a BFS with basis $B$, so $x_j = 0$ for every nonbasic index $j$. Suppose $x = \tfrac12(u + v)$ with $u, v \in \mathcal{P}$. For each nonbasic $j$ we have $x_j = 0$ while $u_j, v_j \ge 0$, and
+
+$$
+\tfrac12\bigl(u_j + v_j\bigr) = x_j = 0
+$$
+
+with both terms nonnegative forces $u_j = v_j = 0$. Thus $u$ and $v$ vanish off the basis, so their basic parts alone must satisfy the equality constraints: $A_B\, u_B = b = A_B\, v_B$. Since $A_B$ is invertible,
+
+$$
+u_B = A_B^{-1} b = v_B = x_B,
+$$
+
+and hence $u = v = x$. Therefore $x$ is a vertex.
+
+*(vertex $\Rightarrow$ BFS).* Let $x$ be a vertex, and let $S = \{\, j : x_j > 0 \,\}$ be its support. We claim the columns $\{A_j : j \in S\}$ are linearly independent. Suppose not: then there is a nonzero vector $d$, supported on $S$, with
+
+$$
+\sum_{j \in S} d_j A_j = 0, \quad\text{i.e.}\quad Ad = 0.
+$$
+
+Because $d$ is supported only on the strictly positive coordinates of $x$, for all sufficiently small $\varepsilon > 0$ the two points $x \pm \varepsilon d$ remain nonnegative, and they satisfy $A(x \pm \varepsilon d) = Ax \pm \varepsilon\, Ad = b$, so both are feasible. But then
+
+$$
+x = \tfrac12\bigl[(x + \varepsilon d) + (x - \varepsilon d)\bigr]
+$$
+
+exhibits $x$ as the midpoint of two distinct feasible points, contradicting that $x$ is a vertex. Hence $\{A_j : j \in S\}$ are linearly independent. Since $A$ has rank $m$, we may extend this independent set to a full basis $B \supseteq S$ of $m$ independent columns; the nonbasic variables are zero (they lie outside $S$), so $x$ is exactly the basic feasible solution for the basis $B$. $\blacksquare$
+
+This correspondence is what makes linear programming finite. A basis is a choice of $m$ columns from $n$, so there are at most $\binom{n}{m}$ bases and therefore **finitely many vertices**. The Fundamental Theorem of Rung 3 will show that one of these finitely many vertices is optimal, and the simplex method will search among them — turning an optimization over a continuum into a walk across a finite list of corners.
