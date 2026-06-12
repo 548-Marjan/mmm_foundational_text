@@ -232,7 +232,95 @@ The formal machinery for detecting these pathologies — **$\hat{R}$**, **effect
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+### Example (a) — Hamiltonian dynamics for a 1-D Gaussian, by hand
+
+The target is $\pi(q) \propto e^{-q^2/2}$, the standard normal. With unit mass matrix $M = 1$, the potential and kinetic energies are
+
+$$
+U(q) = \tfrac{1}{2}q^2, \qquad K(p) = \tfrac{1}{2}p^2,
+$$
+
+so $\nabla U(q) = q$ and Hamilton's equations read $\dot{q} = p$, $\dot{p} = -q$.
+
+**Solving the equations.** The system $\dot{q} = p$, $\dot{p} = -q$ is the **harmonic oscillator**. Its general solution starting from $(q_0, p_0)$ is
+
+$$
+q(t) = q_0\cos t + p_0\sin t, \qquad p(t) = p_0\cos t - q_0\sin t.
+$$
+
+Differentiating confirms the equations of motion: $\dot{q}(t) = -q_0\sin t + p_0\cos t = p(t)$ and $\dot{p}(t) = -p_0\sin t - q_0\cos t = -q(t)$. The phase-space point traces a **circle** of radius $\sqrt{q_0^2 + p_0^2}$ at unit angular speed.
+
+**Energy conservation verified.** Substituting the solution into $H = \tfrac{1}{2}(q^2 + p^2)$:
+
+$$
+H(q(t),\,p(t)) = \tfrac{1}{2}\bigl[(q_0\cos t + p_0\sin t)^2 + (p_0\cos t - q_0\sin t)^2\bigr].
+$$
+
+Expanding and using $\cos^2 t + \sin^2 t = 1$, the cross terms $\pm 2q_0 p_0\cos t\sin t$ cancel and the squared terms combine:
+
+$$
+= \tfrac{1}{2}\bigl[q_0^2(\cos^2 t + \sin^2 t) + p_0^2(\sin^2 t + \cos^2 t)\bigr] = \tfrac{1}{2}(q_0^2 + p_0^2),
+$$
+
+which is independent of $t$. The Hamiltonian is exactly conserved, confirming that the trajectory stays on a level set of the joint density $e^{-H}$.
+
+**A concrete trajectory.** Starting at $(q_0, p_0) = (1, 0)$, the solution is $q(t) = \cos t$, $p(t) = -\sin t$, tracing the following landmarks:
+
+| $t$ | $q(t)$ | $p(t)$ | $H$ |
+|-----|--------|--------|-----|
+| $0$ | $1$ | $0$ | $0.5$ |
+| $\pi/2$ | $0$ | $-1$ | $0.5$ |
+| $\pi$ | $-1$ | $0$ | $0.5$ |
+| $3\pi/2$ | $0$ | $1$ | $0.5$ |
+| $2\pi$ | $1$ | $0$ | $0.5$ |
+
+**Interpretation.** A single trajectory of length $\pi$ carries the particle from $q = 1$ all the way to $q = -1$ — a displacement of $2$ — while a random-walk proposal of step size $\sigma$ moves only $O(\sigma)$. The momentum converts potential energy to kinetic and back, sweeping the full diameter of the posterior in one unbroken arc at constant $H$. This is the geometric reason HMC decorrelates so rapidly: rather than stumbling outward from the current point, the dynamics navigate the posterior's own level sets, letting the gradient steer every step of the trajectory.
+
+### Example (b) — One leapfrog step, by hand
+
+Same target: $U(q) = \tfrac{1}{2}q^2$, $\nabla U(q) = q$, $M = 1$. Step size $\varepsilon = 0.3$, starting state $(q, p) = (1, 0)$.
+
+**Half-step momentum.** The leapfrog opens with a half-kick to $p$:
+
+$$
+p_{1/2} = p - \tfrac{\varepsilon}{2}\,\nabla U(q) = 0 - \tfrac{0.3}{2}(1) = -0.15.
+$$
+
+**Full-step position.** The position advances a full step using the half-updated momentum:
+
+$$
+q' = q + \varepsilon\,p_{1/2} = 1 + (0.3)(-0.15) = 0.955.
+$$
+
+**Closing half-step momentum.** The momentum receives its second half-kick at the new position:
+
+$$
+p' = p_{1/2} - \tfrac{\varepsilon}{2}\,\nabla U(q') = -0.15 - \tfrac{0.3}{2}(0.955) = -0.15 - 0.14325 = -0.29325.
+$$
+
+**Energy error.** The Hamiltonian before the step is
+
+$$
+H = \tfrac{1}{2}(1^2 + 0^2) = 0.5.
+$$
+
+After the step,
+
+$$
+H' = \tfrac{1}{2}(0.955^2 + 0.29325^2) = \tfrac{1}{2}(0.912025 + 0.085996) = 0.49901,
+$$
+
+so $\Delta H = H' - H = -0.00099$: third-order small in $\varepsilon$, bounded rather than growing, and exactly the controlled error the Metropolis filter was designed to absorb.
+
+**Acceptance.** The Metropolis step accepts the proposal with probability
+
+$$
+\min(1,\,e^{-\Delta H}) = \min(1,\,e^{0.00099}) = 1,
+$$
+
+since $e^{0.00099} > 1$. The step slightly lowered the energy, so it is accepted with certainty.
+
+**Interpretation.** The exact solution of Hamilton's equations at $t = 0.3$ is $(\cos 0.3,\,-\sin 0.3) = (0.9553,\,-0.2955)$; the leapfrog endpoint $(0.955,\,-0.29325)$ is correct to three decimal places. Even at the relatively coarse step size $\varepsilon = 0.3$ the leapfrog integrator hugs the true circular orbit of Example (a) closely — a direct consequence of the symplectic structure of Rung 3, which keeps energy errors bounded regardless of how many steps are chained. A trajectory of $L = 10$ such steps would carry the particle roughly one radian around the circle and propose a state far from the start, with the Metropolis filter correcting only the small accumulated $\Delta H$.
 
 ## Code Tie-in
 
