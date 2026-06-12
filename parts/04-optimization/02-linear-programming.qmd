@@ -113,3 +113,120 @@ $$
 exhibits $x$ as the midpoint of two distinct feasible points, contradicting that $x$ is a vertex. Hence $\{A_j : j \in S\}$ are linearly independent. Since $A$ has rank $m$, we may extend this independent set to a full basis $B \supseteq S$ of $m$ independent columns; the nonbasic variables are zero (they lie outside $S$), so $x$ is exactly the basic feasible solution for the basis $B$. $\blacksquare$
 
 This correspondence is what makes linear programming finite. A basis is a choice of $m$ columns from $n$, so there are at most $\binom{n}{m}$ bases and therefore **finitely many vertices**. The Fundamental Theorem of Rung 3 will show that one of these finitely many vertices is optimal, and the simplex method will search among them — turning an optimization over a continuum into a walk across a finite list of corners.
+
+### Rung 3 — The Fundamental Theorem
+
+Rung 2 made vertices *computable*: it identified the geometric corners of $\mathcal{P}$ with the basic feasible solutions, points we can produce by selecting $m$ columns and solving a square system. But computability is only half the prize. We do not want every vertex — we want an *optimal* one, and so far nothing rules out the possibility that the best feasible point hides somewhere in the flat interior of a face, far from any corner. This rung closes that gap. It shows that the search for an optimum can be **confined to the vertices**: if the problem has any optimal solution at all, it has one sitting at a corner. Combined with Rung 2's finiteness, this is what makes linear programming solvable with certainty.
+
+> **Theorem (Fundamental Theorem of LP).** Consider a standard-form LP $\min c^\top x$ s.t. $x \in \mathcal{P} = \{x : Ax = b,\ x \ge 0\}$.
+>
+> 1. If $\mathcal{P}$ is nonempty, it has at least one basic feasible solution (vertex).
+> 2. If the LP has an optimal solution, then it has an optimal solution at a vertex.
+>
+> Consequently every LP is exactly one of: **infeasible** ($\mathcal{P} = \varnothing$), **unbounded** (the objective decreases without bound on $\mathcal{P}$), or has a **finite optimum attained at a vertex**.
+
+**Proof.** We prove part 2; part 1 is the same argument applied to any feasible point, ignoring the objective.
+
+Suppose the LP has an optimal solution. Among all optimal solutions, choose one, $x^\star$, whose **support** $S = \{\, j : x_j^\star > 0 \,\}$ is as small as possible (such a minimizer of $|S|$ exists because the supports are subsets of $\{1,\dots,n\}$, a finite collection). We show $x^\star$ is a vertex.
+
+Consider the columns $\{A_j : j \in S\}$. If they are **linearly independent**, then exactly as in Rung 2 we may extend them to a basis $B \supseteq S$, the nonbasic variables are zero, and $x^\star$ is the basic feasible solution for $B$ — that is, a vertex, and we are done.
+
+Otherwise the support columns are **dependent**: there is a vector $d \ne 0$, supported on $S$, with
+
+$$
+\sum_{j \in S} d_j A_j = 0, \qquad \text{i.e.} \qquad Ad = 0.
+$$
+
+We move along $\pm d$ and track what happens. For small $|\theta|$ the point $x^\star + \theta d$ stays feasible: it satisfies the equalities, since
+
+$$
+A(x^\star + \theta d) = Ax^\star + \theta\, Ad = b + 0 = b,
+$$
+
+and it stays nonnegative because $d$ is supported only on the strictly positive coordinates of $x^\star$, so a small step cannot drive any of them below zero. Along this motion the objective changes linearly,
+
+$$
+c^\top(x^\star + \theta d) = c^\top x^\star + \theta\, c^\top d.
+$$
+
+There are two cases for the slope $c^\top d$.
+
+- If $c^\top d \ne 0$, choose the sign of $\theta$ so that $\theta\, c^\top d < 0$. Then for small such $\theta$ the point $x^\star + \theta d$ is feasible with *strictly smaller* cost than $x^\star$, contradicting the optimality of $x^\star$. Hence this case cannot occur, and we must have $c^\top d = 0$.
+
+- Since $c^\top d = 0$, moving along *either* direction leaves the objective unchanged: every point $x^\star + \theta d$ that is feasible is also optimal. Because $d \ne 0$ is supported on $S$, it has a nonzero entry there; pick the sign of $\theta$ so that at least one strictly positive coordinate is *decreasing*, and increase $|\theta|$ until the first such basic coordinate reaches zero — that is, until $x_i^\star + \theta d_i = 0$ for some $i \in S$. The resulting point is feasible, still optimal (the cost never changed), and now has at least one fewer positive coordinate, hence **strictly smaller support** than $x^\star$.
+
+The second case manufactures an optimal solution with smaller support than $x^\star$, contradicting the minimality of $S$. Therefore the dependent case is impossible: the support columns of $x^\star$ are independent, and by the first paragraph $x^\star$ is a vertex.
+
+It remains to read off the trichotomy. If $\mathcal{P} = \varnothing$ the LP is **infeasible**. Otherwise $\mathcal{P}$ is nonempty; if the objective is bounded below on $\mathcal{P}$ then a finite optimal value is attained, and by what we just proved it is attained at a vertex — a **finite optimum at a vertex**. If instead the objective is not bounded below, it tends to $-\infty$ along a feasible ray and the LP is **unbounded**. These three possibilities are mutually exclusive and exhaustive. $\blacksquare$
+
+The Fundamental Theorem reduces optimization over a continuum to a search over the finitely many vertices of $\mathcal{P}$ — and that reduction is not merely existential but *constructive*, carried out vertex by vertex by the simplex method of the next rung.
+
+### Rung 4 — The simplex method
+
+The Fundamental Theorem guarantees that an optimal vertex *exists*, but it is silent about *which* vertex it is. Rung 2 bounded the candidates at $\binom{n}{m}$, yet that count is astronomical — a modest LP with $n = 50$ variables and $m = 25$ constraints already has more than $10^{14}$ bases, so blind enumeration is hopeless. The **simplex method** of Dantzig sidesteps the enumeration entirely. Rather than list the vertices, it *walks* among them: starting at one basic feasible solution, it repeatedly steps to a neighboring vertex of no greater cost, until it reaches a corner from which no step improves. Because each step strictly improves (in the non-degenerate case) and the vertices are finite, the walk must terminate at an optimum.
+
+**Setup at a BFS.** Suppose we are standing at a basic feasible solution with basis $B$, so $x_B = A_B^{-1} b \ge 0$ and the nonbasic variables are zero. Partition the data along the basis: write $c = (c_B, c_N)$ and $A = [\,A_B \mid A_N\,]$, where the subscripts collect the basic and nonbasic columns. The equality $A_B x_B + A_N x_N = b$ lets us solve for the basic variables in terms of the nonbasic ones,
+
+$$
+x_B = A_B^{-1}\bigl(b - A_N x_N\bigr),
+$$
+
+and substituting into the objective eliminates $x_B$, leaving the cost as a function of the nonbasic variables alone:
+
+$$
+\begin{aligned}
+c^\top x
+&= c_B^\top x_B + c_N^\top x_N \\
+&= c_B^\top A_B^{-1}\bigl(b - A_N x_N\bigr) + c_N^\top x_N \\
+&= c_B^\top A_B^{-1} b + \bigl(c_N - A_N^\top (A_B^{-1})^\top c_B\bigr)^\top x_N.
+\end{aligned}
+$$
+
+The constant $c_B^\top A_B^{-1} b$ is the cost at the current vertex (where $x_N = 0$); the vector multiplying $x_N$ is the vector of **reduced costs**,
+
+$$
+\bar c_N = c_N - A_N^\top (A_B^{-1})^\top c_B = c_N - A_N^\top y, \qquad y = (A_B^{-1})^\top c_B.
+$$
+
+Each entry $\bar c_j$ measures the net rate at which the total cost changes as the nonbasic variable $x_j$ is raised off zero — *net* of the compensating adjustment forced on the basic variables.
+
+**Optimality test.** If $\bar c_N \ge 0$, then raising any nonbasic variable from zero can only *increase* the cost (the nonbasic variables are constrained to be nonnegative, so we may only move them up). No feasible move from this vertex lowers the objective, and the current basic feasible solution is **optimal**. The auxiliary vector $y = (A_B^{-1})^\top c_B$ that appears here is exactly the **dual vector**, and the test $\bar c_N \ge 0$ is precisely dual feasibility — a connection Rungs 5 and 6 will make into the theory of LP duality.
+
+**Entering variable.** If instead some reduced cost is negative, say $\bar c_j < 0$, then increasing $x_j$ from $0$ *lowers* the objective. We select such an index $j$ to **enter** the basis. (When several qualify, the choice is a *pivoting rule*; Dantzig's original rule takes the most negative $\bar c_j$, but as we note below the choice matters for termination.)
+
+**Leaving variable (the min-ratio test).** Having decided to increase $x_j$ to some value $t \ge 0$, we hold the other nonbasic variables at zero and let the basic variables adjust to maintain feasibility:
+
+$$
+x_B(t) = A_B^{-1} b - t\, A_B^{-1} A_j.
+$$
+
+As $t$ grows, any basic coordinate with a positive entry of $A_B^{-1} A_j$ decreases, and feasibility $x_B(t) \ge 0$ caps how far we may go. The largest admissible step is given by the **min-ratio test**,
+
+$$
+t^\star = \min_{i\, :\, (A_B^{-1} A_j)_i > 0} \frac{(A_B^{-1} b)_i}{(A_B^{-1} A_j)_i},
+$$
+
+and a basic variable attaining this minimum is the first to hit zero; it **leaves** the basis as $x_j$ enters. Swapping $j$ in for the leaving index produces a new basis whose basic feasible solution is an **adjacent vertex** — this swap is the **pivot**. If no entry of $A_B^{-1} A_j$ is positive, then $x_B(t) \ge 0$ for *all* $t \ge 0$: the step is unbounded, the cost falls without limit, and the LP is **unbounded**.
+
+**Geometric picture.** Each pivot is a walk along an **edge** of the polyhedron $\mathcal{P}$, from the current vertex to a neighboring one, with the objective nonincreasing along the way. The algorithm threads from corner to corner down the faces of the polyhedron and halts at a vertex from which every outgoing edge would raise the cost — a local minimum that, by convexity, is global.
+
+**Termination and degeneracy.** Because the cost is nonincreasing across pivots and there are only finitely many vertices, the method terminates *provided* each pivot strictly decreases the cost. The catch is **degeneracy**: a basic feasible solution with a basic variable already equal to $0$ can yield a pivot of step length $t^\star = 0$, which changes the basis without moving the vertex or the cost. A run of such degenerate pivots can in principle **cycle**, returning to a basis already visited. Cycling is prevented by anti-cycling pivoting rules — **Bland's rule** (always choose the smallest eligible index to enter and to leave) or lexicographic perturbation — which guarantee finite termination [@bertsimas1997].
+
+**Complexity in reality.** Simplex is, in the worst case, *exponential*: the Klee–Minty cubes are polyhedra on which Dantzig's rule visits all $2^n$ vertices. Yet on the problems that arise in practice it is famously fast, typically converging in a small multiple of $m$ pivots. The theoretical gap is closed by a different family of algorithms: **interior-point** (barrier) methods cross the *interior* of the polyhedron rather than its edges and solve LPs in provably **polynomial** time, and they are the modern default for very large instances. Their smooth, gradient-driven treatment of the same KKT conditions is exactly the viewpoint Chapter 13 generalizes to nonlinear problems.
+
+**A worked pivot.** Take the running example $\min\, -(3x_1 + 2x_2)$ subject to $x_1 + x_2 \le 4$, $x_1 \le 2$, and $x \ge 0$. Introducing slack variables $s_1, s_2 \ge 0$ puts it in standard form,
+
+$$
+\begin{aligned}
+x_1 + x_2 + s_1 &= 4, \\
+x_1 \qquad\;\; + s_2 &= 2,
+\end{aligned}
+$$
+
+with objective coefficients $c = (-3, -2, 0, 0)$ on $(x_1, x_2, s_1, s_2)$. The slacks furnish an obvious starting basis $B = \{s_1, s_2\}$ with $A_B = I$, giving the basic feasible solution $x = (0,0)$, $s = (4, 2)$ at cost $0$. Here the reduced costs of the nonbasic variables $x_1, x_2$ are simply their objective coefficients, $\bar c_{1} = -3$ and $\bar c_2 = -2$; both are negative, so the vertex is not optimal. Choosing the more negative one, $x_1$ **enters**. The min-ratio test compares the two rows,
+
+$$
+t^\star = \min\!\left(\frac{4}{1},\, \frac{2}{1}\right) = 2,
+$$
+
+attained in the $s_2$ row, so $s_2$ **leaves** and $x_1$ rises to $2$. The new basis is $\{s_1, x_1\}$, with basic feasible solution $x = (2, 0)$, $s = (2, 0)$ and cost $-6$ — an adjacent vertex, reached by one pivot. A second pivot ($x_2$ enters, $s_1$ leaves) advances to the optimal vertex $(x_1, x_2) = (2, 2)$ with cost $-10$, at which all reduced costs are nonnegative and the optimality test passes. The full tableau bookkeeping for both pivots is carried out in the Worked Examples.
