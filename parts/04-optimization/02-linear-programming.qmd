@@ -2,32 +2,14 @@
 
 *Canonical anchors: Bertsimas & Tsitsiklis; Boyd & Vandenberghe.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapter 11 closed by pointing at a door. It built the full machinery of convex optimization — convex sets, the local-is-global theorem, Lagrange multipliers, the KKT conditions — and then noted that when the objective $f$ and *every* constraint are **affine**, that machinery does not merely apply; it simplifies into something exact and almost magically clean. The feasible set stops being a vague convex blob and becomes a **polyhedron**, a region cut out by finitely many flat faces. Complementary slackness becomes the active-set bookkeeping of which faces a point sits on. And the KKT system collapses into the elegant symmetry of **linear-programming duality**, in which the optimum is pinned down not by curvature but by counting corners. This chapter walks through that door. Its governing question is the most natural specialization of Part IV's theme: *what does optimization look like when everything is linear?*
 
-## Theory & Proofs
+The answer is unusually satisfying. Because the feasible polyhedron has only finitely many **vertices** — corner points where enough constraints meet — and because a linear objective can always be pushed to an extreme without ever wanting to stop in the flat interior, an optimum must sit at one of those vertices. This is the **Fundamental Theorem of Linear Programming**, and it converts a search over a continuum into a search over a finite list. You can therefore find the global optimum *with certainty*, accompanied by a certificate that proves no better point exists. The **simplex method** exploits exactly this: it walks from vertex to neighboring vertex, improving the objective at each step, until no improving edge remains. And duality hands us a second prize — every constraint earns a **shadow price**, the marginal value of relaxing it by one unit. Solve the problem once and you learn not just the answer but the worth of every resource binding it.
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+That shadow price is where this chapter quietly reunites with the last one. A budget-allocation problem whose channel response is **piecewise-linear** is, exactly, a linear program — and the shadow price on its budget constraint turns out to be the very same equal-marginal-return multiplier $\lambda$ that Chapter 11 derived by hand for the smooth concave case. We will rediscover Chapter 11's capstone, but now as a *theorem of duality* rather than a calculation. That payoff is real, but deferred: we earn it only after building linear programming honestly on its own terms.
 
-## Worked Examples
+And we should be honest about the boundary too. Linear programming owns the linear and piecewise-linear-concave world *exactly* — there, a global optimum with a certificate. Genuinely smooth response curves, and the non-concave S-shapes that real channels exhibit, lie just outside its reach; those are the job of Chapter 13 and SLSQP. Knowing where LP stops is as valuable as knowing what it guarantees.
 
-_Worked numerical example(s)._
-
-## Code Tie-in
-
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
-
-## Exercises
-
-### C -- Conceptual / Reading Comprehension
-
-### B -- By Hand
-
-### P -- Prove It
-
-### A -- Applied / Code
+The roadmap follows that logic. We put problems into **standard form**; study the **geometry of polyhedra and vertices**; prove the **Fundamental Theorem** that an optimum lives at a vertex; develop the **simplex method** that finds it; build **LP duality and complementary slackness**; read off **shadow prices**; cast the **budget problem as an LP**; and finally mark the boundary where linear programming ends and Chapter 13 begins.
