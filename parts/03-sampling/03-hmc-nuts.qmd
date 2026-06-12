@@ -160,6 +160,76 @@ giving $H(q', p') = \tfrac{1}{2}(0.955^2 + 0.29325^2) \approx 0.499$, so $\Delta
 
 The leapfrog integrator threads the needle exactly required by HMC: symplectic (energy error bounded, not drifting), volume-preserving (no Jacobian correction), time-reversible (detailed balance holds), and cheap to evaluate (one gradient call per interior step when steps are chained). The only remaining question is how many leapfrog steps to take before proposing — and how to correct for the residual $\Delta H$. Rung 4 delivers the Metropolis accept step that provides the correction; NUTS (Rungs 5 and 6) automates the trajectory length adaptively.
 
+### Rung 4 — The HMC algorithm
+
+One HMC step from the current position $q$ proceeds in three sub-steps.
+
+1. **Resample momentum.** Draw $p \sim \mathcal{N}(0, M)$ independently of $q$.
+2. **Leapfrog proposal.** Run $L$ leapfrog steps from $(q, p)$ to obtain the proposal $(q^*, p^*)$.
+3. **Metropolis accept/reject.** Accept $q^*$ as the next state with probability $\min\!\bigl(1,\, e^{-\Delta H}\bigr)$, where $\Delta H = H(q^*, p^*) - H(q, p)$; otherwise retain $q$.
+
+> **Theorem (HMC leaves $\pi$ invariant).** The HMC transition has the posterior $\pi(q)$ as a stationary distribution.
+
+**Proof.** The HMC step is the composition of two sub-steps; it suffices to show that each preserves the joint density $\pi(q, p) \propto e^{-H(q,p)}$.
+
+**(i) Momentum resampling.** The momentum $p$ is replaced by a fresh draw from $\mathcal{N}(0, M)$. Because $H(q, p) = U(q) + K(p)$ decomposes additively and $K(p) = \tfrac{1}{2}p^\top M^{-1}p$ is the negative log-density of $\mathcal{N}(0, M)$, the conditional distribution of $p$ given $q$ under $\pi(q, p) \propto e^{-H}$ is exactly $\mathcal{N}(0, M)$. Drawing $p$ from this conditional is a **Gibbs step**: it leaves the joint $\pi(q, p)$ invariant by the fundamental property of Gibbs sampling.
+
+**(ii) Leapfrog proposal with Metropolis correction.** Let $T$ denote the deterministic map "run $L$ leapfrog steps from $(q, p)$, then negate the final momentum." By Rung 3, leapfrog is **volume-preserving** ($|\det \partial T| = 1$) and $T$ is an **involution** ($T \circ T = \mathrm{id}$): applying momentum negation after $L$ leapfrog steps and then running $L$ more leapfrog steps and negating again returns exactly to $(q, p)$, because leapfrog composed with momentum negation is time-reversible. Proposing $T(q, p) = (q^*, p^*)$ and accepting with the Metropolis–Hastings rule gives acceptance probability
+
+$$
+\alpha = \min\!\left(1,\; \frac{\pi(T(q,p))}{\pi(q,p)}\,\bigl|\det \partial T\bigr|\right) = \min\!\left(1,\; \frac{e^{-H(q^*, p^*)}}{e^{-H(q, p)}}\right) = \min\!\bigl(1,\, e^{-\Delta H}\bigr),
+$$
+
+with **no Jacobian factor** ($|\det \partial T| = 1$ drops out by volume preservation) and **no proposal-density ratio** (the proposal is deterministic and $T$ is an involution, so the forward proposal from $(q, p)$ and the reverse proposal from $(q^*, p^*)$ coincide). This kernel satisfies detailed balance with respect to $e^{-H}$ by Chapter 8's Metropolis–Hastings theorem. Since both sub-steps preserve $e^{-H}$, the $q$-marginal $\pi(q)$ is invariant under the full HMC step. $\blacksquare$
+
+*(The momentum negation inside $T$ makes it a clean involution but is otherwise irrelevant in practice: $p$ is discarded and resampled at the start of the next step.)*
+
+Because leapfrog **nearly conserves $H$** — Rung 3 established that $\Delta H = O(\varepsilon^2)$, bounded and non-accumulating — the acceptance probability $\min(1, e^{-\Delta H})$ is **near $1$ even for a proposal $L$ leapfrog steps away**, at a distance of roughly $L\varepsilon$ in parameter space. This is the decisive contrast with random-walk Metropolis. Chapter 8 showed that on a correlated posterior the random-walk step size must shrink like $d^{-1/2}$ as dimension $d$ grows, forcing the chain to take tiny, expensive steps to maintain reasonable acceptance. HMC's leapfrog trajectories are accepted with near-unit probability regardless of $L$, enabling proposals that traverse the posterior ridge in a single step.
+
+The two tuning knobs are the **step size** $\varepsilon$ and the **number of leapfrog steps** $L$. The step size governs the energy error: a larger $\varepsilon$ produces faster movement but lower acceptance; practice targets an acceptance rate of approximately $0.65$–$0.8$ [@neal2011], balancing exploration against rejection. The trajectory length $L\varepsilon$ governs how far each proposal travels: too few steps and HMC degenerates toward a random walk; too many and the trajectory doubles back, wasting gradient evaluations. The only problem-specific input is the gradient $\nabla U(q) = -\nabla \log \pi(q)$, available for any differentiable log-posterior and supplied automatically by Stan and PyMC's autodifferentiation engines. HMC is the gradient-guided sampler the Motivation promised: gliding along the high-density contours of the posterior, traveling far in a single trajectory, where the random walk of Chapter 8 was condemned to crawl.
+
+### Rung 5 — NUTS: removing the trajectory-length knob
+
+The step size $\varepsilon$ controls the energy error and can be tuned automatically by targeting an acceptance statistic. The trajectory length $L$, however, is more delicate. Too few steps and HMC degenerates: the particle barely moves before the momentum is discarded and resampled, producing behavior close to a random walk. Too many steps and the trajectory **makes a U-turn**: the particle curves back toward where it began, eventually returning near its starting position while spending many gradient evaluations going nowhere new. Neither excess yields efficient exploration. The **No-U-Turn Sampler** (NUTS) removes this knob entirely by growing the trajectory **adaptively** and stopping automatically when it detects the U-turn [@hoffman2014].
+
+**The U-turn criterion.** NUTS builds the trajectory by extending it both **forward** and **backward** in time, maintaining the two endpoints $(q^-, p^-)$ and $(q^+, p^+)$. The trajectory has begun to double back when the endpoints are no longer moving apart — when the displacement vector $q^+ - q^-$ begins to contract against one of the endpoint momenta:
+
+$$
+(q^+ - q^-) \cdot p^- < 0 \qquad \text{or} \qquad (q^+ - q^-) \cdot p^+ < 0.
+$$
+
+To see why: $\tfrac{d}{dt}\tfrac{1}{2}\|q^+ - q^-\|^2 = (q^+ - q^-) \cdot (\dot{q}^+ - \dot{q}^-)$, and since $\dot{q}^{\pm} \propto p^{\pm}$ by Hamilton's first equation, once either dot product becomes negative the endpoints are closing. Continuing the trajectory would bring the particle back toward its starting region without exploring new probability mass. NUTS stops at the first step that triggers this criterion.
+
+**Trajectory doubling.** NUTS grows the trajectory by **repeated doubling**: at each stage it doubles the number of leapfrog steps, choosing at random whether to extend in the forward or backward direction. The visited states are organized as a **balanced binary tree** — each doubling adds a new subtree of equal depth alongside the existing trajectory — which preserves reversibility, since the forward and backward extension probabilities are symmetric. Work grows proportionally to the final trajectory length. From the completed tree, NUTS selects the next state via a **multinomial scheme** over trajectory positions weighted by $e^{-H}$, in a way that satisfies detailed balance. The full recursive algorithm and its correctness proof are given in @hoffman2014; this rung presents the construction at the conceptual level.
+
+**Step-size adaptation.** During **warm-up**, NUTS tunes $\varepsilon$ automatically by **dual averaging** [@hoffman2014]: a stochastic averaging scheme drives the mean acceptance statistic toward a target (typically $0.8$), then freezes $\varepsilon$ at the end of warm-up for the sampling phase. The practitioner supplies neither $\varepsilon$ nor $L$.
+
+**NUTS with a dual-averaged step size is what Stan and PyMC run by default.** The modeler writes a log-posterior, the autodifferentiation engine supplies the gradient, and the sampler tunes its own step size and trajectory length. This is why modern MMM is fit with NUTS: the efficiency of HMC — proposals that travel far with near-unit acceptance — combined with automatic, problem-adaptive tuning that removes the last manual knobs.
+
+### Rung 6 — Divergences, the funnel, and the bridge to Chapter 10
+
+HMC's distinctive failure mode is the **divergent transition**. Where the posterior has **high curvature** — sharply curving level sets, rapidly changing gradients — a step size $\varepsilon$ that is well-tuned for the bulk of the posterior becomes **too large** for that region. The leapfrog integrator, whose energy error scales as $O(\varepsilon^2)$ per step in smooth regions, accumulates large errors as it enters high-curvature territory: $\Delta H$ blows up, often to $\infty$ or NaN, the Metropolis step rejects the proposal, and — the real damage — the sampler is **unable to enter that region at all**. Probability mass the posterior places there is silently missed, and downstream estimates are biased without warning.
+
+**Neal's funnel.** The canonical geometry that produces divergences is **Neal's funnel** [@betancourt2017]:
+
+$$
+v \sim \mathcal{N}(0,\, 3^2), \qquad x_i \mid v \sim \mathcal{N}(0,\, e^{v}), \quad i = 1, \ldots, d.
+$$
+
+This is the exact shape of a **hierarchical variance parameter** $v$ (on the log-scale) and its $d$ dependent regression coefficients $x_i$ — the structure of Chapter 6's hierarchical MMM. When $v$ is large and positive the $x_i$ spread widely: the **mouth** of the funnel is broad, curvature is gentle, and a moderate $\varepsilon$ integrates comfortably. When $v$ is very negative the $x_i$ are squeezed into a vanishingly narrow **neck** whose curvature in the $x$ directions scales like $e^{-v}$, growing exponentially as $v$ decreases. A step size suited to the mouth diverges in the neck; a step size suited to the neck is hopelessly conservative in the mouth. No single fixed $\varepsilon$ can navigate the full funnel, and divergences concentrate precisely in the neck — the region that holds the most posterior mass when $v$ is small.
+
+**The cure: non-centered reparameterization.** Replace the hierarchical coordinates by **standardized** ones: introduce $\tilde{x}_i \sim \mathcal{N}(0, 1)$ and set
+
+$$
+x_i = \tilde{x}_i\, e^{v/2}.
+$$
+
+In the $(\tilde{x}, v)$ coordinates the prior is $\tilde{x}_i \perp v$, with $\tilde{x}_i \sim \mathcal{N}(0,1)$ and $v \sim \mathcal{N}(0, 3^2)$ independently. The geometry the sampler must explore is **decoupled and roughly flat** across the full range of $v$: the funnel is gone. A single $\varepsilon$ works everywhere, divergences vanish, and posterior mass in the neck is recovered. Non-centered reparameterization is a routine, essential transformation in hierarchical MMM — applied in Stan's parameter block or in a PyMC model's `Deterministic` declaration — and is the most common cure when divergences appear.
+
+**Divergences as a diagnostic.** A divergent transition is not a numerical nuisance to be suppressed. It is a **trustworthy alarm**: each divergence marks a trajectory that entered a region of high curvature, failed to integrate accurately, and returned biased or missing probability mass. A run that reports divergences should not be trusted until they are resolved — by reparameterization, by reducing $\varepsilon$, or by model revision. The signal is precise enough that divergences in a hierarchical model almost always indicate that the centered parameterization should be replaced by its non-centered equivalent [@betancourt2017].
+
+The formal machinery for detecting these pathologies — **$\hat{R}$**, **effective sample size**, and **divergence counts** — is the subject of Chapter 10. The present chapter has built the theoretical foundation: momentum augmentation, Hamiltonian dynamics, leapfrog integration, HMC's invariance proof, NUTS's adaptive trajectory, and the geometry of divergences. Chapter 10 closes the loop by providing the diagnostics that tell a practitioner whether the sampler has done its job.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
