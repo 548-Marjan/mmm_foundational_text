@@ -15,3 +15,110 @@ Both questions bind tightly in an MMM. A converged-but-wrong model hands confide
 The running example is the canonical **eight-schools hierarchical model** — the small dataset on which essentially the entire MCMC-diagnostics literature, from the funnel to $\hat{R}$ to simulation-based calibration, was first worked out. The Theory section adapts it in a single step to a **geo-level MMM**, in which regional effects are partially pooled toward a national mean, so that every diagnostic we build lands directly on the models you fit.
 
 The roadmap follows the two questions. **Part A** answers convergence: Monte Carlo standard error, $\hat{R}$, effective sample size, and divergences. **Part B** answers model adequacy: posterior predictive checks, simulation-based calibration, and out-of-sample scoring.
+
+## Theory & Proofs
+
+The diagnostics of Part A form a ladder. Rung 1 quantifies the residual error that survives even at stationarity — the finite-sample noise in any quantity computed from the draws. Rung 2 builds the convergence statistic $\hat{R}$ that certifies stationarity itself, with a full proof of why it tends to one when the chains agree and exceeds one when they do not, then sharpens it into the split and rank-normalized forms used in practice. Rung 3 (next) defines the effective sample size that Rung 1 already needs. Before the rungs, we fix the running model on which every diagnostic will be exercised.
+
+### The running model
+
+Every diagnostic in this chapter is developed on a single small hierarchical model — the one on which essentially the entire MCMC-diagnostics literature was first worked out. The **eight-schools** model [@gelman2013] estimates the effect of a coaching program in $J = 8$ schools. For school $j$, a separate analysis produced a noisy estimate $y_j$ of the true effect $\theta_j$, with a known standard error $\sigma_j$:
+
+$$
+y_j \mid \theta_j \sim \mathcal{N}(\theta_j,\, \sigma_j^2), \qquad
+\theta_j \mid \mu, \tau \sim \mathcal{N}(\mu,\, \tau^2), \qquad j = 1, \dots, J.
+$$
+
+The school-level effects $\theta_j$ are drawn from a common population $\mathcal{N}(\mu, \tau^2)$, with weak priors placed on the population mean $\mu$ and the between-school standard deviation $\tau$. The $\sigma_j$ are known measurement standard errors; $\mu$ is the population mean effect, and $\tau$ governs how much the $\theta_j$ are pulled toward $\mu$ — full pooling as $\tau \to 0$, no pooling as $\tau \to \infty$.
+
+**Same math, marketing labels.** Read $\theta_g$ as a geo-level effect — the incremental ROAS, or the baseline sales level, of region $g$ — partially pooled toward a national mean $\mu$ with cross-geo standard deviation $\tau$. The observation $y_g$ is that geo's noisy regression estimate of the effect, carrying a standard error $\sigma_g$ inherited from the geo-level fit. The structure is identical to eight schools; only the nouns change. And so does the trap: when only a handful of geos are available, $\tau$ is weakly identified, and a weakly identified $\tau$ reproduces exactly the funnel geometry of Chapter 9 — the variance parameter and its dependent effects squeezing into a narrow neck — which the sampler announces as divergences. The diagnostics below are precisely the instruments that catch this.
+
+### Rung 1 — Monte Carlo standard error
+
+A posterior summary is never computed from the posterior itself; it is computed from a finite sample of draws, and so it carries its own sampling error on top of whatever uncertainty the posterior already expresses. Reporting the summary without that error is reporting a measurement without its tolerance.
+
+Let $\theta^{(1)}, \dots, \theta^{(N)}$ be the draws of a scalar quantity from a converged chain, and consider the ergodic average
+
+$$
+\widehat{\mathbb{E}}[\theta] = \frac{1}{N}\sum_{i=1}^{N} \theta^{(i)},
+$$
+
+our estimate of the posterior mean $\mathbb{E}[\theta]$. The Markov-chain central limit theorem of Chapter 8 tells us this estimate is asymptotically normal around the true mean, with a standard error
+
+$$
+\text{MCSE} = \frac{\sigma_\theta}{\sqrt{N_{\text{eff}}}},
+$$
+
+where $\sigma_\theta$ is the posterior standard deviation of $\theta$ and $N_{\text{eff}}$ is the **effective sample size** — the number of independent draws that would carry the same information as the $N$ correlated draws actually in hand (constructed in Rung 3). The form mirrors the classical $\sigma/\sqrt{N}$, but with $N$ replaced by $N_{\text{eff}}$.
+
+The replacement is the whole point. Successive draws of a Markov chain are autocorrelated: each draw is a perturbation of the last, not a fresh sample, so a run of $N$ draws carries less information than $N$ independent samples would. Autocorrelation inflates the variance of the ergodic average, and the inflation is absorbed by setting $N_{\text{eff}} < N$. A chain that mixes well has $N_{\text{eff}}$ close to $N$; a sticky chain that crawls along a posterior ridge can have $N_{\text{eff}}$ orders of magnitude smaller, and its summaries are correspondingly noisier than their draw count suggests.
+
+The practical rule is simple: report MCSE alongside every posterior summary, and quote the summary only to the precision the MCSE supports. An MMM that reports a channel's ROAS as $2.47$ when the MCSE is $0.05$ is claiming a third significant figure that the sampler never resolved — false precision that an optimizer will nonetheless treat as exact. If the MCSE bites the second figure, the second figure should not be printed.
+
+### Rung 2 — The Gelman–Rubin statistic $\hat{R}$
+
+MCSE presumes convergence; the next diagnostic tests for it. The idea behind the Gelman–Rubin statistic is to run several chains from overdispersed starting points and ask whether they have forgotten where they began. If every chain has converged to the same target, the variation *between* chains should be no larger than the variation *within* each chain. If the chains are still wandering in separate regions, the between-chain variation will dominate. $\hat{R}$ makes this comparison a single number.
+
+Run $M$ chains, each of length $N$, on a scalar quantity $\theta$. Let $\bar\theta_m$ be the mean of chain $m$, let $\bar\theta = \frac{1}{M}\sum_{m=1}^{M}\bar\theta_m$ be the grand mean, and let $s_m^2$ be the within-chain sample variance of chain $m$. Define the **between-chain** and **within-chain** variance estimates
+
+$$
+B = \frac{N}{M-1}\sum_{m=1}^{M}(\bar\theta_m - \bar\theta)^2, \qquad
+W = \frac{1}{M}\sum_{m=1}^{M} s_m^2,
+$$
+
+and combine them into the **marginal posterior variance estimate** and the statistic itself:
+
+$$
+\widehat{\operatorname{var}}^+(\theta) = \frac{N-1}{N}W + \frac{1}{N}B, \qquad
+\hat{R} = \sqrt{\frac{\widehat{\operatorname{var}}^+(\theta)}{W}}.
+$$
+
+> **Theorem ($\hat{R}$ detects non-convergence).** If the $M$ chains are stationary and have converged to a common target with finite variance, then $\hat{R} \to 1$ as $N \to \infty$. If the chains have not mixed — if they occupy systematically different regions of parameter space — then $\hat{R} > 1$.
+
+**Proof.** Suppose first that all chains have converged to the common target, whose marginal variance for $\theta$ is $\operatorname{var}(\theta)$.
+
+The within-chain term $W$ averages the $M$ within-chain sample variances. Each $s_m^2$ is a consistent estimator of the marginal variance of a stationary chain, so as $N \to \infty$ each $s_m^2 \to \operatorname{var}(\theta)$ and therefore
+
+$$
+W \to \operatorname{var}(\theta).
+$$
+
+For the between-chain term, note that $B/N = \frac{1}{M-1}\sum_{m=1}^{M}(\bar\theta_m - \bar\theta)^2$ is the sample variance of the $M$ chain means. For converged chains the means $\bar\theta_m$ are independent and identically distributed, each an average of $N$ stationary draws, so $\operatorname{var}(\bar\theta_m) = \operatorname{var}(\theta)/N$ (up to the autocorrelation correction, which does not change the scaling). Hence $B/N$ estimates $\operatorname{var}(\theta)/N$, giving
+
+$$
+B \to \operatorname{var}(\theta), \qquad \frac{B}{N} \to 0.
+$$
+
+Combining the two limits in the marginal variance estimate,
+
+$$
+\begin{aligned}
+\widehat{\operatorname{var}}^+(\theta)
+  &= \frac{N-1}{N}\,W + \frac{1}{N}\,B \\
+  &\to 1 \cdot \operatorname{var}(\theta) + 0 \\
+  &= \operatorname{var}(\theta),
+\end{aligned}
+$$
+
+since $(N-1)/N \to 1$ and $B/N \to 0$. Therefore
+
+$$
+\hat{R} = \sqrt{\frac{\widehat{\operatorname{var}}^+(\theta)}{W}}
+  \to \sqrt{\frac{\operatorname{var}(\theta)}{\operatorname{var}(\theta)}} = 1.
+$$
+
+Now suppose the chains have not mixed: they sit in systematically different regions, so the chain means $\bar\theta_m$ differ by amounts that do not shrink as $N$ grows. Then $B$, which scales those squared mean differences by $N$, does not vanish on the relative scale, and $\widehat{\operatorname{var}}^+(\theta)$ — built to be unbiased only under the overdispersed-initialization assumption that the chains jointly cover the target — **overestimates** $\operatorname{var}(\theta)$. At the same time each chain, confined to its own region, explores only part of the target, so $W$ **underestimates** $\operatorname{var}(\theta)$. The ratio therefore exceeds one,
+
+$$
+\hat{R} = \sqrt{\frac{\widehat{\operatorname{var}}^+(\theta)}{W}} > 1,
+$$
+
+and remains bounded away from one until the chains overlap. $\blacksquare$
+
+The classical advice was to accept convergence once $\hat{R} < 1.1$. Modern practice is stricter: declare non-convergence unless $\hat{R} < 1.01$ [@vehtari2021], because the looser threshold lets through chains whose residual bias is large enough to corrupt tail estimates and MCSE.
+
+The plain statistic above has two blind spots, each closed by a refinement.
+
+**Split-$\hat{R}$.** A single chain that drifts steadily — never settling, but moving slowly enough that its overall mean still resembles the others' — can pass the whole-chain test while being plainly non-stationary. Split-$\hat{R}$ catches this by cutting each chain into its first and second halves and treating the $2M$ halves as separate chains before computing $\hat{R}$. A drifting chain has mismatched halves, which inflates the between-chain term and exposes the non-stationarity that the undivided statistic concealed [@vehtari2021].
+
+**Rank-normalized $\hat{R}$.** The variance-based statistic presumes the target has a finite variance; for a heavy-tailed posterior — and an MMM ROAS posterior can be heavy-tailed — $\operatorname{var}(\theta)$ may be enormous or undefined, and $\hat{R}$ becomes unstable or meaningless. The fix is to replace each draw by the normal score of its rank across all chains and all draws, then compute $\hat{R}$ on these rank-normalized values. Ranks are always finite, so the transformed quantity has a well-defined variance and the diagnostic stays valid even for heavy-tailed or infinite-variance targets [@vehtari2021]. The split and rank-normalized refinements are applied together, and their combination is the $\hat{R}$ that Stan and PyMC report by default.
