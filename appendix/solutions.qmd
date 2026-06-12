@@ -1561,4 +1561,351 @@ assert abs(chain_mh.mean() - grid_mean) < 0.1
 
 **Takeaway.** The Gibbs autocorrelation rises steeply with $\rho$ and ESS collapses — confirming the $\rho^2$ lag-1 formula and the slow-mixing ridge geometry that motivates Hamiltonian Monte Carlo. For the non-conjugate logistic posterior, MCMC recovers the correct posterior without ever computing the normalizing constant, demonstrating that the intractability identified in Chapter 5 is fully resolved by Metropolis–Hastings.
 
+## Chapter 9 — Hamiltonian Monte Carlo & NUTS
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** HMC augments the parameter vector $q = \beta$ with an auxiliary momentum $p \in \mathbb{R}^d$ drawn from a zero-mean Gaussian with mass matrix $M$. Defining the potential energy $U(q) = -\log\pi(q)$, the kinetic energy $K(p) = \tfrac{1}{2}p^\top M^{-1}p$, and the Hamiltonian $H(q,p) = U(q) + K(p)$, the joint density on augmented phase space is
+
+$$
+\pi(q,p) \propto e^{-H(q,p)} = e^{-U(q)}\,e^{-K(p)}.
+$$
+
+Because $H$ decomposes additively with no cross-terms, $q$ and $p$ are **independent** under $\pi(q,p)$. Marginalizing out $p$ recovers the posterior exactly:
+
+$$
+\int e^{-H(q,p)}\,dp = e^{-U(q)}\int e^{-K(p)}\,dp \;\propto\; e^{-U(q)} = \pi(q).
+$$
+
+Discarding the momentum from each $(q, p)$ draw therefore yields exact posterior samples — the augmentation introduces no approximation.
+
+A trajectory that conserves $H$ stays on a **level set** of $e^{-H(q,p)}$, i.e., a region of constant joint probability. An endpoint that is far from the starting position in $q$-space can still lie at the same level of the joint density, so the proposal travels a large distance in parameter space while remaining acceptable under the Metropolis criterion. Random-walk Metropolis has no such guidance: its symmetric proposal is equally likely to step toward or away from the high-probability region and must be kept small to maintain reasonable acceptance, producing short moves and high autocorrelation. Hamiltonian flow redirects that wasted energy along the posterior's own contours.
+
+**C2.** The three structural properties of exact Hamiltonian flow each deliver a specific guarantee.
+
+**Energy conservation** ($\frac{d}{dt}H = 0$ along any Hamiltonian trajectory) means the trajectory stays on a level set of $e^{-H}$, holding the joint density constant. An endpoint of the trajectory therefore has the same density as the starting point, so the Metropolis acceptance probability would be exactly 1 if the integration were exact. This property is what lets HMC propose states far away in $q$-space with near-unit acceptance: the particle glides along the posterior's high-probability contours rather than stumbling across them.
+
+**Volume preservation** (Liouville's theorem: the Hamiltonian velocity field is divergence-free, so the flow preserves the phase-space volume element $dq\,dp$) means the Jacobian of the proposal map is identically 1. Consequently, no Jacobian factor appears in the Metropolis–Hastings acceptance ratio. If volume were not preserved, the factor $|\det \partial T| \ne 1$ would need to be included and could severely penalize proposals.
+
+**Time-reversibility** (combined with volume preservation) enforces detailed balance: the probability flow from $(q,p)$ to $T(q,p)$ and the reverse flow from $T(q,p)$ back to $(q,p)$ are exactly balanced, making $e^{-H}$ the stationary distribution of the resulting Markov kernel. Reversibility without volume preservation would break the symmetry needed for detailed balance.
+
+**Why leapfrog, not Euler.** The naive Euler integrator is neither symplectic nor volume-preserving: its energy error accumulates monotonically, trajectories spiral outward, and the scheme has no exact stationary distribution. The **leapfrog** (Störmer–Verlet) integrator is **symplectic**: it preserves the symplectic two-form $\sum_i dq_i \wedge dp_i$, which implies volume preservation and time-reversibility exactly at the discrete level. Crucially, the global energy error over an $L$-step trajectory remains $O(\varepsilon^2)$ and **stays bounded** rather than accumulating — the leapfrog does not conserve $H$ exactly, but it does not drift. The **Metropolis $\min(1, e^{-\Delta H})$ step** corrects for this bounded residual error: accepting the leapfrog endpoint with this probability recovers exact stationarity with respect to $\pi(q)$. When $\varepsilon$ is well chosen, $\Delta H \approx 0$, acceptance is near 1, and almost nothing is discarded.
+
+**C3.** NUTS automates the **trajectory length** — the number of leapfrog steps $L$ before proposing — which is the most delicate tuning knob in HMC. Too few steps and HMC degenerates toward a random walk; too many and the trajectory makes a **U-turn**, curving back toward where it began and wasting gradient evaluations without discovering new probability mass. NUTS grows the trajectory forward and backward in time by repeated doubling and stops as soon as the **U-turn criterion** fires: the trajectory is doubling back when the displacement vector between the two trajectory endpoints $q^+$ and $q^-$ begins to contract against either endpoint momentum,
+
+$$
+(q^+ - q^-) \cdot p^- < 0 \qquad \text{or} \qquad (q^+ - q^-) \cdot p^+ < 0.
+$$
+
+For a practitioner fitting an MMM, removing this knob matters: the optimal $L$ varies across models, datasets, and even across individual parameters in the same model. Manual tuning requires expensive trial runs; NUTS makes the sampler self-configuring. The step size $\varepsilon$ is tuned separately by **dual averaging** during warm-up.
+
+A **divergent transition** occurs when the leapfrog integrator enters a region of **high curvature** in the posterior where the step size $\varepsilon$ — well-tuned for the bulk of the distribution — is too large. The energy error $\Delta H$ blows up (often to infinity or NaN), the Metropolis step rejects the proposal, and the sampler cannot explore that region, silently missing probability mass and biasing downstream estimates.
+
+**Neal's funnel** is the canonical geometry that provokes divergences:
+
+$$
+v \sim \mathcal{N}(0,\, 3^2), \qquad x_i \mid v \sim \mathcal{N}(0,\, e^{v}), \quad i = 1, \ldots, d.
+$$
+
+This matches exactly the hierarchical structure of Chapter 6's MMM variance parameters and their regression coefficients. As $v \to -\infty$, the curvature of the potential in the $x_i$ directions scales as $e^{-v}$, growing exponentially as the funnel narrows. A fixed step size tuned for the wide mouth ($v$ large and positive) shatters in the narrow neck ($v$ very negative).
+
+The **non-centered reparameterization** introduces standardized coordinates $\tilde{x}_i \sim \mathcal{N}(0,1)$ independently of $v$, and sets $x_i = \tilde{x}_i e^{v/2}$. In $(\tilde{x}, v)$ coordinates the prior is a product of independent Gaussians: the funnel geometry is eliminated, the curvature is uniform across all values of $v$, and a single $\varepsilon$ navigates the full support without divergences.
+
+A divergence is not a nuisance to suppress — it is a **trustworthy alarm**. Each divergence marks a trajectory that entered a high-curvature region, failed to integrate accurately, and returned biased or missing posterior mass. A run that reports divergences should not be trusted until they are resolved by reparameterization, step-size reduction, or model revision. In a hierarchical MMM, divergences almost invariably signal that the centered parameterization of a variance block should be replaced by its non-centered equivalent.
+
+### B — By Hand
+
+**B1.** For the standard-normal target $U(q) = \tfrac{1}{2}q^2$, $\nabla U(q) = q$, $M = 1$, Hamilton's equations are
+
+$$
+\dot{q} = \frac{\partial H}{\partial p} = p, \qquad \dot{p} = -\frac{\partial H}{\partial q} = -q.
+$$
+
+**Verifying the solution.** Differentiating $q(t) = q_0\cos t + p_0\sin t$ gives $\dot{q}(t) = -q_0\sin t + p_0\cos t = p(t)$. Differentiating $p(t) = p_0\cos t - q_0\sin t$ gives $\dot{p}(t) = -p_0\sin t - q_0\cos t = -q(t)$. Both equations are satisfied. $\blacksquare$
+
+**Energy conservation.** Substituting the solution into $H = \tfrac{1}{2}(q^2 + p^2)$:
+
+$$
+H(q(t),\,p(t)) = \tfrac{1}{2}\bigl[(q_0\cos t + p_0\sin t)^2 + (p_0\cos t - q_0\sin t)^2\bigr].
+$$
+
+Expanding and using $\cos^2 t + \sin^2 t = 1$, the cross terms $\pm 2q_0 p_0\cos t\sin t$ cancel and the squared terms combine to give
+
+$$
+H = \tfrac{1}{2}(q_0^2 + p_0^2),
+$$
+
+which is independent of $t$: the Hamiltonian is exactly conserved.
+
+**Trajectory from $(q_0, p_0) = (2, 0)$.** The solution specializes to $q(t) = 2\cos t$, $p(t) = -2\sin t$, and $H = \tfrac{1}{2}(4 + 0) = 2$ throughout.
+
+| $t$ | $q(t)$ | $p(t)$ | $H$ |
+|-----|--------|--------|-----|
+| $0$ | $2$ | $0$ | $2$ |
+| $\pi/2$ | $0$ | $-2$ | $2$ |
+| $\pi$ | $-2$ | $0$ | $2$ |
+
+A single trajectory of length $\pi$ carries the particle from $q = 2$ to $q = -2$, a displacement of $4$, while the Hamiltonian remains exactly $2$ — the level-set geometry that HMC exploits to propose far-reaching moves with near-unit acceptance.
+
+**B2.** Target $U(q) = \tfrac{1}{2}q^2$, $\nabla U(q) = q$, $M = 1$, step size $\varepsilon = 0.5$, starting state $(q, p) = (0, 1)$.
+
+**Half-step momentum.** Since $\nabla U(0) = 0$:
+
+$$
+p_{1/2} = p - \tfrac{\varepsilon}{2}\,\nabla U(q) = 1 - \tfrac{0.5}{2}(0) = 1.
+$$
+
+**Full-step position.**
+
+$$
+q' = q + \varepsilon\,p_{1/2} = 0 + 0.5 \times 1 = 0.5.
+$$
+
+**Closing half-step momentum.**
+
+$$
+p' = p_{1/2} - \tfrac{\varepsilon}{2}\,\nabla U(q') = 1 - \tfrac{0.5}{2}(0.5) = 1 - 0.125 = 0.875.
+$$
+
+**Energy error.** The Hamiltonian before the step is $H = \tfrac{1}{2}(0^2 + 1^2) = 0.5$. After the step:
+
+$$
+H' = \tfrac{1}{2}(q'^2 + p'^2) = \tfrac{1}{2}(0.25 + 0.765625) \approx 0.5078,
+$$
+
+so $\Delta H \approx 0.0078$.
+
+**Is the proposal accepted with certainty?** No. The energy rose slightly ($\Delta H > 0$), so the acceptance probability is
+
+$$
+\min\!\bigl(1,\, e^{-\Delta H}\bigr) = \min\!\bigl(1,\, e^{-0.0078}\bigr) = e^{-0.0078} \approx 0.9922.
+$$
+
+The proposal is accepted with probability approximately $0.992$, not with certainty. The leapfrog step slightly overshot the exact Hamiltonian orbit (which would have preserved $H$), and the Metropolis filter corrects for this small error — accepting with probability just below $1$. Only a proposal with $\Delta H \le 0$ is accepted with certainty.
+
+**B3.** The Metropolis acceptance probability for an HMC proposal is $\min(1, e^{-\Delta H})$.
+
+**(a) $\Delta H = 0.4$ (proposal raised the energy).** The leapfrog overshot slightly:
+
+$$
+\min\!\bigl(1,\, e^{-0.4}\bigr) = e^{-0.4} \approx 0.6703.
+$$
+
+**(b) $\Delta H = -0.2$ (proposal lowered the energy).** The leapfrog landed in a higher-density region:
+
+$$
+\min\!\bigl(1,\, e^{0.2}\bigr) = \min(1,\, 1.2214) = 1.
+$$
+
+Any proposal that lowers the Hamiltonian is accepted with certainty.
+
+**(c) $\Delta H = 5$ (near-divergence).** The leapfrog wandered far off the true level set:
+
+$$
+\min\!\bigl(1,\, e^{-5}\bigr) = e^{-5} \approx 0.0067.
+$$
+
+**Interpretation.** These three cases tell a precise story about how energy error controls HMC efficiency. A small positive $\Delta H$ ($0.4$) yields moderate acceptance ($67\%$): the integrator overshot slightly, and the Metropolis filter corrects it at modest cost. A negative $\Delta H$ is always accepted: the leapfrog happened to land in a lower-energy, higher-density region. A large positive $\Delta H$ ($5$) yields near-zero acceptance ($0.7\%$): the integrator has drifted badly from the true Hamiltonian level set and the filter almost always rejects the proposal, leaving the chain stuck. When $\Delta H \to +\infty$ the acceptance probability $e^{-\Delta H} \to 0$: the proposal is always rejected and the sampler cannot enter that region at all — this is a **divergent transition**, signaling a high-curvature region where the fixed step size is too large.
+
+### P — Prove It
+
+**P1.** *Claim.* Along any solution of Hamilton's equations $\dot{q}_i = \partial H/\partial p_i$, $\dot{p}_i = -\partial H/\partial q_i$, the Hamiltonian is constant: $\dfrac{d}{dt}H(q(t), p(t)) = 0$.
+
+*Proof.* By the chain rule,
+
+$$
+\frac{d}{dt}H(q(t), p(t)) = \sum_{i=1}^d \left(\frac{\partial H}{\partial q_i}\,\dot{q}_i + \frac{\partial H}{\partial p_i}\,\dot{p}_i\right).
+$$
+
+Substituting Hamilton's equations $\dot{q}_i = \partial H/\partial p_i$ and $\dot{p}_i = -\partial H/\partial q_i$:
+
+$$
+\frac{dH}{dt} = \sum_{i=1}^d \left(\frac{\partial H}{\partial q_i}\cdot\frac{\partial H}{\partial p_i} - \frac{\partial H}{\partial p_i}\cdot\frac{\partial H}{\partial q_i}\right) = \sum_{i=1}^d 0 = 0,
+$$
+
+since every summand is a product minus itself. $\blacksquare$
+
+**P2.** *Claim.* (i) Each leapfrog step has Jacobian determinant $1$ (volume-preserving). (ii) Composed with momentum negation, the step is an involution (time-reversible).
+
+*Proof of (i).* Decompose the leapfrog step into three sub-maps and verify that each has unit Jacobian determinant.
+
+*Sub-map 1* — momentum half-kick: $(q, p) \mapsto (q,\; p - \tfrac{\varepsilon}{2}\nabla U(q))$. Only $p$ changes; the Jacobian of the map with respect to $(q, p)$ is
+
+$$
+\begin{bmatrix}
+I & 0 \\[4pt]
+-\tfrac{\varepsilon}{2}\nabla^2 U(q) & I
+\end{bmatrix},
+$$
+
+a block lower-triangular matrix with identity diagonal blocks — a shear transformation. Its determinant is $\det(I)\cdot\det(I) = 1$.
+
+*Sub-map 2* — position full step: $(q, p_{1/2}) \mapsto (q + \varepsilon M^{-1}p_{1/2},\; p_{1/2})$. Only $q$ changes; the Jacobian is block upper-triangular with identity diagonal blocks, determinant $1$.
+
+*Sub-map 3* — momentum half-kick at $q'$: $(q', p_{1/2}) \mapsto (q',\; p_{1/2} - \tfrac{\varepsilon}{2}\nabla U(q'))$. Identical structure to Sub-map 1, determinant $1$.
+
+The leapfrog step is the composition of these three sub-maps, so its Jacobian determinant is $1 \cdot 1 \cdot 1 = 1$. Phase-space volume is preserved, and no Jacobian correction appears in the acceptance ratio.
+
+*Proof of (ii).* The half-kick / full-step / half-kick structure of leapfrog is symmetric under time reversal. Negating the momentum $(q, p) \mapsto (q, -p)$, applying one leapfrog step, and negating the momentum again returns exactly to $(q, p)$: the sequence of operations is its own inverse. For $L$ chained leapfrog steps the same argument extends by induction, since each step is individually reversible and the composition of $L$ such steps is the entire leapfrog trajectory. Thus the map $T$ consisting of $L$ leapfrog steps followed by momentum negation satisfies $T \circ T = \mathrm{id}$: it is an involution. $\blacksquare$
+
+**P3.** *Claim.* The HMC transition — momentum resampling followed by a leapfrog proposal with Metropolis correction — leaves the posterior $\pi(q)$ invariant.
+
+*Proof.* Define $T(q,p)$ as the map "run $L$ leapfrog steps from $(q,p)$, then negate the final momentum." By P2, $|\det \partial T| = 1$ (each leapfrog step has unit Jacobian, and negating $p$ contributes $(-1)^d$ whose absolute value is $1$) and $T$ is an **involution**: $T \circ T = \mathrm{id}$.
+
+Propose $T(q,p) = (q^*, p^*)$ and apply the Metropolis–Hastings acceptance rule. Since $T$ is deterministic and is its own inverse, the forward proposal from $(q,p)$ to $(q^*,p^*)$ and the reverse proposal from $(q^*,p^*)$ back to $(q,p)$ are point masses at the same involution image; the proposal-density ratio is $1$ and cancels. The acceptance probability is therefore
+
+$$
+\alpha = \min\!\left(1,\; \frac{\pi(T(q,p))}{\pi(q,p)}\cdot|\det \partial T|\right) = \min\!\left(1,\; \frac{e^{-H(q^*,\,p^*)}}{e^{-H(q,\,p)}}\cdot 1\right) = \min\!\bigl(1,\, e^{-\Delta H}\bigr),
+$$
+
+with neither a Jacobian factor ($|\det \partial T| = 1$) nor a proposal-ratio correction. By Chapter 8's Metropolis–Hastings detailed-balance theorem, this kernel satisfies detailed balance with respect to the joint density $e^{-H(q,p)}$, making $e^{-H}$ invariant under the leapfrog-plus-Metropolis sub-step.
+
+The momentum-resampling sub-step draws $p$ from its conditional distribution $\mathcal{N}(0,M)$ given $q$, which is exactly the marginal of $e^{-H} = e^{-U(q)}e^{-K(p)}$ in $p$. This is a **Gibbs step** on the $p$-block, which leaves the joint $e^{-H}$ invariant by Chapter 8's Gibbs invariance result (P2 of that chapter).
+
+Since both sub-steps preserve $e^{-H}$, their composition does as well. Integrating out $p$, the $q$-marginal of $e^{-H}$ is $e^{-U(q)} = \pi(q)$ (up to normalization), so $\pi(q)$ is invariant under the full HMC step. $\blacksquare$
+
+### A — Applied / Code
+
+**A1.** Implement a leapfrog integrator and an HMC sampler for $\mathcal{N}(0,\Sigma)$ with $\Sigma = \bigl[\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\bigr]$, alongside a random-walk Metropolis baseline. At matched iteration counts, HMC's effective sample size substantially exceeds that of random-walk Metropolis, and the gap grows sharply as $\rho \to 1$: near $\rho = 0.95$ the ratio exceeds two orders of magnitude, confirming the collapse of RWM ESS that Chapter 8 diagnosed theoretically. Studying the acceptance rate and mean $|\Delta H|$ as a function of step size $\varepsilon$ confirms the expected monotone trade-off — acceptance falls and energy error grows with $\varepsilon$ — and identifies a well-tuned step size in the recommended acceptance band of $0.65$–$0.8$.
+
+```python
+import numpy as np
+from numpy.linalg import inv
+
+rng = np.random.default_rng(0)
+
+def make_target(rho):
+    Sigma = np.array([[1.0, rho], [rho, 1.0]])
+    Sinv  = inv(Sigma)
+    def U(q):     return 0.5 * q @ Sinv @ q
+    def gradU(q): return Sinv @ q
+    return U, gradU
+
+def leapfrog(q, p, eps, L, gradU):
+    q, p = q.copy(), p.copy()
+    p -= 0.5 * eps * gradU(q)
+    for _ in range(L - 1):
+        q += eps * p
+        p -= eps * gradU(q)
+    q += eps * p
+    p -= 0.5 * eps * gradU(q)
+    return q, p
+
+def hmc_run(U, gradU, n, eps, L):
+    q = np.zeros(2); chain = np.empty((n, 2))
+    n_acc = 0; dH_abs = []
+    for i in range(n):
+        p = rng.standard_normal(2)
+        H0 = U(q) + 0.5 * (p @ p)
+        qp, pp = leapfrog(q, p, eps, L, gradU)
+        dH = U(qp) + 0.5 * (pp @ pp) - H0
+        dH_abs.append(abs(dH))
+        if np.log(rng.random()) < -dH:
+            q = qp; n_acc += 1
+        chain[i] = q
+    return chain, n_acc / n, np.mean(dH_abs)
+
+def rwm_run(U, n, step):
+    q = np.zeros(2); chain = np.empty((n, 2))
+    n_acc = 0; lp = -U(q)
+    for i in range(n):
+        prop = q + step * rng.standard_normal(2)
+        lp_p = -U(prop)
+        if np.log(rng.random()) < lp_p - lp:
+            q = prop; lp = lp_p; n_acc += 1
+        chain[i] = q
+    return chain, n_acc / n
+
+def ess(x):
+    x = x - x.mean(); v = np.var(x); total = 0.0
+    for k in range(1, len(x)):
+        rk = np.mean(x[:-k] * x[k:]) / v
+        if rk < 0: break
+        total += rk
+    return len(x) / (1.0 + 2.0 * total)
+
+N = 4000
+# ESS comparison across rho values
+print("rho    HMC acc  HMC ESS    RWM acc  RWM ESS")
+for rho in [0.5, 0.9, 0.95]:
+    U, gradU = make_target(rho)
+    ch_h, acc_h, _ = hmc_run(U, gradU, N, eps=0.25, L=20)
+    ch_r, acc_r    = rwm_run(U, N, step=0.4)
+    print(f"{rho:.2f}   {acc_h:.3f}   {ess(ch_h[:,0]):>8.0f}"
+          f"    {acc_r:.3f}   {ess(ch_r[:,0]):>8.0f}")
+
+# Acceptance and mean |dH| vs step size  (rho=0.95, L=20)
+U, gradU = make_target(0.95)
+print("\neps    accept   mean|dH|")
+for eps in [0.1, 0.25, 0.5, 0.8, 1.2]:
+    _, acc, mdh = hmc_run(U, gradU, N, eps=eps, L=20)
+    print(f"{eps:.2f}   {acc:.3f}    {mdh:.4f}")
+```
+
+**Takeaway.** HMC's ESS approaches the chain length at any $\rho$ because gradient guidance keeps trajectories within the posterior's high-density contours, proposing moves that are far and accepted with near-unit probability. Random-walk Metropolis ESS collapses toward zero as $\rho \to 1$, quantitatively confirming Chapter 8's autocorrelation analysis. The $\varepsilon$ sweep reveals that the acceptance band $0.65$–$0.8$ corresponds to small but bounded mean $|\Delta H|$; below this band ESS is limited by short moves, above it by frequent rejection, and the Metropolis filter discards most proposals.
+
+**A2.** Implement Neal's funnel $v \sim \mathcal{N}(0, 3^2)$, $x \mid v \sim \mathcal{N}(0, e^v)$ in both its centered and non-centered parameterizations, and run fixed-$(\varepsilon, L)$ HMC on each. The centered parameterization accumulates many divergent transitions (iterations where $|\Delta H|$ exceeds a large threshold or is non-finite), concentrated at negative values of $v$ where the curvature of the potential in the $x$ direction scales as $e^{-v}$ and grows exponentially in the funnel's neck. The non-centered parameterization $\tilde{x} \sim \mathcal{N}(0,1)$, $x = \tilde{x}e^{v/2}$ presents a geometrically uniform landscape — a product of two independent Gaussians — where divergences vanish entirely and the recovered $v$-marginal matches $\mathcal{N}(0, 9)$.
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(7)
+
+# --- Centered funnel: v ~ N(0,9),  x|v ~ N(0, exp(v)) ---
+def U_c(q):
+    v, x = q
+    return 0.5 * v**2 / 9.0 + 0.5 * x**2 * np.exp(-v) + 0.5 * v
+
+def gradU_c(q):
+    v, x = q; ev = np.exp(-v)
+    return np.array([v / 9.0 - 0.5 * x**2 * ev + 0.5,  x * ev])
+
+# --- Non-centered funnel: x_tilde ~ N(0,1),  v ~ N(0,9) independently ---
+def U_nc(q):
+    v, xt = q
+    return 0.5 * v**2 / 9.0 + 0.5 * xt**2
+
+def gradU_nc(q):
+    v, xt = q
+    return np.array([v / 9.0, xt])
+
+def leapfrog(q, p, eps, L, gU):
+    q, p = q.copy(), p.copy()
+    p -= 0.5 * eps * gU(q)
+    for _ in range(L - 1):
+        q += eps * p; p -= eps * gU(q)
+    q += eps * p; p -= 0.5 * eps * gU(q)
+    return q, p
+
+def hmc_funnel(U_fn, gU_fn, n, eps, L):
+    q = np.zeros(2); chain = np.empty((n, 2)); n_div = 0
+    for i in range(n):
+        p = rng.standard_normal(2)
+        H0 = U_fn(q) + 0.5 * (p @ p)
+        if not np.isfinite(H0):
+            chain[i] = q; n_div += 1; continue
+        qp, pp = leapfrog(q, p, eps, L, gU_fn)
+        H1 = U_fn(qp) + 0.5 * (pp @ pp)
+        dH = H1 - H0
+        if not np.isfinite(dH) or abs(dH) > 1000:
+            n_div += 1          # divergence — reject, stay at q
+        elif np.log(rng.random()) < -dH:
+            q = qp
+        chain[i] = q
+    return chain, n_div
+
+EPS, L, N = 0.5, 10, 2000
+
+ch_c,  n_div_c  = hmc_funnel(U_c,  gradU_c,  N, EPS, L)
+ch_nc, n_div_nc = hmc_funnel(U_nc, gradU_nc, N, EPS, L)
+
+v_nc = ch_nc[:, 0]
+print(f"Centered:     divergences = {n_div_c}")
+print(f"Non-centered: divergences = {n_div_nc}")
+print(f"Non-centered v:  mean = {v_nc.mean():.3f}  (expect ~0),  "
+      f"var = {v_nc.var():.3f}  (expect ~9)")
+```
+
+**Takeaway.** The centered funnel's divergences are a direct signal that a fixed $\varepsilon$ cannot cope with the curvature gradient between the funnel's wide mouth and its narrow neck. The non-centered form presents a geometrically flat landscape in $(\tilde{x}, v)$ coordinates that a single step size handles throughout — confirmed by zero divergences and a $v$-marginal that recovers the correct mean and variance. Divergence elimination together with $v$-marginal recovery demonstrates that the reparameterization cures the geometric obstruction rather than merely suppressing a symptom.
+
 :::
