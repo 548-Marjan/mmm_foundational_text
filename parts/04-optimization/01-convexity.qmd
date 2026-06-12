@@ -264,3 +264,65 @@ contradicting that $p^\star$ is the minimum value of $f$ over $C$. Hence the min
 This also explains the workflow of all of Part IV. The first question to ask about any optimization problem is not "what algorithm should I run?" but "is this problem convex?", because a yes converts local search into a global guarantee — it changes what a stopping point *means*. The first- and second-order conditions of Rungs 3–4 are precisely how that question gets answered, which is why we spent so long sharpening them.
 
 And a forewarning. The guarantee is a property of convexity, not a law of nature. When the response curve is S-shaped — convex toe, concave tail, the very shape glimpsed in Rung 4 and confronted head-on in Rung 10 — the objective is no longer convex, and this keystone evaporates. A single descent can then halt in a local basin that is nowhere near the best, with no way to tell from local information alone that anything is wrong. That single failure is what forces the multi-start machinery of Chapter 13: when local can no longer certify global, the only recourse is to search many basins and compare.
+
+### Rung 8 — Constrained optimality: Lagrange and KKT
+
+The keystone of Rung 7 is a theorem about *unconstrained* minimization: set the gradient to zero and, for a convex objective, you have the global optimum. But the budget problem is not unconstrained. Spend is nonnegative, and it must sum to (or stay within) the budget. Constraints change what "optimal" means. At a constrained optimum the gradient of the objective need *not* vanish — pushing further downhill may simply be forbidden by a constraint. What must instead hold is a balance: the objective's gradient must be exactly cancelled by a combination of the constraint gradients, so that no feasible direction descends. Lagrange multipliers and the Karush–Kuhn–Tucker (KKT) conditions are the apparatus that formalizes that balance, and they are the bridge from Rung 7 to every constrained optimizer in Part IV.
+
+**The setup.** Write the **convex program** in standard form,
+
+$$
+\min_x\ f(x) \quad \text{subject to} \quad g_i(x) \le 0\ (i = 1, \dots, m), \quad h_j(x) = 0\ (j = 1, \dots, p),
+$$
+
+with $f$ and every $g_i$ convex and every $h_j$ affine. These hypotheses are exactly what make the program convex: the inequality sets $\{g_i \le 0\}$ are convex sublevel sets of convex functions, the equality sets $\{h_j = 0\}$ are hyperplanes, and the feasible region is their intersection — convex by Rung 1.
+
+The device that couples objective and constraints is the **Lagrangian**, which attaches a scalar multiplier to each constraint and folds the whole problem into a single function:
+
+$$
+L(x, \lambda, \nu) = f(x) + \sum_{i=1}^m \lambda_i g_i(x) + \sum_{j=1}^p \nu_j h_j(x), \qquad \lambda_i \ge 0,\ \nu_j \in \mathbb{R}.
+$$
+
+The **sign convention** is not arbitrary. An inequality multiplier $\lambda_i$ is constrained to be **nonnegative**: it prices a one-sided constraint $g_i \le 0$, and charging a penalty $\lambda_i g_i$ that only bites when the constraint is pushed toward violation ($g_i \to 0^+$) requires $\lambda_i \ge 0$, so that relaxing the constraint can never look worse than respecting it. An equality multiplier $\nu_j$ is **free** in sign, because an equality constraint can be violated in either direction and the penalty $\nu_j h_j$ must be able to push back both ways.
+
+**The KKT conditions.** A point $(x^\star, \lambda^\star, \nu^\star)$ satisfies the **KKT conditions** when all four of the following hold:
+
+1. **Stationarity:** $\nabla f(x^\star) + \sum_i \lambda_i^\star \nabla g_i(x^\star) + \sum_j \nu_j^\star \nabla h_j(x^\star) = 0$. The objective gradient is balanced by a weighted sum of constraint gradients — no net pull remains.
+2. **Primal feasibility:** $g_i(x^\star) \le 0$ for all $i$ and $h_j(x^\star) = 0$ for all $j$. The candidate point actually obeys the constraints.
+3. **Dual feasibility:** $\lambda_i^\star \ge 0$ for all $i$. The inequality prices respect the sign convention.
+4. **Complementary slackness:** $\lambda_i^\star\, g_i(x^\star) = 0$ for every $i$.
+
+Complementary slackness deserves a word, because it is the condition that encodes which constraints matter. For each $i$ the product $\lambda_i^\star g_i(x^\star)$ is zero, so at least one factor must vanish. Either the constraint is **active** — it holds with equality, $g_i(x^\star) = 0$, and its multiplier $\lambda_i^\star$ is free to be positive, exerting force on the optimum — or it is **inactive**, $g_i(x^\star) < 0$, with strict slack, and then complementary slackness forces $\lambda_i^\star = 0$. An inactive constraint exerts no force: it is not touching the optimum, so it contributes nothing to the stationarity balance. The multipliers thus switch off automatically for the constraints that do not bind.
+
+> **Theorem (KKT sufficiency for convex programs).** For the convex program above — $f$ and all $g_i$ convex, all $h_j$ affine — if $(x^\star, \lambda^\star, \nu^\star)$ satisfies the four KKT conditions, then $x^\star$ is a **global** minimizer of $f$ over the feasible set.
+
+**Proof.** Fix the multipliers at their KKT values and define the **partial Lagrangian**
+
+$$
+\tilde L(x) = f(x) + \sum_i \lambda_i^\star g_i(x) + \sum_j \nu_j^\star h_j(x),
+$$
+
+a function of $x$ alone. The proof has two moves: show $\tilde L$ is globally minimized at $x^\star$ by reducing to the keystone, then convert that into a statement about $f$ on the feasible set.
+
+*Step 1: $\tilde L$ is convex.* The first term $f$ is convex by hypothesis. Each term $\lambda_i^\star g_i$ is a nonnegative multiple — $\lambda_i^\star \ge 0$ by dual feasibility — of a convex $g_i$, hence convex. Each term $\nu_j^\star h_j$ is a scalar multiple of an affine function, hence affine and so convex. By the nonnegative-weighted-sum and affine rules of Rung 5, $\tilde L$ is a sum of convex pieces and is therefore convex on $\mathbb{R}^n$.
+
+*Step 2: $x^\star$ globally minimizes $\tilde L$.* Differentiating $\tilde L$ gives exactly the left-hand side of the stationarity condition, so KKT stationarity says $\nabla \tilde L(x^\star) = 0$. A convex function with a zero gradient is at a global minimum — this is precisely the keystone of Rung 7, Part 2, applied to the unconstrained convex function $\tilde L$. Hence
+
+$$
+\tilde L(x) \ge \tilde L(x^\star) \quad \text{for all } x \in \mathbb{R}^n.
+$$
+
+*Step 3: transfer to $f$ on the feasible set.* Let $y$ be any feasible point, so $g_i(y) \le 0$ and $h_j(y) = 0$. Then
+
+$$
+\begin{aligned}
+f(y) &\ge f(y) + \sum_i \lambda_i^\star g_i(y) + \sum_j \nu_j^\star h_j(y) = \tilde L(y) \\
+     &\ge \tilde L(x^\star) = f(x^\star) + \sum_i \lambda_i^\star g_i(x^\star) + \sum_j \nu_j^\star h_j(x^\star) = f(x^\star).
+\end{aligned}
+$$
+
+Each step earns its place. The **first inequality** holds because the added terms are nonpositive: $\lambda_i^\star \ge 0$ (dual feasibility) times $g_i(y) \le 0$ (primal feasibility of $y$) gives $\sum_i \lambda_i^\star g_i(y) \le 0$, while $h_j(y) = 0$ makes the equality terms vanish — so we have only *subtracted* a nonnegative quantity from $f(y)$, leaving $\tilde L(y) \le f(y)$. The **second inequality** is the global minimization of $\tilde L$ from Step 2. The **final equality** strips the constraint terms at $x^\star$: complementary slackness gives $\lambda_i^\star g_i(x^\star) = 0$ for every $i$, and primal feasibility gives $h_j(x^\star) = 0$ for every $j$, so every term in the two sums is zero and $\tilde L(x^\star) = f(x^\star)$. The chain therefore reads $f(y) \ge f(x^\star)$, and since $y$ was an arbitrary feasible point, $x^\star$ is a global minimizer of $f$ over the feasible set. $\blacksquare$
+
+**Necessity, Slater's condition, and what the multipliers cost.** We proved that KKT is *sufficient* for global optimality — a complete certificate built from convexity and the keystone. The converse, that a global optimum *must* admit KKT multipliers, is more delicate and does not hold without a **constraint qualification**: the constraint gradients must be well-behaved enough that the multipliers exist. For convex programs the cleanest qualification is **Slater's condition** — the existence of a strictly feasible point, some $x$ with $g_i(x) < 0$ for all $i$ (and $h_j(x) = 0$). When Slater holds, every global optimum admits KKT multipliers, and moreover **strong duality** holds: the optimal value of the primal program equals that of its Lagrangian dual, with no gap. The proofs of necessity and strong duality are developed in full by @boyd2004 and @nocedal2006; we take them as given and use sufficiency directly. The payoff of necessity is operational rather than theoretical — it is what licenses the later chapters to *solve* for the optimum by solving the KKT system, confident that the solution they seek actually satisfies those equations.
+
+**The hand-off.** Rung 8 is the theory hub of Part IV, and the two engine chapters specialize it in opposite directions. Chapter 12 takes $f$ and every $g_i$ to be **affine**: the feasible set becomes a polyhedron, complementary slackness becomes the active-set logic of vertices, and the KKT system collapses into the elegant symmetry of **linear-programming duality**. Chapter 13's **SLSQP** keeps the full nonlinear program but attacks the KKT system *iteratively* — at each step it forms a quadratic model of the Lagrangian and a linearization of the constraints, solves that quadratic program for a search direction, and repeats, so that the algorithm is at heart a Newton iteration on the KKT equations. And the very next rung stays closest to home: it applies these conditions by hand to the budget problem, where the single equality constraint $\mathbf{1}^\top b = B$ contributes one multiplier $\nu$, stationarity sets every channel's marginal return equal to that shared $\nu$, and the KKT system delivers the capstone of the chapter — the **equal-marginal-returns rule** for allocating spend.
