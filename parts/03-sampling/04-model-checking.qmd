@@ -188,3 +188,53 @@ $\hat{R}$ and effective sample size are necessary but not sufficient. Both are c
 **Tree-depth saturation (NUTS).** The No-U-Turn Sampler grows each trajectory until a U-turn criterion signals that continuing would double back, subject to a maximum tree depth that caps the work per iteration. When NUTS *repeatedly* hits that maximum, its trajectories are being truncated before the U-turn would naturally stop them: the sampler is exploring correctly but is cut short, taking many small, expensive steps where a longer trajectory would have moved farther for less cost. This is an efficiency alarm, not a bias alarm — the draws are valid, just dearer than they should be.
 
 The three signals partition cleanly. **Divergences are a bias alarm; BFMI and tree-depth saturation are efficiency alarms.** A bias alarm says the answer may be wrong; an efficiency alarm says the answer is right but costlier than necessary. This is why the convergence diagnostics of Rungs 2 and 3 ($\hat{R}$, ESS) and the geometric diagnostics of this rung (divergences above all) are complementary rather than redundant: the former certify that the draws you have are a faithful sample of where the chain went, the latter warn when where the chain went is not where the posterior actually lives. A trustworthy MMM fit must clear both.
+
+Everything to this point has been Part A: it certified that the sampler faithfully characterized the posterior of a model, that the draws in hand are a trustworthy sample from $p(\theta \mid y)$. It said nothing about whether that model deserves belief. A perfectly converged fit of a badly specified model is a precise answer to the wrong question. Part B asks instead: *is the model any good?* — and it splits in two. **B1, self-consistency**: does the model reproduce the data it was fit to, and are the intervals it reports honest? This is the work of predictive checks and simulation-based calibration, Rungs 5 through 7. **B2, out-of-sample prediction**: does the model generalize to data it has not seen? — taken up later. The next two rungs build the predictive checks that anchor B1.
+
+### Rung 5 — Predictive checks
+
+A model is a generative claim: it asserts that data arise from a particular stochastic process. The most direct test of such a claim is to run the process and look at what comes out — before fitting, to audit the priors, and after fitting, to audit the fit.
+
+**Prior predictive checks.** Before any data touches the model, draw a parameter vector from the prior, $\theta \sim p(\theta)$, then a dataset from the likelihood given that draw, $\tilde{y} \sim p(y \mid \theta)$. Repeating this traces out the **prior predictive distribution**
+
+$$
+p(\tilde{y}) = \int p(\tilde{y} \mid \theta)\,p(\theta)\,d\theta,
+$$
+
+the distribution of datasets the model considers plausible before seeing any data. The check is to inspect whether these simulated datasets are remotely reasonable — the right order of magnitude, the right sign, a sensible range. This is cheap and it catches absurd priors before a single expensive MCMC run is launched. In an MMM the payoff is concrete: a prior that lets a single channel's contribution exceed total observed sales by an order of magnitude is exposed immediately in the prior predictive draws, not discovered after a week of sampling, divergence-chasing, and debugging a fit that was doomed by its priors from the start.
+
+**Posterior predictive checks (PPC).** After fitting, the analogous object conditions on the data. The **posterior predictive distribution** is
+
+$$
+p(y^{\text{rep}} \mid y) = \int p(y^{\text{rep}} \mid \theta)\,p(\theta \mid y)\,d\theta,
+$$
+
+the distribution of replicated datasets the fitted model would generate. It is sampled in two stages that mirror the prior predictive, with the posterior in place of the prior: draw $\theta^{(s)} \sim p(\theta \mid y)$ from the posterior, then $y^{\text{rep},(s)} \sim p(\cdot \mid \theta^{(s)})$ from the likelihood. Because the posterior draws are already in hand from the MCMC run, the replicates cost only a forward simulation apiece.
+
+The check turns on a **test quantity** $T(y, \theta)$ — a scalar summary chosen to be sensitive to a feature of the data you care about: the maximum, the minimum, a count of zeros, a discrepancy between two groups. Compare the observed value to the distribution of the quantity over replicates. If the observed data is typical of what the model generates, the replicate distribution of $T$ will be centered near the observed value and the model reproduces that feature; if $T(y)$ sits in the extreme tail of the replicate distribution, the model cannot generate data with that feature and the misfit is exposed. The discipline is to pick test quantities that probe the failure modes that would actually hurt the decision — for an MMM, the size of the largest weekly sales spike, or the share of weeks with near-zero spend on a channel — rather than the features the model is guaranteed to fit by construction [@gelman2013].
+
+This comparison is summarized by the **posterior predictive p-value**, the tail probability of the observed test quantity under the replicate distribution:
+
+$$
+p_B = \Pr\!\bigl(T(y^{\text{rep}}, \theta) \ge T(y, \theta) \,\big|\, y\bigr),
+$$
+
+estimated as the fraction of posterior-predictive replicates whose test quantity equals or exceeds the observed value. A $p_B$ near $0$ or $1$ flags a feature the model systematically under- or over-produces; the question is what value $p_B$ should take when the model is correct, which is the subject of the next rung.
+
+### Rung 6 — When is a p-value honest? The probability integral transform
+
+A predictive p-value is only interpretable if we know what distribution it follows under a correct model — otherwise an observed value of, say, $0.05$ has no reference against which to be judged surprising. For a continuous test statistic the answer is clean and universal: under a correct model the p-value is uniform on $[0, 1]$. The reason is a single fact about cumulative distribution functions, the probability integral transform.
+
+> **Proposition (PIT uniformity).** Let $T$ be a continuous test statistic with cumulative distribution function $F$ under the (correct) model. Then the random variable $U = F(T)$ is uniformly distributed on $[0, 1]$. Consequently, if the model is correct, the tail probability $p_B$ is $\text{Uniform}(0,1)$.
+
+**Proof.** For any $u \in [0,1]$, using that $F$ is continuous and nondecreasing with (generalized) inverse $F^{-1}$,
+
+$$
+\Pr(U \le u) = \Pr(F(T) \le u) = \Pr(T \le F^{-1}(u)) = F(F^{-1}(u)) = u,
+$$
+
+which is exactly the cumulative distribution function of $\text{Uniform}(0,1)$. Hence $U \sim \text{Uniform}(0,1)$. $\blacksquare$
+
+The practical reading follows directly. Under a correct model the p-value is uniform, so **systematic** departure from uniformity — a pile-up of p-values near $0$, near $1$, or bunched in the middle — is evidence of misfit, and the *shape* of the departure points to its kind. By the same token a single p-value near $0.5$ is weak evidence: it is consistent with a correct model, but it is equally consistent with a great many wrong ones, and on its own it certifies nothing.
+
+There is a crucial caveat, and it is structural rather than incidental. The posterior predictive p-value uses the data twice — once to fit the posterior $p(\theta \mid y)$, and again to test against it through $T(y, \theta)$. Because the replicate distribution is generated from a posterior that was itself pulled toward the observed data, the replicates are pulled toward $y$ as well, and $p_B$ is biased toward $0.5$. The check is therefore **conservative**: it is less sensitive than its uniform ideal, more apt to pass a misspecified model than the clean PIT result would suggest. This double-use of the data is exactly the defect that simulation-based calibration removes, by working in the prior-predictive space — where parameters and data are drawn jointly and no datum is reused — rather than conditioning on a single observed dataset. That construction is the subject of Rung 7.
