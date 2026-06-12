@@ -2,32 +2,22 @@
 
 *Canonical anchors: Boyd & Vandenberghe.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Parts I through III did the patient work: we built a Bayesian posterior for a marketing mix model, sampled it faithfully, and — in Chapter 10 — checked that the model deserved our belief. That posterior is now an asset, not an end. The whole point of estimating channel response was to *act* on it. A business hands us a fixed budget $B$ and a portfolio of channels, and asks the only question that pays the bills: where should the next dollar go? Take a posterior estimate of each channel's response curve, and finding the spend plan that maximizes total response is an **optimization problem**. Part IV is about solving it.
 
-## Theory & Proofs
+But optimization is not one subject; it is two, and the boundary between them decides everything. Some problems yield to a simple downhill algorithm that cannot be fooled. Others are minefields where the same algorithm, started from two different points, returns two different answers and tells you nothing about which is right. The question that opens this part — *why is one optimization problem solvable and another a trap?* — has a single-word answer: **convexity**. A convex problem has no false summits. Every local optimum is the global one, so descending until you can descend no further is guaranteed to land you at the best point that exists. A non-convex problem is a ridged landscape of basins and saddles, and a local search can stall in any of them.
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+This distinction is not abstract for an MMM; it is the difference between two response curves. The budget-allocation problem is
 
-## Worked Examples
+$$
+\max_{b}\ \sum_{i} r_i(b_i)
+\quad \text{subject to} \quad
+\mathbf{1}^\top b = B,
+$$
 
-_Worked numerical example(s)._
+where $r_i$ is channel $i$'s response curve and the constraint fixes total spend. If each $r_i$ is **concave** — the diminishing-returns saturation curve introduced in Chapter 5, where every extra dollar buys a little less than the last — the problem is convex, and its solution has a clean, unique, and frankly beautiful structure: at the optimum, the **marginal returns are equalized** across all channels. No dollar can be moved to do more good elsewhere. But if the curves are **S-shaped** — a convex "toe" at low spend, where early dollars build momentum before diminishing returns finally set in — the problem turns non-convex. Multiple local optima appear, and a single descent can settle on a genuinely bad allocation. That is precisely why Chapter 13 reaches for multi-start SLSQP instead of trusting one run from one starting point.
 
-## Code Tie-in
+The roadmap follows the logic upward. We begin with **convex sets**, then **convex functions**, then the **first- and second-order conditions** that certify when a function is convex without checking every pair of points. From these we prove the keystone — **a local minimum of a convex problem is global** — and then extend it to constrained problems through **Lagrange multipliers and the KKT conditions**. That machinery delivers the MMM capstone, the equal-marginal-returns rule, and then we close with an honest reckoning: real response curves are S-shaped, and we name exactly what that costs us.
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
-
-## Exercises
-
-### C -- Conceptual / Reading Comprehension
-
-### B -- By Hand
-
-### P -- Prove It
-
-### A -- Applied / Code
+This chapter is the theory hub of Part IV. Chapter 12 (Linear Programming) and Chapter 13 (SLSQP) are both engines that exploit the optimality conditions proved here; everything downstream rests on the certificates we build now.
