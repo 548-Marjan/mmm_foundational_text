@@ -12,7 +12,153 @@ Hamiltonian Monte Carlo answers that question by translating it into physics. De
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+Rung 1 constructs the augmented target and shows why sampling it recovers the posterior exactly. Rungs 2 and 3 develop the two mathematical engines that make efficient exploration possible: the Hamiltonian dynamics that glide along posterior contours, and the leapfrog integrator that discretizes those dynamics while preserving the structural properties needed for exact stationarity.
+
+### Rung 1 — Augmenting with momentum
+
+Chapter 8's Rung 4 identified the root cause of random-walk inefficiency: a symmetric proposal that is blind to the geometry of $\pi$ must be small enough to stay within the high-density region in every direction, including the across-the-ridge directions that are almost always downhill. The cure is a proposal that knows which direction is *along* the ridge and moves there deliberately. Hamiltonian Monte Carlo manufactures such proposals by embedding the parameter vector $q \in \mathbb{R}^d$ in an augmented phase space together with an auxiliary **momentum** variable $p \in \mathbb{R}^d$ and simulating the dynamics of a physical particle rolling across an energy landscape defined by $\pi$.
+
+**Potential energy.** Define
+
+$$
+U(q) = -\log \pi(q),
+$$
+
+up to an additive constant. This is the **potential energy** of the position $q$: it is large where $\pi$ is small and small where $\pi$ is large, so the high-probability region of $\pi$ is the low-potential valley of $U$. Since $\pi$ is the unnormalized posterior — evaluable pointwise as $p(y \mid q)\,p(q)$ — any additive constant in $U$ cancels in every density ratio and is harmless.
+
+**Kinetic energy.** Introduce a symmetric positive-definite **mass matrix** $M \in \mathbb{R}^{d \times d}$, defaulting to the identity $I$. Define the **kinetic energy**
+
+$$
+K(p) = \tfrac{1}{2}\,p^\top M^{-1} p.
+$$
+
+This is the negative log-density of a $\mathcal{N}(0, M)$ random variable up to a constant. The mass matrix $M$ can be set to a diagonal approximation to the posterior's covariance as a preconditioning strategy — equipping each direction with inertia proportional to its posterior variance — but the theory requires only that $M$ be positive definite.
+
+**The Hamiltonian and joint density.** The **Hamiltonian** is the total energy:
+
+$$
+H(q, p) = U(q) + K(p).
+$$
+
+Define the joint density on augmented phase space $(q, p) \in \mathbb{R}^d \times \mathbb{R}^d$ by
+
+$$
+\pi(q, p) \propto e^{-H(q,\,p)} = e^{-U(q)}\,e^{-K(p)}.
+$$
+
+Because $H$ decomposes additively with no cross-terms, the joint density **factorizes**: $q$ and $p$ are **independent** under $\pi(q,p)$, with marginals
+
+$$
+q \sim \pi(q), \qquad p \sim \mathcal{N}(0, M).
+$$
+
+The marginal over $p$ is exactly the original target $\pi(q)$: drawing samples $(q^{(t)}, p^{(t)})$ from the joint and **discarding $p^{(t)}$** yields exact samples from the posterior. The augmentation introduces no approximation.
+
+**The plan.** The Hamiltonian gives the joint density a conserved quantity $H$: a trajectory in phase space that holds $H$ constant traces out a level set of $e^{-H}$, remaining in a region of high joint probability throughout. Launching a particle from the current $(q, p)$ along such a trajectory and proposing its endpoint as the next state yields a proposal that can travel far from $q$ in parameter space while staying within the high-probability region — the cure for the random walk's blindness. The momentum is redrawn fresh from $\mathcal{N}(0, M)$ at the start of each trajectory, so successive trajectories explore different directions and the chain is ergodic. Rungs 2 and 3 develop the dynamics that trace these trajectories and the integrator that approximates them in practice.
+
+### Rung 2 — Hamiltonian dynamics and energy conservation
+
+Given an initial state $(q_0, p_0)$, Hamiltonian dynamics evolve the phase-space point continuously in a fictitious time $t$ according to **Hamilton's equations**:
+
+$$
+\dot{q} = \frac{\partial H}{\partial p} = M^{-1} p, \qquad \dot{p} = -\frac{\partial H}{\partial q} = -\nabla U(q).
+$$
+
+The first equation says position evolves in the direction of momentum, scaled by the inverse mass matrix; the second says momentum is pushed in the direction $-\nabla U = \nabla \log \pi$, toward higher log-posterior. A particle starting in a low-density region experiences a strong push toward the posterior's mode; near the mode the push is gentle. The trajectory traces the posterior's geometry, accelerating through valleys and decelerating on ridges, all while remaining on a level set of $H$.
+
+> **Theorem (energy conservation).** Along any solution of Hamilton's equations, the Hamiltonian is constant: $\dfrac{d}{dt}H(q(t), p(t)) = 0$.
+
+**Proof.** By the chain rule,
+
+$$
+\frac{d}{dt}H(q(t), p(t)) = \sum_{i=1}^d \left(\frac{\partial H}{\partial q_i}\,\dot{q}_i + \frac{\partial H}{\partial p_i}\,\dot{p}_i\right).
+$$
+
+Substituting Hamilton's equations $\dot{q}_i = \partial H/\partial p_i$ and $\dot{p}_i = -\partial H/\partial q_i$,
+
+$$
+\frac{dH}{dt} = \sum_{i=1}^d \left(\frac{\partial H}{\partial q_i}\,\frac{\partial H}{\partial p_i} - \frac{\partial H}{\partial p_i}\,\frac{\partial H}{\partial q_i}\right) = 0,
+$$
+
+since each pair of terms is equal and opposite and cancels identically. $\blacksquare$
+
+Energy conservation means the trajectory remains on a level set of $e^{-H}$: the joint density is constant along the trajectory. A proposal drawn from the endpoint of an exact Hamiltonian trajectory has the same density under $\pi(q,p)$ as the starting point — a Metropolis acceptance probability of exactly $1$ if the dynamics were integrated without numerical error.
+
+Two further properties of exact Hamiltonian flow complete the picture [@neal2011].
+
+**Volume preservation.** The velocity field $(\dot{q}, \dot{p})$ of Hamiltonian dynamics is divergence-free:
+
+$$
+\sum_{i=1}^d \frac{\partial \dot{q}_i}{\partial q_i} + \frac{\partial \dot{p}_i}{\partial p_i} = \sum_{i=1}^d \frac{\partial^2 H}{\partial q_i \partial p_i} - \frac{\partial^2 H}{\partial p_i \partial q_i} = 0,
+$$
+
+since mixed partial derivatives of a smooth $H$ commute. By **Liouville's theorem**, a divergence-free flow preserves the volume of every region in phase space. Consequently, a Hamiltonian-dynamics proposal requires **no Jacobian correction** in the Metropolis acceptance ratio — the volume element $dq\,dp$ is unchanged between the starting state and the proposed state.
+
+**Time-reversibility.** Negating the momentum — applying the involution $(q, p) \mapsto (q, -p)$ — and then integrating Hamilton's equations backward for time $T$ retraces the trajectory exactly, returning to $(q_0, p_0)$. Equivalently: integrate forward for time $T$, negate $p$, integrate forward for time $T$ again, negate $p$ once more — this returns to $(q_0, p_0)$. Combined with volume preservation, this reversibility ensures detailed balance holds without any asymmetric correction factor.
+
+Taken together: exact Hamiltonian flow followed by momentum negation is a volume-preserving, reversible involution that conserves $H$ — a Metropolis proposal that would be accepted with probability $1$. The obstacle is that for a general $U$ the equations have no closed-form solution and must be integrated numerically. That numerical integration introduces a small, correctable energy error — which is where Rung 3 takes over.
+
+### Rung 3 — The leapfrog integrator
+
+Exact Hamiltonian flow is the ideal; the leapfrog integrator is its practical realization. The key design requirement is that the integrator must preserve the two structural properties of Rung 2 — volume preservation and time-reversibility — that enforce detailed balance, even though it can no longer conserve $H$ exactly. The **leapfrog** (Störmer–Verlet) scheme achieves this by staggering a half-step in momentum with a full step in position and a closing half-step in momentum.
+
+**The leapfrog step.** Given step size $\varepsilon > 0$, one leapfrog step maps $(q, p) \mapsto (q', p')$ by:
+
+$$
+p_{1/2} = p - \frac{\varepsilon}{2}\,\nabla U(q),
+$$
+
+$$
+q' = q + \varepsilon\,M^{-1} p_{1/2},
+$$
+
+$$
+p' = p_{1/2} - \frac{\varepsilon}{2}\,\nabla U(q').
+$$
+
+When $L$ leapfrog steps are chained, the final half-kick of one step and the opening half-kick of the next merge into a single full kick, so $L$ chained steps require only $L+1$ gradient evaluations in total.
+
+> **Theorem (leapfrog is volume-preserving and reversible).** Each leapfrog step has Jacobian determinant $1$, and composed with momentum negation it is an involution.
+
+**Proof (volume preservation).** Decompose the leapfrog step into three sub-maps and verify that each has unit Jacobian determinant.
+
+*Sub-map 1* — momentum half-kick: $(q, p) \mapsto (q,\ p - \tfrac{\varepsilon}{2}\nabla U(q))$. This changes only $p$, using $q$ as a fixed parameter. Its Jacobian is
+
+$$
+\begin{bmatrix}
+\dfrac{\partial q}{\partial q} & \dfrac{\partial q}{\partial p} \\[8pt]
+\dfrac{\partial p_{1/2}}{\partial q} & \dfrac{\partial p_{1/2}}{\partial p}
+\end{bmatrix}
+=
+\begin{bmatrix}
+I & 0 \\[4pt]
+-\tfrac{\varepsilon}{2}\nabla^2 U(q) & I
+\end{bmatrix},
+$$
+
+a block lower-triangular matrix with identity blocks on the diagonal. Its determinant is $1$ — a shear transformation.
+
+*Sub-map 2* — position step: $(q, p_{1/2}) \mapsto (q + \varepsilon M^{-1} p_{1/2},\ p_{1/2})$. This changes only $q$, using $p_{1/2}$ as a fixed parameter. The Jacobian is block upper-triangular with identity diagonal blocks, determinant $1$.
+
+*Sub-map 3* — momentum half-kick at the new position: $(q', p_{1/2}) \mapsto (q',\ p_{1/2} - \tfrac{\varepsilon}{2}\nabla U(q'))$. Another momentum shear, determinant $1$ by the same argument as Sub-map 1.
+
+The leapfrog step is their composition, so its Jacobian determinant is $1 \cdot 1 \cdot 1 = 1$. Volume is preserved, and no Jacobian factor appears in the acceptance ratio. **Reversibility:** applying momentum negation $(q, p) \mapsto (q, -p)$, then one leapfrog step, then momentum negation again returns exactly to $(q, p)$ — the half-kick / full-position-step / half-kick structure is symmetric under time reversal. $\blacksquare$
+
+**Energy error and symplecticity.** Unlike exact Hamiltonian flow, leapfrog does not conserve $H$ exactly. However, because leapfrog is a **symplectic** integrator — it exactly preserves the symplectic two-form $\sum_i dq_i \wedge dp_i$ — the energy error does not accumulate: the global error $\Delta H$ over a trajectory of $L$ leapfrog steps remains $O(\varepsilon^2)$ and stays **bounded** rather than drifting [@neal2011]. This is the critical contrast with the naive **Euler** integrator, which is neither symplectic nor volume-preserving: Euler's energy error grows monotonically, trajectories spiral outward, and the scheme has no exact stationary distribution. The leapfrog's bounded, non-accumulating $\Delta H$ is precisely what the Metropolis accept step of Rung 4 corrects: by accepting the leapfrog endpoint with probability $\min(1,\, e^{-\Delta H})$, the algorithm restores exact stationarity with respect to $\pi(q)$ while discarding almost nothing when $\varepsilon$ is well chosen.
+
+As a concrete preview (developed fully in Worked Example (b)): one leapfrog step for the standard-normal target $\pi(q) \propto e^{-q^2/2}$ — where $U(q) = q^2/2$ and $\nabla U(q) = q$ — starting from $(q, p) = (1, 0)$ with $\varepsilon = 0.3$ produces
+
+$$
+\begin{aligned}
+p_{1/2} &= 0 - (0.15)(1) = -0.15, \\
+q' &= 1 + (0.3)(-0.15) = 0.955, \\
+p' &= -0.15 - (0.15)(0.955) \approx -0.29325,
+\end{aligned}
+$$
+
+giving $H(q', p') = \tfrac{1}{2}(0.955^2 + 0.29325^2) \approx 0.499$, so $\Delta H \approx -0.00099$ — third-order small, bounded, and easily survived by the Metropolis filter.
+
+The leapfrog integrator threads the needle exactly required by HMC: symplectic (energy error bounded, not drifting), volume-preserving (no Jacobian correction), time-reversible (detailed balance holds), and cheap to evaluate (one gradient call per interior step when steps are chained). The only remaining question is how many leapfrog steps to take before proposing — and how to correct for the residual $\Delta H$. Rung 4 delivers the Metropolis accept step that provides the correction; NUTS (Rungs 5 and 6) automates the trajectory length adaptively.
 
 ## Worked Examples
 
