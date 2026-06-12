@@ -649,7 +649,7 @@ The printed output pins the chapter's arithmetic. The $n=2$ Hill curve inflects 
 
 ### A — Applied / Code
 
-**A1.** Write a function `is_convex_quadratic(Q)` that returns whether $b \mapsto b^\top Q b$ is convex by testing the eigenvalues of the symmetric part of $Q$. Test it on a convex case ($Q = \begin{psmallmatrix} 3 & 1 \\ 1 & 2 \end{psmallmatrix}$) and a non-convex (indefinite) case ($Q = \begin{psmallmatrix} 1 & 0 \\ 0 & -1 \end{psmallmatrix}$); report the eigenvalues and the verdict for each.
+**A1.** Write a function `is_convex_quadratic(Q)` that returns whether $b \mapsto b^\top Q b$ is convex by testing the eigenvalues of the symmetric part of $Q$. Test it on a convex case ($Q = \begin{pmatrix} 3 & 1 \\ 1 & 2 \end{pmatrix}$) and a non-convex (indefinite) case ($Q = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}$); report the eigenvalues and the verdict for each.
 
 **A2.** Solve the three-channel concave allocation $\max \sum_i a_i\sqrt{b_i}$ subject to $\mathbf{1}^\top b = 14$, $b \ge 0$, with $a = (3, 2, 1)$, using a constrained optimizer. Confirm numerically that the solution is $b^\star = (9, 4, 1)$ and that the per-channel marginals $a_i/(2\sqrt{b_i^\star})$ are all equal.
 
