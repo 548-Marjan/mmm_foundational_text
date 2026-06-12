@@ -1908,4 +1908,135 @@ print(f"Non-centered v:  mean = {v_nc.mean():.3f}  (expect ~0),  "
 
 **Takeaway.** The centered funnel's divergences are a direct signal that a fixed $\varepsilon$ cannot cope with the curvature gradient between the funnel's wide mouth and its narrow neck. The non-centered form presents a geometrically flat landscape in $(\tilde{x}, v)$ coordinates that a single step size handles throughout — confirmed by zero divergences and a $v$-marginal that recovers the correct mean and variance. Divergence elimination together with $v$-marginal recovery demonstrates that the reparameterization cures the geometric obstruction rather than merely suppressing a symptom.
 
+## Chapter 10 — Model Checking & Calibration
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** The posterior is **not** trustworthy. Both $\hat{R}$ and ESS are computed *from the draws the sampler collected*, so they can only describe how well the chain explored the territory it actually reached; they are structurally blind to regions it never visited. Divergences detect exactly that blind spot: a divergent transition marks a place — the funnel neck — where the leapfrog integrator's energy error explodes and the sampler turns back, leaving that part of the posterior unsampled. Forty divergences mean the sampler is *systematically* avoiding a region, so the draws are biased, not merely noisy, and $\hat{R} < 1.01$ on the biased draws is consensus on the wrong answer. Believe the divergences: they are a bias alarm, and bias is the failure that corrupts a downstream decision. The fix is geometric (reparameterize, e.g. non-centering, or lower the step size), not statistical (more draws would only sharpen the bias).
+
+**C2.** A $\cup$-shaped histogram (mass piled in the extreme bins) means the truth lands in the tails of the posterior too often: the posterior is **too narrow / overconfident**, its intervals too tight. A $\cap$-shaped histogram (mass in the middle bins) means the truth lands near the posterior center too often: the posterior is **too wide / under-confident**, its intervals inflated. If forced to choose, the under-confident ($\cap$) fit is the less dangerous one to hand an optimizer, because it overstates uncertainty rather than hiding it — the overconfident ($\cup$) fit feeds the optimizer false precision it will exploit, allocating budget on ROAS distinctions the data never supported. But neither is acceptable: both are miscalibrated, and the right action is to fix the inference (reparameterize, correct the prior, debug the sampler) until the ranks are flat.
+
+**C3.** Two problems. First, a single p-value near $0.5$ establishes almost nothing: under a *correct* model the p-value is $\text{Uniform}(0,1)$, so every value in $[0,1]$ — including $0.48$ — is equally likely, and a middling value is consistent with the correct model but equally consistent with a great many wrong ones. Only a *systematic* departure from uniformity across many checks is evidence, and a lone $0.48$ is not that. Second, the posterior predictive p-value uses the data twice — once to fit the posterior, once to test against it — which pulls the replicate distribution toward the observed data and biases $p_B$ *toward* $0.5$. So a value near $0.5$ is partly an artifact of the check's conservatism, not a verdict on the model; it is the expected outcome even for a somewhat misspecified model.
+
+### B — By Hand
+
+**B1.** Chain means: $\bar\theta_1 = \tfrac{1+2+3+2+2}{5} = 2$, $\bar\theta_2 = 3$, $\bar\theta_3 = 1$. Grand mean $\bar\theta = \tfrac{2+3+1}{3} = 2$. Each chain has deviations $\{-1, 0, 1, 0, 0\}$ about its mean, so each within-chain sample variance is $s_m^2 = \tfrac{1+0+1+0+0}{N-1} = \tfrac{2}{4} = 0.5$, giving $W = 0.5$. Between-chain: $\sum_m(\bar\theta_m - \bar\theta)^2 = (2-2)^2 + (3-2)^2 + (1-2)^2 = 2$, so $B = \tfrac{N}{M-1}\sum = \tfrac{5}{2}\cdot 2 = 5$. Marginal variance estimate $\widehat{\operatorname{var}}^+ = \tfrac{N-1}{N}W + \tfrac{1}{N}B = \tfrac{4}{5}(0.5) + \tfrac{1}{5}(5) = 0.4 + 1.0 = 1.4$. Then $\hat{R} = \sqrt{1.4 / 0.5} = \sqrt{2.8} \approx 1.6733$. This is far above $1.01$, so the fit **fails** the threshold — the three chains sit at means $2, 3, 1$, spread much wider than the within-chain wobble.
+
+**B2.** Exact: $\tau_{\text{int}} = 1 + 2\sum_{k\ge1}0.6^k = 1 + 2\cdot\tfrac{0.6}{1-0.6} = 1 + 2\cdot 1.5 = 4$. Two-lag truncation: $1 + 2(0.6 + 0.36) = 1 + 2(0.96) = 2.92$. With $N = 2000$: $N_{\text{eff}} = 2000/4 = 500$. The Monte Carlo error is inflated by $\sqrt{\tau_{\text{int}}} = \sqrt{4} = 2$ over the i.i.d. ideal — a thousand correlated draws here are worth $500$ independent ones, and the truncated estimate $2.92$ undershoots the true $4$ because it drops the geometric tail.
+
+**B3.** The draws below $\theta_0 = 1.2$ are $-0.5, 0.2, 0.9, 1.0$ (four of them); $1.5, 1.8, 2.4$ are above. So $r = 4$. With $L = 7$ draws the rank can take any value in $\{0, 1, 2, \dots, 7\}$ ($L+1 = 8$ possible values), and under exact inference the SBC theorem guarantees $r \sim \text{Uniform}\{0, \dots, 7\}$, each value with probability $\tfrac{1}{8}$.
+
+### P — Prove It
+
+**P1.** Write $B/N = \tfrac{1}{M-1}\sum_{m=1}^{M}(\bar\theta_m - \bar\theta)^2$, which is the sample variance of the $M$ chain means. **Assumption:** for chains that have converged to the common stationary target, the chain means $\bar\theta_1, \dots, \bar\theta_M$ are independent and identically distributed, each the average of $N$ stationary draws, so $\operatorname{var}(\bar\theta_m) = \operatorname{var}(\theta)/N$ (up to an autocorrelation factor that does not change the $1/N$ scaling). Hence $B/N$ is an unbiased estimator of $\operatorname{var}(\bar\theta_m) = \operatorname{var}(\theta)/N$, and as $N \to \infty$ this target tends to $0$:
+$$
+\frac{B}{N} \;\xrightarrow{\;N\to\infty\;}\; \frac{\operatorname{var}(\theta)}{N} \to 0,
+$$
+which is the step used in the $\hat{R}$ proof. (Equivalently $B \to \operatorname{var}(\theta)$, a finite limit, so $B/N \to 0$.)
+
+**P2.** Start from the mean as a sum and expand the variance over all pairs:
+$$
+\operatorname{var}(\bar\theta) = \operatorname{var}\!\left(\frac{1}{N}\sum_{i=1}^{N}\theta^{(i)}\right) = \frac{1}{N^2}\sum_{i=1}^{N}\sum_{j=1}^{N}\operatorname{cov}(\theta^{(i)}, \theta^{(j)}).
+$$
+By stationarity $\operatorname{cov}(\theta^{(i)}, \theta^{(j)}) = \sigma^2\rho_{|i-j|}$ with $\rho_0 = 1$. Among the $N^2$ ordered pairs $(i,j)$ there are $N$ with $i = j$ (lag $0$) and, for each lag $k = 1, \dots, N-1$, exactly $2(N-k)$ pairs with $|i-j| = k$. Therefore
+$$
+\operatorname{var}(\bar\theta) = \frac{\sigma^2}{N^2}\left(N + 2\sum_{k=1}^{N-1}(N-k)\rho_k\right) = \frac{\sigma^2}{N}\left(1 + 2\sum_{k=1}^{N-1}\Bigl(1 - \frac{k}{N}\Bigr)\rho_k\right),
+$$
+dividing $N - k$ by $N$ in the last step. $\blacksquare$
+
+**P3.** Let $p(y) = \int p(y\mid\theta')p(\theta')\,d\theta'$ be the prior-predictive marginal. Then
+$$
+\int p(\theta\mid y)\,p(y)\,dy = \int p(\theta, y)\,dy = p(\theta).
+$$
+The first equality uses **Bayes' rule** in the form $p(\theta\mid y)\,p(y) = p(\theta, y)$ (the conditional times the marginal of $y$ is the joint); the second uses **marginalization**, integrating the joint over $y$ to leave the prior marginal $p(\theta)$. This makes the SBC rank uniform because it shows the prior-drawn truth $\theta_0$ and each posterior draw $\theta_\ell$ share the same marginal law (the prior), so the $L+1$ values are exchangeable and the rank of $\theta_0$ among them is equally likely to be any of $0, \dots, L$.
+
+### A — Applied / Code
+
+**A1.** A drifting chain has matched halves only on average, so whole-chain $\hat{R}$ can pass while split-$\hat{R}$ — comparing first to second halves — exposes the trend.
+```{python}
+import numpy as np
+
+def gelman_rubin(chains):  # chains: (M, N)
+    M, N = chains.shape
+    means = chains.mean(axis=1)
+    B = N / (M - 1) * np.sum((means - means.mean())**2)
+    W = np.mean(chains.var(axis=1, ddof=1))
+    vhat = (N - 1) / N * W + B / N
+    return float(np.sqrt(vhat / W))
+
+def split_rhat(chains):
+    M, N = chains.shape
+    halves = chains[:, :N//2 * 2].reshape(2 * M, N // 2)
+    return gelman_rubin(halves)
+
+rng = np.random.default_rng(0)
+N = 2000
+drift = 0.001 * np.arange(N)                      # common slow upward trend
+chains = np.array([drift + rng.normal(0, 0.5, N) for _ in range(4)])
+print(f"whole-chain R-hat = {gelman_rubin(chains):.4f}")  # ~1.00, passes
+print(f"split      R-hat = {split_rhat(chains):.4f}")     # >1.01, caught
+```
+Whole-chain $\hat{R}$ is near $1$ because all four chains share the same drift (their full-length means barely differ), but split-$\hat{R}$ is well above $1.01$ because within each chain the second half sits systematically above the first — the non-stationarity the undivided statistic concealed.
+
+**A2.** Halving the posterior variance makes the intervals too tight, so the truth falls in the tails: a $\cup$-shaped histogram.
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(1)
+L, reps = 9, 4000
+
+def sbc_ranks(post_sd_factor):
+    ranks = np.empty(reps, dtype=int)
+    for r in range(reps):
+        theta0 = rng.normal(0, 1)                 # prior draw
+        y = rng.normal(theta0, 1)                 # data
+        sd = np.sqrt(0.5) * post_sd_factor
+        draws = rng.normal(y / 2, sd, size=L)     # "posterior"
+        ranks[r] = np.sum(draws < theta0)
+    return ranks
+
+calibrated = sbc_ranks(1.0)    # correct posterior -> flat
+overconf   = sbc_ranks(0.5)    # half the SD       -> U-shaped
+
+fig, ax = plt.subplots(1, 2, figsize=(9, 3.2), sharey=True)
+for a, (rk, t) in zip(ax, [(calibrated, "calibrated"), (overconf, "overconfident")]):
+    a.hist(rk, bins=np.arange(L + 2) - 0.5, color="steelblue", edgecolor="white")
+    a.axhline(reps / (L + 1), color="crimson", ls="--", lw=1)
+    a.set_title(t); a.set_xlabel("rank")
+ax[0].set_ylabel("count")
+plt.tight_layout()
+plt.show()
+print("calibrated: edge bins ~ expected;  overconfident: edge bins inflated")
+```
+The correct posterior gives a flat histogram around the expected $\text{reps}/(L+1)$ per bin; halving the standard deviation piles mass into bins $0$ and $9$ because a too-narrow posterior leaves the truth outside its intervals — the canonical overconfidence signature.
+
+**A3.** WAIC scores out-of-sample prediction from in-sample draws by penalizing the lppd for effective complexity.
+```{python}
+import numpy as np
+from scipy import stats
+
+rng = np.random.default_rng(2)
+y = rng.normal(0, 1, size=40)                     # data
+
+def waic(loglik):  # loglik: (S draws, n points)
+    lppd = np.sum(np.log(np.mean(np.exp(loglik), axis=0)))
+    p_waic = np.sum(np.var(loglik, axis=0, ddof=1))
+    return lppd - p_waic, lppd, p_waic
+
+S = 2000
+# Model 1: correct N(mu, 1), posterior on mu ~ N(ybar, 1/n)
+mu1 = rng.normal(y.mean(), 1/np.sqrt(len(y)), size=S)
+ll1 = stats.norm.logpdf(y[None, :], mu1[:, None], 1.0)
+# Model 2: misspecified wide N(mu, 3), same posterior form on mu
+mu2 = rng.normal(y.mean(), 3/np.sqrt(len(y)), size=S)
+ll2 = stats.norm.logpdf(y[None, :], mu2[:, None], 3.0)
+
+e1, *_ = waic(ll1)
+e2, *_ = waic(ll2)
+print(f"elpd_WAIC  model1 = {e1:.2f}   model2 = {e2:.2f}")
+print(f"difference = {e1 - e2:.2f}  (positive favors model 1)")
+```
+The correctly specified model (unit variance) attains the higher $\widehat{\text{elpd}}_{\text{WAIC}}$ and is preferred. Whether the gap is decisive is judged against its standard error — the standard deviation of the pointwise elpd differences times $\sqrt{n}$ — and a difference smaller than two or three of those is not strong evidence either way.
+
 :::
