@@ -13,7 +13,7 @@
 The chapter is organized around two questions a practitioner must answer before trusting any posterior:
 
 1. **"Did the sampler converge?"** — computational diagnostics: did the Markov chain actually explore the posterior, and is the Monte Carlo error small enough?
-2. **"Is the model any good?"** — calibration & checking: even with perfect sampling, does the model produce data like what we observed, and are its credible intervals honest?
+2. **"Is the model any good?"** — calibration & checking, in two sub-answers: **(B1) self-consistency** — even with perfect sampling, does the model reproduce the observed data and are its credible intervals honest (PPC, SBC)? and **(B2) out-of-sample prediction** — does it predict held-out data well, and better than an alternative (ELPD, WAIC, PSIS-LOO)? Framing the two halves explicitly keeps the checking/comparison seam a feature rather than a blur.
 
 The keystone result is **Simulation-Based Calibration (SBC)** rank-uniformity (Talts et al. 2018), which formally connects "correct posterior computation" to a checkable, distribution-free signal.
 
@@ -47,11 +47,12 @@ Three results get the full theorem→proof (`\blacksquare`) treatment:
 
 A fourth, lighter result is the **posterior-predictive p-value uniformity** (PIT argument), stated and proved compactly. WAIC/LOO equivalence and PSIS theory are **stated precisely** with references, not proved (they are asymptotic/empirical-process results beyond the book's scope).
 
-## Running Example — Self-Contained Hierarchical-Normal Model
+## Running Example — Eight Schools, Adapted to a Geo-Level MMM
 
-A single clean model carries every worked example and the code tie-in, with MMM relevance discussed narratively:
+The chapter teaches the **canonical eight-schools hierarchical model** by name — the model on which essentially the entire MCMC-diagnostics literature (the funnel, $\hat{R}$, SBC) was developed — and then **immediately adapts it to the geo-level MMM** so the reader sees the marketing structure underneath. The same model carries every worked example and the code tie-in.
 
-- **Model (eight-schools-style):** $y_j\mid\theta_j\sim\mathcal{N}(\theta_j,\sigma_j^2)$, $\theta_j\mid\mu,\tau\sim\mathcal{N}(\mu,\tau^2)$, $j=1,\dots,J$, with weak priors on $\mu,\tau$. Chosen because it is the canonical funnel-prone hierarchy: it exhibits divergences, $\hat{R}$/ESS degradation, and SBC/PPC behavior all at once, and it connects directly to Ch6 (partial pooling) and Ch9 (funnel + non-centering).
+- **Canonical model (eight schools, @gelman2013):** $y_j\mid\theta_j\sim\mathcal{N}(\theta_j,\sigma_j^2)$, $\theta_j\mid\mu,\tau\sim\mathcal{N}(\mu,\tau^2)$, $j=1,\dots,J$, with weak priors on $\mu,\tau$. Introduced first because it is *the* canonical funnel-prone hierarchy: it exhibits divergences, $\hat{R}$/ESS degradation, and SBC/PPC behavior all at once, and it connects directly to Ch6 (partial pooling) and Ch9 (funnel + non-centering).
+- **Adapted to MMM (the quick translation):** the same likelihood with marketing nouns — $\theta_g$ is a **geo-level effect** (e.g. incremental ROAS or baseline sales for region $g$), partially pooled toward a national mean $\mu$ with cross-geo SD $\tau$, observed as a noisy estimate $y_g$ with standard error $\sigma_g$ from that geo's regression. The funnel pathology becomes a concrete MMM trap: **few geos $\Rightarrow$ $\tau$ weakly identified $\Rightarrow$ funnel $\Rightarrow$ divergences** — exactly what bites a geo-MMM fit on a handful of regions. This is presented as a one-paragraph "same math, marketing labels" bridge right after the canonical model, then used interchangeably.
 - **Worked Examples (exact arithmetic a reader can verify):**
   - (a) Compute $\hat{R}$ by hand from a small set of toy chains (e.g., 4 chains × a few draws) with $B$, $W$, $\widehat{\text{var}}^+$, $\hat{R}$ shown to 3–4 decimals.
   - (b) Compute an ESS / variance-inflation factor by hand from a short autocorrelation sequence.
