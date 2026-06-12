@@ -341,3 +341,114 @@ The rungs of this chapter are not a menu to graze from; they are an ordered pipe
 5. **PSIS-LOO.** With a single trustworthy model in hand, compare candidate specifications on out-of-sample prediction, choosing by ELPD difference and its standard error.
 
 The consequence for the rest of the book is not optional. Only a model that clears steps 1 through 4 should feed the budget optimizer of Part IV. A red light on divergences, or a non-uniform SBC histogram, means the ROAS posterior is untrustworthy — and an optimizer fed an untrustworthy posterior does not fail safely. It seeks out and amplifies precisely the misspecified directions, allocating budget toward whatever channel the model's error happened to flatter; the optimization machinery turns a quiet inferential bug into a confident, expensive recommendation. This is why checking is not a postscript to modeling. It is the gate between a fitted model and a decision, and the gate must hold. A checked, trustworthy posterior — one that has passed every rung of this chapter — is exactly the input the optimization of Part IV assumes it has been handed.
+
+## Worked Examples
+
+The three diagnostics that carry the most arithmetic — $\hat{R}$, effective sample size, and the SBC rank — are each small enough to compute entirely by hand. Doing so once fixes what the formulas of Rungs 2, 3, and 7 actually measure.
+
+### Example 1 — Computing $\hat{R}$ from four chains
+
+Take $M = 4$ chains, each of length $N = 4$, of a scalar parameter $\theta$:
+
+- Chain 1: $3,\ 4,\ 5,\ 4$
+- Chain 2: $4,\ 5,\ 6,\ 5$
+- Chain 3: $2,\ 3,\ 4,\ 3$
+- Chain 4: $5,\ 6,\ 7,\ 6$
+
+We compute $\hat{R}$ from the definitions of Rung 2.
+
+**Chain means and grand mean.** Averaging each chain,
+
+$$
+\bar\theta_1 = 4, \qquad \bar\theta_2 = 5, \qquad \bar\theta_3 = 3, \qquad \bar\theta_4 = 6,
+$$
+
+and the grand mean is $\bar\theta = \frac{1}{4}(4 + 5 + 3 + 6) = 4.5$.
+
+**Within-chain variances.** Every chain has the shape $\{m-1,\ m,\ m+1,\ m\}$ around its own mean $m$, so its deviations are $\{-1,\ 0,\ +1,\ 0\}$ regardless of $m$. Each within-chain sample variance uses the denominator $N - 1 = 3$:
+
+$$
+s_m^2 = \frac{(-1)^2 + 0^2 + (+1)^2 + 0^2}{3} = \frac{2}{3} \qquad \text{for every } m.
+$$
+
+The within-chain estimate is their average,
+
+$$
+W = \frac{1}{M}\sum_{m=1}^{M} s_m^2 = \frac{1}{4}\Bigl(4 \cdot \tfrac{2}{3}\Bigr) = \frac{2}{3} \approx 0.6667.
+$$
+
+**Between-chain variance.** The squared deviations of the chain means from the grand mean are
+
+$$
+\sum_{m=1}^{M}(\bar\theta_m - \bar\theta)^2 = (4 - 4.5)^2 + (5 - 4.5)^2 + (3 - 4.5)^2 + (6 - 4.5)^2 = 0.25 + 0.25 + 2.25 + 2.25 = 5,
+$$
+
+so, with $B = \frac{N}{M-1}\sum_m(\bar\theta_m - \bar\theta)^2$,
+
+$$
+B = \frac{4}{3} \cdot 5 = \frac{20}{3} \approx 6.6667.
+$$
+
+**Marginal variance estimate and $\hat{R}$.** Combining the two with the weights of Rung 2,
+
+$$
+\widehat{\operatorname{var}}^+(\theta) = \frac{N-1}{N}\,W + \frac{1}{N}\,B = \frac{3}{4}\cdot\frac{2}{3} + \frac{1}{4}\cdot\frac{20}{3} = \frac{1}{2} + \frac{5}{3} = \frac{13}{6} \approx 2.1667,
+$$
+
+and therefore
+
+$$
+\hat{R} = \sqrt{\frac{\widehat{\operatorname{var}}^+(\theta)}{W}} = \sqrt{\frac{13/6}{2/3}} = \sqrt{\frac{13}{4}} = \sqrt{3.25} \approx 1.8028.
+$$
+
+**Interpretation.** The result $\hat{R} \approx 1.80 \gg 1.01$ fails the convergence threshold by a wide margin. The four chains sit in systematically different places — their means $3, 4, 5, 6$ are spread far wider than the wobble within any one chain — so the between-chain term $B$ dwarfs $W$ and the ratio blows up. This is the textbook signature of an unmixed hierarchy whose between-group scale $\tau$ is poorly identified: the geo-MMM funnel, with each chain trapped near a different value of the weakly constrained parameter.
+
+### Example 2 — Effective sample size of an autocorrelated chain
+
+Consider a chain whose lag-$k$ autocorrelations decay geometrically like an AR(1) with $\phi = 0.5$, so that $\rho_k = 0.5^k$. We compute the integrated autocorrelation time $\tau_{\text{int}} = 1 + 2\sum_{k\ge1}\rho_k$ and the effective sample size $N_{\text{eff}} = N/\tau_{\text{int}}$ of Rung 3.
+
+**Truncated at three lags.** Summing only the first three autocorrelations,
+
+$$
+1 + 2(\rho_1 + \rho_2 + \rho_3) = 1 + 2(0.5 + 0.25 + 0.125) = 1 + 2(0.875) = 2.75.
+$$
+
+**Exact, via the full geometric series.** Because $\sum_{k\ge1}0.5^k = \frac{0.5}{1 - 0.5} = 1$, the sum closes in one step:
+
+$$
+\tau_{\text{int}} = 1 + 2\sum_{k\ge1}0.5^k = 1 + 2\cdot\frac{0.5}{1 - 0.5} = 1 + 2 = 3.
+$$
+
+**Effective sample size.** With $N = 1000$ draws,
+
+$$
+N_{\text{eff}} = \frac{N}{\tau_{\text{int}}} = \frac{1000}{3} \approx 333.
+$$
+
+**Monte Carlo error inflation.** The MCSE of Rung 1 uses $N_{\text{eff}}$, not $N$:
+
+$$
+\text{MCSE} = \frac{\sigma}{\sqrt{N_{\text{eff}}}} = \frac{\sigma}{\sqrt{333}} \approx 0.0548\,\sigma,
+$$
+
+against the i.i.d. ideal $\sigma/\sqrt{1000} \approx 0.0316\,\sigma$. The autocorrelation inflates the Monte Carlo error by the factor $\sqrt{\tau_{\text{int}}} = \sqrt{3} \approx 1.73$.
+
+**Interpretation.** A thousand correlated draws here carry the information of about $333$ independent ones. Note that the truncated estimate $2.75$ slightly undershoots the true factor $3$, because cutting the sum at three lags discards the geometric tail $\rho_4 + \rho_5 + \cdots$; summing further lags would recover the missing $0.25$.
+
+### Example 3 — A simulation-based calibration rank
+
+In one SBC replication of the kind constructed in Rung 7, the ground truth drawn from the prior is $\theta_0 = 0.7$, and the inference under test returns $L = 9$ posterior draws, which sorted are
+
+$$
+-0.2,\ 0.1,\ 0.3,\ 0.55,\ 0.8,\ 0.9,\ 1.1,\ 1.3,\ 1.6.
+$$
+
+**The rank.** By the definition $r = \#\{\ell : \theta_\ell < \theta_0\}$, the rank counts how many posterior draws fall below $\theta_0 = 0.7$. The four draws $-0.2, 0.1, 0.3, 0.55$ are below $0.7$; the five draws $0.8, 0.9, 1.1, 1.3, 1.6$ are above. Hence
+
+$$
+r = 4,
+$$
+
+one of the $L + 1 = 10$ possible values $0, 1, \dots, 9$ — ten bins in all.
+
+**Interpretation.** One rank is almost uninformative: a single draw of a $\text{Uniform}\{0, \dots, 9\}$ variable, by the theorem of Rung 7, tells us essentially nothing on its own. The diagnosis lives in the aggregate histogram over many replications, and its *shape* is what convicts or acquits the inference. Two contrasting cases make the point. A **flat** histogram, with the ranks spread evenly across all ten bins, is exactly the uniform signal the theorem demands — the inference is calibrated. A **$\cup$-shaped** histogram, with mass piled into bins $0$ and $9$, is the signature of an **overconfident** posterior: the truth keeps landing in the extreme bins because the posterior intervals are too narrow, so the ground truth falls into the tails — at rank $0$ or rank $L$ — far more often than chance allows. This is precisely the reading of histogram shapes set out in Rung 7, where the $\cup$ shape diagnoses a posterior that is too narrow.
