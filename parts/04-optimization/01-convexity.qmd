@@ -159,3 +159,72 @@ x^\star = K\left(\frac{n-1}{n+1}\right)^{1/n},
 $$
 
 so $f$ is **convex** on the "toe" $0 \le x < x^\star$ and **concave** for $x > x^\star$. For $n = 2,\ K = 3$ this gives $x^\star = \sqrt{3} \approx 1.7321$. This S-shape — convex toe, concave tail — is the seed of the trouble that Rung 10 confronts head-on: a response curve that is not globally concave makes the budget-allocation problem not globally convex, and a single descent can stall in the wrong basin.
+
+### Rung 5 — Operations that preserve convexity
+
+Certifying a single function convex — by the chord definition, the tangent inequality, or the Hessian — is a self-contained exercise. But real objectives are never handed to us as one tidy function. They are *built up* from pieces: a sum of per-channel costs, a data-fit term plus a regularizer, a worst-case taken over scenarios. Re-deriving convexity from scratch for each composite would be wasteful when the pieces are already known to be convex. What we want instead is a small **calculus of convexity** — a handful of operations that, applied to convex inputs, are guaranteed to return convex outputs. With it, we certify the whole from the parts and never touch a Hessian for the assembled objective at all.
+
+**The toolkit.** Four operations carry almost all the weight in practice:
+
+- **(i) Nonnegative weighted sums.** If $f_1, \dots, f_m$ are convex and $w_1, \dots, w_m \ge 0$, then $\sum_i w_i f_i$ is convex.
+- **(ii) Composition with an affine map.** If $f$ is convex and $g(x) = f(Ax + b)$, then $g$ is convex.
+- **(iii) Pointwise maximum / supremum.** If $f_1, \dots, f_m$ are convex, then $\max_i f_i$ is convex; more generally the pointwise supremum $\sup_{\alpha} f_\alpha$ of any family of convex functions is convex.
+- **(iv) Scalar composition.** If $h$ is convex and nondecreasing and $g$ is convex, then the composition $h \circ g$ is convex.
+
+We prove the first two — the rules that the book's objectives lean on directly — and cite the standard reference for the rest.
+
+**Proof of (i) and (ii).** Take any $x, y$ in the relevant domain and any $\lambda \in [0,1]$.
+
+*(i) Nonnegative weighted sums.* Each $f_i$ is convex, so its chord inequality holds:
+$$
+f_i\bigl(\lambda x + (1-\lambda)y\bigr) \le \lambda f_i(x) + (1-\lambda)f_i(y).
+$$
+Multiply both sides by $w_i \ge 0$ — a nonnegative factor preserves the direction of the inequality — and sum over $i = 1, \dots, m$:
+$$
+\sum_i w_i f_i\bigl(\lambda x + (1-\lambda)y\bigr) \le \lambda \sum_i w_i f_i(x) + (1-\lambda)\sum_i w_i f_i(y).
+$$
+Writing $F = \sum_i w_i f_i$, this reads $F\bigl(\lambda x + (1-\lambda)y\bigr) \le \lambda F(x) + (1-\lambda)F(y)$, which is exactly the chord inequality for $F$. Hence $\sum_i w_i f_i$ is convex.
+
+*(ii) Composition with an affine map.* Let $g(x) = f(Ax + b)$ with $f$ convex, and set $u = Ax + b$, $v = Ay + b$. Because the map $x \mapsto Ax + b$ is affine, it commutes with convex combinations:
+$$
+A\bigl(\lambda x + (1-\lambda)y\bigr) + b = \lambda(Ax + b) + (1-\lambda)(Ay + b) = \lambda u + (1-\lambda)v.
+$$
+Therefore, using convexity of $f$ on the points $u, v$,
+$$
+g\bigl(\lambda x + (1-\lambda)y\bigr) = f\bigl(\lambda u + (1-\lambda)v\bigr) \le \lambda f(u) + (1-\lambda)f(v) = \lambda g(x) + (1-\lambda)g(y),
+$$
+which is the chord inequality for $g$. Hence $g$ is convex. $\blacksquare$
+
+**Rules (iii) and (iv), stated.** The remaining two follow the same spirit and we record them as facts [@boyd2004]. For the **pointwise supremum** (iii), the epigraph of $\sup_\alpha f_\alpha$ is the intersection $\bigcap_\alpha \text{epi}\,f_\alpha$ of the individual epigraphs; each is convex by the epigraph characterization of Rung 2, and intersections of convex sets are convex by Rung 1, so the supremum is convex. For **scalar composition** (iv), monotonicity is what makes it work: since $h$ is nondecreasing, the chord inequality for $g$ may be pushed *through* $h$ without reversing, and then the convexity of $h$ finishes the bound — so $h \circ g$ is convex.
+
+**Payoff: ridge / MAP estimation is convex.** The toolkit lets us certify a built-up objective without computing a single second derivative of the whole. Recall the negative log-posterior of Chapter 5's Gaussian (ridge) model,
+$$
+J(\beta) = \frac{1}{2\sigma^2}\|y - X\beta\|^2 + \frac{1}{2\tau^2}\|\beta\|^2,
+$$
+whose minimizer is the MAP estimate. Read it through the calculus. The squared Euclidean norm $\|\cdot\|^2$ is convex (its Hessian is $2I \succ 0$). The first term is that convex function composed with the affine map $\beta \mapsto y - X\beta$, hence convex by **(ii)**; the second is $\|\cdot\|^2$ composed with the affine — indeed linear — identity map, hence convex by **(ii)** again. Finally $J$ is the nonnegative weighted sum of these two convex pieces, with weights $1/(2\sigma^2) \ge 0$ and $1/(2\tau^2) \ge 0$, so it is convex by **(i)**. Therefore MAP / ridge estimation is a convex optimization problem. The keystone of Rung 7 will then guarantee that its unique minimizer is global — and that minimizer is precisely the closed-form ridge solution $\hat\beta = (X^\top X + \tfrac{\sigma^2}{\tau^2} I)^{-1} X^\top y$ derived by pure linear algebra in Part II. Part IV's curvature theory and Part II's algebra are describing the same point from two directions.
+
+### Rung 6 — Jensen's inequality
+
+The chord inequality of Rung 2 compares a convex function evaluated at a two-point average, $\lambda x + (1-\lambda)y$, to the corresponding average of its values. But an average over two points with weights $\lambda$ and $1-\lambda$ is just the simplest probability distribution — a coin flip. Nothing in the geometry of convexity is special to two points, and the natural generalization replaces the finite average by an expectation over *any* probability distribution. That generalization is Jensen's inequality, and it is the bridge from convexity to probability that the rest of the book will cross repeatedly.
+
+> **Theorem (Jensen's inequality).** Let $f$ be convex and let $X$ be a random vector with finite mean $\mu = \mathbb{E}[X]$, taking values in the domain of $f$. Then
+> $$
+> f(\mathbb{E}[X]) \le \mathbb{E}[f(X)].
+> $$
+> For concave $f$ the inequality reverses.
+
+**Proof.** Assume $f$ is differentiable and apply the first-order condition of Rung 3 with base point $\mu$. For *every* realization $x$ that $X$ may take, the graph lies above the tangent plane at $\mu$:
+$$
+f(X) \ge f(\mu) + \nabla f(\mu)^\top (X - \mu),
+$$
+an inequality that holds pointwise, for each outcome of the random vector. Now take expectations of both sides. Expectation is monotone (it preserves $\ge$) and linear, and $f(\mu)$ and $\nabla f(\mu)$ are constants, so
+$$
+\mathbb{E}[f(X)] \ge f(\mu) + \nabla f(\mu)^\top \mathbb{E}[X - \mu] = f(\mu) + \nabla f(\mu)^\top \cdot 0 = f(\mu) = f(\mathbb{E}[X]),
+$$
+where the middle step uses $\mathbb{E}[X - \mu] = \mathbb{E}[X] - \mu = 0$. This is the claim. If $f$ is convex but not differentiable, the identical argument runs with a subgradient at $\mu$ in place of $\nabla f(\mu)$, since the supporting-hyperplane inequality holds there too. The concave case follows by applying the result to $-f$. $\blacksquare$
+
+**MMM reading: volatility is a tax.** The response curve $r$ is concave, so Jensen runs the other way:
+$$
+r(\mathbb{E}[\text{spend}]) \ge \mathbb{E}[r(\text{spend})].
+$$
+Read the two sides as two flighting plans with the *same* average budget. The left side is steady spend held at the average level; the right side is erratic spend — feast one week, famine the next — that merely averages out to the same total. Jensen says the steady plan produces at least as much expected response as the volatile one. Concavity penalizes volatility, and the size of the gap between the two sides is a quantitative measure of that penalty: it grows with the curvature of $r$, that is, with the strength of diminishing returns. This is the formal reason a smooth, level flighting plan beats a feast-or-famine one at equal total budget — and why, when Chapter 13 allocates spend, it is solving for the level plan rather than chasing spikes.
