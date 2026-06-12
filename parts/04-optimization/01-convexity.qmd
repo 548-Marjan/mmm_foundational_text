@@ -73,3 +73,89 @@ f(x; K, n) = \frac{x^n}{K^n + x^n},
 $$
 
 which for exponent $n = 1$ is concave in spend $x \ge 0$ — the textbook shape of an advertising channel that saturates. Concavity and convexity are not two theories but one, and the bridge is a single observation: maximizing a concave function is identical to minimizing its convex negative, since $\arg\max_x f(x) = \arg\min_x \bigl(-f(x)\bigr)$ and the optimal value merely changes sign. So the budget problem's "concave maximization" and the standard "convex minimization" are the same problem wearing different clothes. We therefore state every result for the convex-minimization side, without loss of generality, and read it off for concave maximization whenever the MMM demands it.
+
+### Rung 3 — The first-order condition
+
+The chord definition of Rung 2 is exact but operationally hopeless: to certify a function convex by it, you would have to check the inequality for every pair of points and every $\lambda$ between them — an infinite verification with no obvious starting place. When $f$ is differentiable, there is a far cheaper test, one that examines the function a single point at a time through its gradient. It replaces a global statement about chords with a local statement about tangents.
+
+**Theorem (first-order condition).** Let $f$ be differentiable on a convex domain. Then $f$ is convex if and only if
+
+$$
+f(y) \ge f(x) + \nabla f(x)^\top (y - x) \quad \text{for all } x, y \text{ in the domain.}
+$$
+
+Geometrically, the graph of $f$ lies on or above each of its tangent planes: no matter where you take the tangent, the whole surface stays above it.
+
+**Proof.** We argue both directions.
+
+($\Rightarrow$) Assume $f$ is convex. Fix $x, y$ in the domain and take $\lambda \in (0,1]$. Writing $x + \lambda(y - x) = \lambda y + (1-\lambda)x$, convexity gives
+
+$$
+f\bigl(x + \lambda(y - x)\bigr) \le (1-\lambda)f(x) + \lambda f(y).
+$$
+
+Subtract $f(x)$ from both sides and divide by $\lambda > 0$:
+
+$$
+\frac{f\bigl(x + \lambda(y - x)\bigr) - f(x)}{\lambda} \le f(y) - f(x).
+$$
+
+As $\lambda \to 0^+$ the left-hand side converges to the directional derivative of $f$ at $x$ in the direction $y - x$, which is $\nabla f(x)^\top (y - x)$. Taking the limit preserves the inequality, so $\nabla f(x)^\top (y - x) \le f(y) - f(x)$, and rearranging gives the claimed tangent inequality.
+
+($\Leftarrow$) Assume the tangent inequality holds for every pair of points. Fix $x, y$ and $\lambda \in [0,1]$, and set $z = \lambda x + (1-\lambda)y$, which lies in the domain by convexity. Apply the inequality at the base point $z$ to each endpoint:
+
+$$
+\begin{aligned}
+f(x) &\ge f(z) + \nabla f(z)^\top (x - z), \\
+f(y) &\ge f(z) + \nabla f(z)^\top (y - z).
+\end{aligned}
+$$
+
+Form the combination $\lambda \cdot (\text{first}) + (1-\lambda) \cdot (\text{second})$. The gradient terms collect into $\nabla f(z)^\top\bigl(\lambda x + (1-\lambda)y - z\bigr) = \nabla f(z)^\top (z - z) = 0$, and the constant terms sum to $f(z)$. What remains is
+
+$$
+\lambda f(x) + (1-\lambda) f(y) \ge f(z) = f\bigl(\lambda x + (1-\lambda)y\bigr),
+$$
+
+which is exactly the chord inequality defining convexity. $\blacksquare$
+
+This condition is more than a verification tool; it carries the seed of the whole optimization story. At a **stationary point**, where $\nabla f(x) = 0$, the tangent term vanishes and the inequality collapses to $f(y) \ge f(x)$ for *every* $y$ in the domain — the stationary point is a global minimum. That single line is the keystone Rung 7 will state and prove in full.
+
+### Rung 4 — The second-order condition
+
+The first-order condition tests convexity through the gradient, but for a twice-differentiable function there is an even more intrinsic test, one that speaks the native language of shape: **curvature**. A convex function curves upward everywhere, and curvature is precisely what the second derivative measures. In several variables the second derivative is the Hessian matrix $\nabla^2 f$, and the condition becomes a statement about its eigenvalues.
+
+**Theorem (second-order condition).** Let $f$ be twice continuously differentiable on an open convex domain. Then $f$ is convex if and only if its Hessian is positive semidefinite everywhere: $\nabla^2 f(x) \succeq 0$ for all $x$ in the domain. If $\nabla^2 f(x) \succ 0$ everywhere, then $f$ is strictly convex.
+
+**Proof.** The argument reduces the multivariate claim to a one-dimensional fact by slicing along lines.
+
+A function on a convex domain is convex if and only if its restriction to every line is convex — the chord inequality only ever involves the two points $x, y$ and the segment between them, all of which lie on a single line. So fix a base point $x$ and a direction $v$, and define the scalar function $g(t) = f(x + tv)$ on the interval of $t$ for which $x + tv$ stays in the domain. Differentiating through the chain rule twice gives
+
+$$
+\begin{aligned}
+g'(t) &= \nabla f(x + tv)^\top v, \\
+g''(t) &= v^\top \nabla^2 f(x + tv)\, v.
+\end{aligned}
+$$
+
+Now invoke the one-dimensional fact: a twice-differentiable $g$ is convex if and only if $g''(t) \ge 0$ everywhere. This follows from the first-order condition applied to $g$ — convexity is equivalent to $g'$ being nondecreasing, and by the mean value theorem $g'$ is nondecreasing exactly when $g'' \ge 0$.
+
+Stitching the slices back together, $f$ is convex iff $g$ is convex for every choice of $x$ and $v$, iff $g''(t) = v^\top \nabla^2 f(x + tv)\, v \ge 0$ for all $x, v, t$, iff $v^\top \nabla^2 f(x)\, v \ge 0$ for all $x$ and all $v$. That last statement is precisely the definition of the Hessian being positive semidefinite, $\nabla^2 f(x) \succeq 0$, reusing the PSD characterization from Chapter 1. If the inequalities are strict for $v \ne 0$, each slice is strictly convex and so is $f$. $\blacksquare$
+
+**Application to the Hill curve.** The second-order condition turns the abstract question "is the response curve concave?" into a concrete derivative computation. Take the Hill curve $f(x; K, n) = x^n / (K^n + x^n)$ and read its curvature off the sign of $f''(x)$ for $x > 0$.
+
+For $n = 1$ the curve simplifies to $f(x) = x/(K + x)$, and a direct computation gives
+
+$$
+f''(x) = -\frac{2K}{(K + x)^3} < 0 \quad \text{for all } x > 0.
+$$
+
+The second derivative is strictly negative throughout, so $f$ is strictly **concave** — the clean diminishing-returns shape in which every dollar buys less than the last, and the budget problem stays convex.
+
+For $n > 1$ the story changes. The second derivative is a messier rational function, but the load-bearing fact is its *sign*: $f''$ is positive near the origin and negative far out, so it changes sign exactly once. The crossing — the **inflection point** where $f''(x) = 0$ — sits at
+
+$$
+x^\star = K\left(\frac{n-1}{n+1}\right)^{1/n},
+$$
+
+so $f$ is **convex** on the "toe" $0 \le x < x^\star$ and **concave** for $x > x^\star$. For $n = 2,\ K = 3$ this gives $x^\star = \sqrt{3} \approx 1.7321$. This S-shape — convex toe, concave tail — is the seed of the trouble that Rung 10 confronts head-on: a response curve that is not globally concave makes the budget-allocation problem not globally convex, and a single descent can stall in the wrong basin.
