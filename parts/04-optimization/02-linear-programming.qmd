@@ -336,3 +336,77 @@ $$
 again a sum of nonnegative terms — each $x_j \ge 0$ and each $c_j - (A^\top y)_j \ge 0$ by feasibility — vanishing if and only if $x_j(c_j - (A^\top y)_j) = 0$ for all $j$. Both gaps close together exactly when both sets of products vanish, which is the stated equivalence. $\blacksquare$
 
 This is the LP face of Chapter 11's complementary slackness $\lambda_i g_i(x^\star) = 0$: the dual variable $y_i$ plays the role of the multiplier $\lambda_i$, and the constraint residual $a_i^\top x - b_i$ plays the role of $g_i$. Its plain meaning is operational — **a constraint with slack has dual price zero, and a positive dual price forces its constraint to bind.** A resource you are not fully using is worth nothing at the margin; a resource whose price is positive must be exhausted. That reading is precisely what turns the dual variables into *shadow prices*, the subject of the next rung.
+
+### Rung 7 — Shadow prices
+
+Rung 6 ended by calling the dual variables *shadow prices*, but a name is not a theorem. This rung earns the name. It shows that the optimal dual value $y_i^\star$ is not a mere bookkeeping multiplier but a *price* in the literal economic sense — the marginal worth of the resource that constraint $i$ rations, the exact amount the optimal objective would improve if you were handed one more unit of $b_i$. Solving the LP once therefore yields not only the optimal plan but a complete schedule of what every binding resource is worth at the margin.
+
+**Sensitivity result.** Treat the right-hand side $b$ as a dial and write $p^\star(b)$ for the optimal value of the primal as a function of it. Fix a value $b_0$ at which the LP has a unique optimal basis $B$, with optimal dual $y^\star$. Strong duality (Rung 6) equates the primal optimum with the dual optimum, and the optimal dual point $y^\star = (A_B^{-1})^\top c_B$ depends on $b$ only through which basis is optimal, not through the numerical value of $b$. So in a neighborhood of $b_0$ small enough that the basis $B$ stays optimal, $y^\star$ is **constant** and the optimal value is the linear function
+
+$$
+p^\star(b) = b^\top y^\star.
+$$
+
+Differentiating in the $i$-th component gives the shadow-price identity,
+
+$$
+\frac{\partial p^\star}{\partial b_i} = y_i^\star.
+$$
+
+The optimal dual variable $y_i^\star$ is therefore the **shadow price** of constraint $i$: the marginal change in the optimal objective per unit relaxation of its right-hand side $b_i$. The caveat is the basis-stability clause that made the derivation work — the relation is *local*. As $b_i$ moves, the optimal value tracks the line $b^\top y^\star$ only until some basic variable would be driven negative and the optimal basis must change; at that breakpoint the slope jumps to a new $y^\star$. The optimal-value function $p^\star(b)$ is thus piecewise linear in $b$, and $y_i^\star$ is the slope of the piece you currently stand on.
+
+**Complementary-slackness reading.** Rung 6's complementary slackness gives the prices an immediate qualitative meaning. A **slack** (non-binding) constraint — one with $a_i^\top x^\star > b_i$, strict room to spare — has shadow price $y_i^\star = 0$: relaxing a resource you are not fully using buys nothing, because you were not constrained by it in the first place. A **binding** constraint, met with equality at the optimum, is the only kind that *can* carry a positive shadow price $y_i^\star > 0$ — the marginal value of one more unit of a resource you have exhausted. Scarcity is what gives a resource a price.
+
+**For a budget constraint** of the form "total spend equals $B$," the shadow price is precisely the **marginal response per extra dollar of budget**: how much more total response one additional dollar of $B$ would buy, evaluated at the optimal allocation. That is word for word the quantity Chapter 11 named $\lambda$ — the multiplier on the budget equality in the equal-marginal-returns capstone. The next rung makes the identification exact by casting the budget problem itself as a linear program and watching $\lambda$ emerge as the dual price the simplex method computes.
+
+### Rung 8 — The budget problem as a linear program
+
+This is the chapter's payoff. Chapter 11 solved the budget-allocation problem with calculus and the KKT conditions, deriving the equal-marginal-returns rule by hand. We now show that under a piecewise-linear model of channel response that same problem becomes a **linear program** — solvable by simplex, with a global optimum and a duality certificate — and that Chapter 11's multiplier $\lambda$ reappears not as a Lagrange multiplier computed by stationarity but as the *dual price* on the budget constraint, produced automatically by LP duality.
+
+**Piecewise-linear concave response.** Chapter 11's response curves $r_i$ are concave: each successive dollar in channel $i$ earns less than the one before. Approximate each curve by a **piecewise-linear concave** function. Split channel $i$'s spend into segments,
+
+$$
+b_i = \sum_k s_{ik}, \qquad s_{ik} \in [0, w_{ik}],
+$$
+
+where segment $k$ has width $w_{ik}$ and constant slope $m_{ik}$, and the slopes **decrease across segments**,
+
+$$
+m_{i1} > m_{i2} > \cdots .
+$$
+
+This decrease *is* concavity, transcribed into the linear setting — each successive slab of spend in channel $i$ returns a strictly smaller marginal response. The response contributed by channel $i$ is the sum of slope times width filled, $\sum_k m_{ik}\, s_{ik}$, and because the slopes decrease, filling a later (flatter) segment before an earlier (steeper) one of the same channel would never pay — the model self-enforces that segment $k$ is used only after segment $k-1$ is full.
+
+**The LP.** Allocating a total budget $B$ to maximize total response is then
+
+$$
+\max_{s \ge 0}\ \sum_{i,k} m_{ik}\, s_{ik} \quad \text{s.t.}\quad \sum_{i,k} s_{ik} = B,\quad s_{ik} \le w_{ik}\ \ \forall i,k,
+$$
+
+optionally with **per-channel caps and minimums** $\underline{B}_i \le \sum_k s_{ik} \le \overline{B}_i$. Every term — objective, budget equality, segment bounds, channel caps — is linear in the segment variables $s_{ik}$. It is a genuine linear program, and the full machinery of this chapter applies to it: an optimum at a vertex, found by simplex, certified by duality.
+
+**Why concavity makes "fill steepest first" optimal.** Because the slopes decrease, the optimum is the discrete **water-filling** rule: pour budget into the highest-slope segments first, across all channels, until the budget runs out. A short exchange argument proves it.
+
+**Proof.** Let $s$ be an optimal allocation, and suppose for contradiction that some segment with slope $m$ has room, $s < w$, while a *different* segment with strictly smaller slope $m' < m$ carries positive budget, $s' > 0$. Move a sliver $\delta > 0$ of budget — small enough that $\delta \le w - s$ and $\delta \le s'$ — out of the $m'$ segment and into the $m$ segment. The budget equality is preserved, since one segment loses exactly what the other gains, and both segments stay within their bounds, so the new allocation is feasible. Its total response changes by
+
+$$
+m\,\delta - m'\,\delta = (m - m')\,\delta > 0,
+$$
+
+a strict improvement — contradicting the optimality of $s$. Hence no such pair exists: at the optimum, **every funded segment has slope at least as large as every unfunded one.** There is a cutoff slope separating the segments that get budget from those that do not. $\blacksquare$
+
+**The dual price is Chapter 11's $\lambda$.** The budget equality $\sum_{i,k} s_{ik} = B$ carries a dual variable, and by Rung 7 that dual variable is the shadow price of the budget — the marginal response per extra dollar of $B$. The exchange argument just located it: the marginal dollar of budget flows into the **last-funded segment**, the one at the cutoff, so its worth is exactly that segment's slope. The budget shadow price is the **cutoff slope** that separates funded from unfunded segments. And that cutoff slope is the discrete image of a common marginal return — every funded segment sits at or above it, every unfunded one at or below it, so the marginal segments of all active channels share the same slope. This is **Chapter 11's equal-marginal-returns $\lambda$**, now produced by LP duality rather than derived by hand from the KKT stationarity equations.
+
+A small example fixes the picture (the full arithmetic is carried out in the Worked Examples and Code Tie-in). Take two channels with decreasing segment slopes $[5, 3, 1]$ and $[4, 2, 1]$, every segment of width $2$, and budget $B = 5$. Filling steepest first pours $2$ into the slope-$5$ segment of channel 1, then $2$ into the slope-$4$ segment of channel 2, then the last $1$ into the slope-$3$ segment of channel 1 — exhausting the budget. The optimal allocation is $b^\star = (3, 2)$, and the marginal (last-funded) segment has slope $3$, so the **budget shadow price is $\lambda = 3$**. Refining the model brings it back to Chapter 11's smooth answer: take the square-root responses $r_i(b) = a_i\sqrt{b}$ with $a = (2,1)$ and $B = 9$, and approximate each by a piecewise-linear concave fit. As the segmentation is refined — more, narrower segments — the LP optimum converges to the smooth concave optimum $b^\star = (7.2, 1.8)$ and the budget shadow price converges to the smooth marginal return $\lambda \to 0.3727$, exactly the values Chapter 11 produced by the equal-marginal condition.
+
+Finally, the **per-channel caps and minimums**, when they bind, carry shadow prices of their own. The dual variable on a binding cap $\sum_k s_{ik} \le \overline{B}_i$ is the marginal value of relaxing that cap — how much more total response you could buy by allowing one more dollar into a channel held back at its ceiling. This is multi-constraint duality in plain action: solve the LP once and read off, alongside the budget price $\lambda$, a separate price for every binding business rule.
+
+### Rung 9 — Where linear programming stops
+
+The piecewise-linear-as-LP trick is powerful, and it is bounded. Honesty about a method includes naming where it fails, and this one fails in two distinct ways — one a matter of approximation, the other a matter of structure. Drawing the boundary precisely is what hands the next chapter its job.
+
+**It is an approximation.** A piecewise-linear curve replaces a smooth response by a chain of straight segments, and the LP optimum is the optimum *of the chain*, not of the curve. The two differ — but the gap is controllable. Refining the segmentation, using more and narrower segments, makes the piecewise-linear fit hug the smooth curve more tightly, and the LP optimum converges to the true smooth concave optimum as the segment widths shrink. The error is a discretization error, and it goes to zero with the mesh. The Code Tie-in demonstrates exactly this convergence on the square-root example, the refined LP marching to Chapter 11's $(7.2, 1.8)$ with budget price $\lambda \to 0.3727$.
+
+**It rests entirely on concavity.** The deeper limit is structural. The "fill steepest first" rule — and with it the clean vertex optimum, the cutoff slope, the single dual price — is correct *only because the slopes decrease*. That ordering is what made the exchange argument of Rung 8 go through. Strip away concavity and the whole edifice collapses. Consider Chapter 11's **S-shaped** Hill response with exponent $n > 1$: convex on the toe, concave only past the inflection point. A piecewise-linear fit of such a curve has **increasing-then-decreasing** slopes — the steepest segments sit in the *middle* of the curve, not at its start. Filling steepest first is now simply wrong: to reach the lucrative middle segments you may first have to fund the shallow, unprofitable toe, and whether it is worth funding the toe at all is a genuinely **discrete, all-or-nothing decision** — fund this channel up past its inflection, or skip it entirely. That is an **integer** decision, and the relaxed problem is **non-concave**, with the multiple local optima Chapter 11 exhibited. The clean LP structure is gone: such problems belong to **integer programming**, attacked by branch-and-bound — solving a tree of LP relaxations while branching on the discrete choices — which we note as the discrete tool but do not develop here.
+
+**The boundary, stated.** Linear programming owns the **linear and concave-separable** world *exactly*. There it delivers a global optimum, sitting at a vertex, accompanied by a duality certificate that proves no better point exists — and, as Rung 8 showed, it absorbs the concave budget problem whole, reproducing Chapter 11's equal-marginal rule as a dual price. The **smooth, possibly non-concave** world — real saturating, S-shaped channel response — lies outside that boundary. That world is the domain of **Chapter 13's SLSQP**, which attacks the nonlinear KKT system directly and iteratively, exactly as Chapter 11 foreshadowed, and which is launched from multiple starting points precisely because the landscape may carry several local optima and no single descent can be trusted to find the global best. Linear programming tells us where optimization is *certain*; Chapter 13 takes up the terrain where it is merely *diligent*. That is where the next chapter begins.
