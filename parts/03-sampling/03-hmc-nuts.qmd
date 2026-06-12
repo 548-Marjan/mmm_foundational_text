@@ -681,3 +681,25 @@ The printed output supplies a numerical signature for each theoretical claim. Th
 **A1.** *HMC versus random walk.* Implement HMC (with a leapfrog integrator and a Metropolis accept step) and random-walk Metropolis for a strongly correlated Gaussian target, e.g. $\mathcal N(0,\Sigma)$ with $\Sigma=\big[\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\big]$. At matched iteration counts, compare the **effective sample size** of a coordinate for the two samplers and show HMC's advantage grows as $\rho\to1$. Study how the HMC acceptance rate and the mean energy error $|\Delta H|$ depend on the step size $\varepsilon$, and identify a step size near the recommended acceptance band (~0.65–0.8).
 
 **A2.** *The funnel and its cure.* Reproduce **Neal's funnel** $v\sim\mathcal N(0,3^2)$, $x_i\mid v\sim\mathcal N(0,e^v)$. Run a fixed-$\varepsilon$ HMC on the **centered** parameterization and count **divergent transitions** (iterations where $|\Delta H|$ exceeds a large threshold or is non-finite), confirming they concentrate at negative $v$ (the neck). Then implement the **non-centered** reparameterization $\tilde x_i\sim\mathcal N(0,1)$, $x_i=\tilde x_i e^{v/2}$, rerun HMC, and show the divergences vanish and the recovered $v$-marginal matches $\mathcal N(0,9)$.
+
+## Summary
+
+This chapter built Hamiltonian Monte Carlo — the gradient-guided sampler that glides along the posterior where random walk crawls — and NUTS, the automation that made it the default engine of modern probabilistic programming. If you can state each concept in a sentence and reproduce each identity from memory, you are ready for the convergence diagnostics of Chapter 10.
+
+**Key concepts**
+
+- **Augment with momentum.** Adjoin a momentum $p$ with kinetic energy $K=\tfrac12 p^\top M^{-1}p$ to the position $q=\beta$ with potential $U=-\log\pi$; the joint is $e^{-H}$, $H=U+K$, and its $q$-marginal is exactly $\pi$ — so sampling $(q,p)$ and discarding $p$ samples the posterior.
+- **Hamiltonian flow makes a valid proposal.** Exact dynamics conserve energy (the trajectory stays in high-probability regions), preserve phase-space volume (no Jacobian in the acceptance ratio), and are time-reversible (detailed balance) — a proposal that would be accepted with probability 1.
+- **Leapfrog is the right discretization.** The symplectic Störmer–Verlet scheme preserves volume and reversibility exactly while leaving only a small, bounded $O(\varepsilon^2)$ energy error; Euler does neither and has no stationary distribution.
+- **HMC corrects the error and glides.** Resample $p$, run $L$ leapfrog steps, accept with $\min(1,e^{-\Delta H})$; because $\Delta H\approx0$, acceptance is near 1 even for a proposal $\sim L\varepsilon$ away — the decisive contrast with the random walk's $O(1/\sqrt d)$ steps. The only model-specific input is the gradient $\nabla\log\pi$.
+- **NUTS removes the trajectory-length knob.** It grows the trajectory by doubling until the U-turn criterion fires and adapts $\varepsilon$ by dual averaging during warm-up — the self-tuning sampler that Stan and PyMC run by default.
+- **Divergences flag the funnel.** Fixed $\varepsilon$ goes unstable in high-curvature regions; Neal's funnel — a hierarchical variance and its coefficients (Chapter 6) — is the canonical case, cured by the non-centered reparameterization $x_i=\tilde x_i e^{v/2}$. A divergence is a trustworthy alarm, handed to Chapter 10's diagnostics.
+
+**Key identities**
+
+- Augmented target: $H(q,p)=U(q)+K(p)$, $U=-\log\pi$, $K=\tfrac12 p^\top M^{-1}p$, joint $\propto e^{-H}$.
+- Hamilton's equations: $\dot q=M^{-1}p$, $\dot p=-\nabla U(q)=\nabla\log\pi(q)$; conservation $\frac{d}{dt}H=0$.
+- Leapfrog step: $p_{1/2}=p-\tfrac{\varepsilon}{2}\nabla U(q)$, $q'=q+\varepsilon M^{-1}p_{1/2}$, $p'=p_{1/2}-\tfrac{\varepsilon}{2}\nabla U(q')$; Jacobian determinant 1.
+- HMC acceptance: $\min(1,e^{-\Delta H})$, $\Delta H=H(q^*,p^*)-H(q,p)$.
+- U-turn criterion: stop when $(q^+-q^-)\cdot p^-<0$ or $(q^+-q^-)\cdot p^+<0$.
+- Non-centered funnel: $\tilde x_i\sim\mathcal N(0,1)$, $x_i=\tilde x_i\,e^{v/2}$.
