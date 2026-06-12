@@ -1,17 +1,5 @@
 # Preface {.unnumbered}
 
-::: {.callout-note appearance="simple"}
-## In one paragraph
-
-A rigorous, self-contained path from undergraduate mathematics to a
-production-grade Bayesian **Marketing Mix Model** — built from scratch, deriving
-the math instead of calling a library. You assemble the whole stack yourself:
-regression → Bayesian inference → MCMC → optimization → a dynamic,
-causally-calibrated MMM → the software engineering to ship it. If you have ever
-run an MMM framework and wanted to know *why* it works — and where it quietly
-misleads you — this is that book.
-:::
-
 This is a self-contained textbook on the mathematics and the software engineering
 that underlie modern **Marketing Mix Modeling (MMM)**. It takes you from standard
 quantitative prerequisites all the way to advanced practice — without hand-waving,
