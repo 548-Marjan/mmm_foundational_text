@@ -2,32 +2,16 @@
 
 *Canonical anchors: Talts et al.; BDA3.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapter 9 closed by promising a reckoning. The No-U-Turn Sampler glides along the posterior's contours and returns thousands of draws, but it can fail silently: a chain stuck in one mode of a multimodal posterior, a hierarchical funnel whose narrow throat goes unexplored, a run terminated before it forgot its starting point. Chapter 9 named the three signals that expose these pathologies — $\hat{R}$, effective sample size, and divergence counts — and deferred their construction to here. This chapter pays that debt. But it also takes the larger step that the diagnostics presuppose: a sampler can be working perfectly and still hand you a useless answer, because it sampled faithfully from the wrong model. HMC gives you draws; draws are worthless until you answer two questions.
 
-## Theory & Proofs
+The first is *did the sampler converge?* Is the sequence of draws a faithful sample from the posterior $\pi(\theta \mid y)$, and is the Monte Carlo error in any quantity you report from it small enough to trust? A Markov chain only approximates its target, and that approximation has two failure modes — it may not have reached stationarity, and even at stationarity its finite length leaves residual sampling error. Part A makes both measurable.
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The second is *is the model any good?* — a question with two faces. **B1, self-consistency:** does the fitted model reproduce the data it was trained on, and are its credible intervals honest, neither overconfident nor timid? **B2, out-of-sample prediction:** does the model predict data it has not seen, and does it beat the alternative specifications you might have chosen instead? A model can pass every convergence check and still fail both: convergence certifies that you have correctly characterized the posterior of a model, not that the model deserves your belief.
 
-## Worked Examples
+Both questions bind tightly in an MMM. A converged-but-wrong model hands confident, precise, and useless budget recommendations to the optimizer of Part IV, which will dutifully reallocate spend toward whichever channel the misspecification flattered. An uncalibrated model is worse still: its credible intervals on return-on-ad-spend are dishonest, reporting a precision the data never supported or hiding uncertainty the business needed to see. Calibration is what makes a posterior interval on ROAS mean what it claims to mean.
 
-_Worked numerical example(s)._
+The running example is the canonical **eight-schools hierarchical model** — the small dataset on which essentially the entire MCMC-diagnostics literature, from the funnel to $\hat{R}$ to simulation-based calibration, was first worked out. The Theory section adapts it in a single step to a **geo-level MMM**, in which regional effects are partially pooled toward a national mean, so that every diagnostic we build lands directly on the models you fit.
 
-## Code Tie-in
-
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
-
-## Exercises
-
-### C -- Conceptual / Reading Comprehension
-
-### B -- By Hand
-
-### P -- Prove It
-
-### A -- Applied / Code
+The roadmap follows the two questions. **Part A** answers convergence: Monte Carlo standard error, $\hat{R}$, effective sample size, and divergences. **Part B** answers model adequacy: posterior predictive checks, simulation-based calibration, and out-of-sample scoring.
