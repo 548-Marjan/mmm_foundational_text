@@ -485,3 +485,138 @@ Now take the Hill response $r(b) = b^2/(K^2 + b^2)$ with $K = 3$ ($n = 2$) on tw
 - *Corner* $b = (6, 0)$: $r(6) = \dfrac{36}{9 + 36} = \dfrac{36}{45} = 0.8$ and $r(0) = 0$, so $R = 0.8$. By symmetry, $(0, 6)$ also gives $0.8$.
 
 **The verdict.** All three are KKT points of the non-convex problem, yet they carry **different objective values** ($1.0$ at the interior split versus $0.8$ at each corner). KKT no longer certifies global optimality: a local optimizer started near a corner converges to the corner ($0.8$) and never discovers the better interior optimum ($1.0$). This is the concrete face of Rung 10 — and exactly the behavior the Code Tie-in's multi-start will exhibit when it lands on different optima depending on where it begins.
+
+## Code Tie-in
+
+The single cell below carries the chapter's geometry into running code with nothing but NumPy, SciPy, and Matplotlib — no modelling framework — so that every claim is the few lines of arithmetic it actually is. It draws the Hill response in its two regimes and marks the inflection that separates the convex toe from the concave shoulder; it certifies strict convexity of Worked Example 1's quadratic by reading the sign of its Hessian's eigenvalues, and confirms the same conclusion with a brute-force chord test; it solves the concave allocation of Worked Example 2 with a constrained optimizer and checks that the solution equalizes marginal returns across channels exactly as the capstone theorem demands; and it runs the non-convex S-curve allocation of Worked Example 3 from five different starting points to watch a local optimizer land on competing optima. The point of the cell is that the convex and non-convex cases are separated by a single observable: whether every start reaches the same answer.
+
+```{python}
+# Chapter 11 — Code Tie-in: convexity certificates and budget allocation.
+# NumPy + Matplotlib + SciPy only. We exhibit the chapter's three results on
+# the Hill response curve and the two-channel budget problem: (1) the inflection
+# that separates the convex toe from the concave shoulder, (2) the positive-
+# definite Hessian certifying strict convexity, (3) the equal-marginal optimum
+# of the concave allocation, and (4) the multiple optima of the non-convex
+# S-curve allocation, found by multi-start local optimization.
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
+
+# --- Hill response and its inflection --------------------------------------
+def hill(x, K, n):
+    return x**n / (K**n + x**n)
+
+K = 3.0
+x = np.linspace(0.0, 12.0, 400)
+h_concave = hill(x, K, 1)      # n = 1: concave everywhere on x > 0
+h_scurve = hill(x, K, 2)       # n = 2: convex toe, concave shoulder
+n = 2
+x_star = K * ((n - 1) / (n + 1)) ** (1.0 / n)   # inflection of the n=2 curve
+print(f"Hill n=2 inflection at x* = K*((n-1)/(n+1))^(1/n) = {x_star:.4f}  (sqrt(3) = {np.sqrt(3):.4f})")
+
+# --- Convexity certificate (Worked Example 1) ------------------------------
+Q = np.array([[2.0, 0.5], [0.5, 1.0]])
+eig = np.linalg.eigvalsh(Q)
+print(f"\nQuadratic Hessian Q eigenvalues = {np.round(eig, 4)}  (both > 0 => strictly convex)")
+assert np.all(eig > 0)
+
+# Chord test: -hill(., 1) is convex, so it sits below no chord — i.e. the
+# midpoint value never exceeds the average of the endpoint values.
+def neg_hill1(t):
+    return -hill(t, K, 1)
+grid = np.linspace(0.1, 11.9, 60)
+convex_ok = True
+for i in range(len(grid)):
+    for j in range(i + 1, len(grid)):
+        a, b = grid[i], grid[j]
+        mid = neg_hill1(0.5 * (a + b))
+        chord = 0.5 * (neg_hill1(a) + neg_hill1(b))
+        if mid > chord + 1e-9:
+            convex_ok = False
+assert convex_ok
+print("Chord test: -hill(x, n=1) lies on/below every chord  -> convex confirmed")
+
+# --- Concave budget allocation: equal marginal returns (Worked Example 2) ---
+a = np.array([2.0, 1.0])
+B = 9.0
+res = minimize(
+    lambda b: -(a @ np.sqrt(np.maximum(b, 0))),
+    x0=[4.5, 4.5],
+    method="SLSQP",
+    bounds=[(0, B), (0, B)],
+    constraints={"type": "eq", "fun": lambda b: b.sum() - B},
+)
+b_star = res.x
+marginals = a / (2 * np.sqrt(b_star))
+total_opt = a @ np.sqrt(b_star)
+total_equal = 3 * np.sqrt(4.5)
+print(f"\nConcave allocation r_i(b)=a_i*sqrt(b), a={a.tolist()}, B={B:.0f}:")
+print(f"  b* = {np.round(b_star, 4).tolist()}   (expected [7.2, 1.8])")
+print(f"  marginals a_i/(2 sqrt(b_i)) = {np.round(marginals, 4).tolist()}  (equal shadow price)")
+print(f"  total at b* = {total_opt:.4f}   vs equal-split 3*sqrt(4.5) = {total_equal:.4f}")
+assert np.allclose(b_star, [7.2, 1.8], atol=1e-2)
+assert np.allclose(marginals[0], marginals[1], atol=1e-3)   # equal marginal returns
+assert total_opt > total_equal                              # beats naive split
+print("  asserts: b*=[7.2,1.8], equal marginals, beats equal split  -> PASSED")
+
+# --- Non-convex multi-start (Rung 10 / Worked Example 3) --------------------
+# Hill n=2, K=3, two channels, total budget 6, optimized along the line b2=6-b1.
+def neg(b1):
+    b1 = float(np.ravel(b1)[0])
+    return -(hill(b1, 3, 2) + hill(6 - b1, 3, 2))
+
+starts = [0.1, 1.0, 3.0, 5.0, 5.9]
+reached_totals = []
+print(f"\nNon-convex S-curve allocation (hill n=2, K=3, B=6) — multi-start:")
+print(f"  {'start b1':>9}{'reached b1':>12}{'b2':>8}{'total R':>10}")
+landings = []
+for s in starts:
+    r = minimize(neg, x0=[s], method="L-BFGS-B", bounds=[(0, 6)])
+    b1 = float(r.x[0])
+    b2 = 6 - b1
+    total = -r.fun
+    reached_totals.append(total)
+    landings.append((b1, total))
+    print(f"  {s:>9.1f}{b1:>12.4f}{b2:>8.4f}{total:>10.4f}")
+
+totals = sorted(set(round(t, 3) for t in reached_totals))
+assert len(totals) > 1, totals    # different starts -> different optima
+print(f"  distinct optima reached (rounded totals): {totals}")
+print("  asserts: multiple distinct optima found  -> PASSED")
+
+# --- Figure 1: Hill concave vs S-shaped, inflection marked ------------------
+fig, ax = plt.subplots(figsize=(6.2, 3.6))
+ax.plot(x, h_concave, color="steelblue", lw=2, label=r"$n=1$ (concave)")
+ax.plot(x, h_scurve, color="darkorange", lw=2, label=r"$n=2$ (S-shaped)")
+ax.axvline(x_star, color="gray", ls="--", lw=1.2)
+ax.scatter([x_star], [hill(x_star, K, 2)], color="black", zorder=5)
+ax.annotate(rf"inflection $x^\star={x_star:.3f}$", xy=(x_star, hill(x_star, K, 2)),
+            xytext=(x_star + 1.0, 0.18), fontsize=9,
+            arrowprops=dict(arrowstyle="->", color="gray"))
+ax.set_xlabel("spend $x$")
+ax.set_ylabel("response (saturation)")
+ax.set_title("Hill response: concave vs S-shaped, with inflection", fontsize=10)
+ax.legend(fontsize=9)
+plt.tight_layout()
+plt.show()
+
+# --- Figure 2: the non-convex objective over the budget line ---------------
+b1_grid = np.linspace(0, 6, 400)
+R = hill(b1_grid, 3, 2) + hill(6 - b1_grid, 3, 2)
+fig, ax = plt.subplots(figsize=(6.2, 3.6))
+ax.plot(b1_grid, R, color="purple", lw=2)
+ax.scatter([3.0], [hill(3, 3, 2) + hill(3, 3, 2)], color="green", zorder=5,
+           label="interior optimum $(3,3)$, $R=1.0$")
+ax.scatter([0.0, 6.0], [hill(0, 3, 2) + hill(6, 3, 2)] * 2, color="red", zorder=5,
+           label="corners $(0,6)/(6,0)$, $R=0.8$")
+for b1, total in landings:
+    ax.scatter([b1], [total], color="black", marker="x", s=40, zorder=6)
+ax.set_xlabel("budget on channel 1, $b_1$  (with $b_2 = 6 - b_1$)")
+ax.set_ylabel("total response $R(b_1)$")
+ax.set_title("Non-convex allocation: competing interior vs corner optima", fontsize=10)
+ax.legend(fontsize=8, loc="lower center")
+plt.tight_layout()
+plt.show()
+```
+
+The printed output pins the chapter's arithmetic. The $n=2$ Hill curve inflects at $x^\star = 1.7321 = \sqrt{3}$, the boundary between its convex toe and its concave shoulder, marked by the dashed line in the first figure. Worked Example 1's quadratic returns Hessian eigenvalues $0.7929$ and $2.2071$ — both strictly positive, so $Q$ is positive definite and the quadratic is strictly convex — and the independent chord test confirms that $-\text{hill}(x, n{=}1)$ never rises above any of its chords. The concave allocation of Worked Example 2 is solved exactly: the optimizer returns $b^\star = (7.2004, 1.7996) \approx (7.2, 1.8)$, the per-channel marginals $a_i/(2\sqrt{b_i})$ come back equal at $0.3727$ — the shared shadow price the equal-marginal theorem demands — and the optimal total response $6.7082$ beats the naive equal split's $6.3640$, the $5.4\%$ gain from steering four times the budget to the stronger channel. The non-convex S-curve allocation then breaks the global guarantee in front of us: starting the local optimizer at $b_1 = 1.0,\ 3.0,\ 5.0$ converges to the interior split $(3, 3)$ with total $1.0$, while the extreme starts $b_1 = 0.1$ and $b_1 = 5.9$ slide into the corners $(0, 6)$ and $(6, 0)$ with total $0.8$ — two distinct optima from the same problem, exactly the failure of KKT to certify global optimality that Rung 10 predicts. The convex case rewards any start with the same answer; the non-convex case does not, and that gap is the whole content of the chapter's optimization rung.
