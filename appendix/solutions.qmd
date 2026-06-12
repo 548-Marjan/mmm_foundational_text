@@ -2039,4 +2039,111 @@ print(f"difference = {e1 - e2:.2f}  (positive favors model 1)")
 ```
 The correctly specified model (unit variance) attains the higher $\widehat{\text{elpd}}_{\text{WAIC}}$ and is preferred. Whether the gap is decisive is judged against its standard error — the standard deviation of the pointwise elpd differences times $\sqrt{n}$ — and a difference smaller than two or three of those is not strong evidence either way.
 
+## Chapter 11 — Convexity Theory
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** Convexity is the property that converts a *local* search into a *global* guarantee. The keystone theorem (Rung 7) says that for a convex problem every local minimum is the global minimum, so a descent algorithm that halts where it can no longer go downhill has provably found the best point that exists. No algorithm, however sophisticated, can supply that guarantee for a non-convex problem: there local information at a stopping point certifies nothing about the rest of the domain, and the only recourse is to search many basins and compare. So the convexity question must be answered first, because its answer changes what *any* algorithm's output *means* — a certified global optimum versus a mere "best so far."
+
+**C2.** In plain words: keep moving budget toward whichever channel is currently returning the most for its next dollar, and stop only when every channel you are funding returns the same amount on its next dollar. A concave response curve makes the problem convex because concavity of each $r_i$ makes $-\sum_i r_i$ a convex objective over the convex budget set, so the keystone applies and the stationary allocation is globally optimal. A channel can be left unfunded even though its curve is increasing because what matters is the *marginal* return, not the total: if even the channel's first dollar returns less than the common shadow price $\lambda$ that the funded channels achieve, then every dollar sent to it would do more good elsewhere, so its optimal spend is zero.
+
+**C3.** First, on the convex toe the response is *not concave*, so the budget problem is not convex and the KKT conditions are only *necessary*, not sufficient: the point the descent reached is a KKT/stationary point, but stationarity no longer certifies global optimality, so "optimal" is unjustified — it may be a local optimum with a strictly better allocation in another basin. Second, for a non-convex problem the result of a single descent depends on the starting point; a different initialization can land on a different optimum (as the worked S-curve shows, an interior split worth $1.0$ versus a corner worth $0.8$). The honest claim is "a certified-local optimum from this starting point," not "the optimal allocation."
+
+### B — By Hand
+
+**B1.** The Hessian of $f(b_1, b_2) = 2b_1^2 + 3b_2^2 + 2b_1 b_2$ is constant,
+$$
+\nabla^2 f = \begin{pmatrix} 4 & 2 \\ 2 & 6 \end{pmatrix}.
+$$
+*Sylvester's criterion:* the leading principal minors are $4 > 0$ and $\det = 4\cdot 6 - 2\cdot 2 = 20 > 0$, so the Hessian is positive definite. *Eigenvalues:* solving $(4-\rho)(6-\rho) - 4 = \rho^2 - 10\rho + 20 = 0$ gives $\rho = 5 \pm \sqrt{5} \approx 2.7639,\ 7.2361$, both positive. Both routes agree: $\nabla^2 f \succ 0$, so $f$ is **strictly convex**.
+
+**B2.** With $r_i(b) = a_i\ln(1+b)$, the marginal is $r_i'(b) = a_i/(1+b)$. The equal-marginal condition $r_1'(b_1) = r_2'(b_2)$ reads $\frac{3}{1+b_1} = \frac{1}{1+b_2}$, i.e. $3(1+b_2) = 1 + b_1$, so $b_1 = 2 + 3b_2$. With $b_1 + b_2 = 6$: $2 + 3b_2 + b_2 = 6 \Rightarrow 4b_2 = 4 \Rightarrow b_2 = 1$, $b_1 = 5$. So $b^\star = (5, 1)$, and the common shadow price is $\lambda = \frac{3}{1+5} = \frac{1}{1+1} = 0.5$. The optimal total response is $3\ln 6 + \ln 2 = 3(1.7918) + 0.6931 \approx 6.0684$, versus the equal split $b=(3,3)$ scoring $3\ln 4 + \ln 4 = 4\ln 4 \approx 5.5452$ — the equal-marginal allocation gains about $0.523$.
+
+**B3.** For $n = 3$, $K = 4$,
+$$
+x^\star = K\left(\frac{n-1}{n+1}\right)^{1/n} = 4\left(\frac{2}{4}\right)^{1/3} = 4\,(0.5)^{1/3} \approx 4(0.7937) = 3.1748.
+$$
+The Hill curve is **convex** on $[0,\ 3.1748)$ (the toe, increasing returns) and **concave** for $x > 3.1748$ (diminishing returns).
+
+### P — Prove It
+
+**P1.** Assume $f$ convex. Fix $x, y$ in the domain and $\lambda \in (0,1]$. Convexity applied to $x + \lambda(y-x) = \lambda y + (1-\lambda)x$ gives
+$$
+f\bigl(x + \lambda(y-x)\bigr) \le (1-\lambda)f(x) + \lambda f(y).
+$$
+Subtract $f(x)$ and divide by $\lambda > 0$:
+$$
+\frac{f\bigl(x + \lambda(y-x)\bigr) - f(x)}{\lambda} \le f(y) - f(x).
+$$
+As $\lambda \to 0^+$ the left-hand side is the definition of the directional derivative of $f$ at $x$ along $y - x$, namely $\nabla f(x)^\top (y - x)$; the limit preserves the inequality, giving $\nabla f(x)^\top(y-x) \le f(y) - f(x)$, which rearranges to $f(y) \ge f(x) + \nabla f(x)^\top(y-x)$. $\blacksquare$
+
+**P2.** Take any $x, y$ in the common domain and $\lambda \in [0,1]$. Each $f_i$ convex gives
+$$
+f_i(\lambda x + (1-\lambda)y) \le \lambda f_i(x) + (1-\lambda)f_i(y).
+$$
+Multiply by $w_i \ge 0$ — and *here* is where nonnegativity is essential: multiplying an inequality by a nonnegative number preserves its direction, whereas a negative weight would reverse it. Summing over $i$,
+$$
+\sum_i w_i f_i(\lambda x + (1-\lambda)y) \le \lambda \sum_i w_i f_i(x) + (1-\lambda)\sum_i w_i f_i(y),
+$$
+which is the chord inequality for $F = \sum_i w_i f_i$. Hence $F$ is convex. $\blacksquare$
+
+**P3.** Minimize $-\sum_i r_i(b_i)$ subject to $\mathbf{1}^\top b - B = 0$ (multiplier $\nu$) and $-b_i \le 0$ (multipliers $\mu_i \ge 0$). The Lagrangian is $L = -\sum_k r_k(b_k) + \nu(\mathbf{1}^\top b - B) - \sum_k \mu_k b_k$. KKT stationarity in coordinate $i$ gives
+$$
+-r_i'(b_i^\star) + \nu - \mu_i = 0 \quad\Longrightarrow\quad r_i'(b_i^\star) = \nu - \mu_i,
+$$
+with complementary slackness $\mu_i b_i^\star = 0$. If $b_i^\star > 0$, then $\mu_i = 0$, so $r_i'(b_i^\star) = \nu$; calling this common value $\lambda \equiv \nu$, every funded channel shares it. If $b_i^\star = 0$, then $\mu_i \ge 0$ gives $r_i'(0) = \nu - \mu_i \le \nu = \lambda$. Concavity of each $r_i$ makes the program convex, so KKT is sufficient and this is the global optimum. $\blacksquare$
+
+### A — Applied / Code
+
+**A1.** Test the eigenvalues of the symmetric part of $Q$; convex iff all are $\ge 0$.
+```{python}
+import numpy as np
+
+def is_convex_quadratic(Q):
+    Qs = 0.5 * (np.array(Q, float) + np.array(Q, float).T)  # symmetric part
+    eig = np.linalg.eigvalsh(Qs)
+    return bool(np.all(eig >= -1e-12)), eig
+
+for Q in ([[3, 1], [1, 2]], [[1, 0], [0, -1]]):
+    convex, eig = is_convex_quadratic(Q)
+    print(f"Q={Q}  eigenvalues={np.round(eig,4)}  convex={convex}")
+```
+The first matrix has eigenvalues $\{1.382, 3.618\}$ (both positive) and is convex; the second is indefinite, eigenvalues $\{-1, 1\}$, so $b^\top Q b$ is a saddle and **not** convex.
+
+**A2.** Solve the three-channel concave allocation with a constrained optimizer and check equal marginals.
+```{python}
+import numpy as np
+from scipy.optimize import minimize
+
+a = np.array([3.0, 2.0, 1.0]); B = 14.0
+res = minimize(lambda b: -(a @ np.sqrt(np.maximum(b, 0))),
+               x0=np.full(3, B/3), method="SLSQP",
+               bounds=[(0, B)]*3,
+               constraints={"type": "eq", "fun": lambda b: b.sum() - B})
+b_star = res.x
+print("b* =", np.round(b_star, 4))                       # ~ (9, 4, 1)
+print("marginals a_i/(2 sqrt(b_i)) =", np.round(a/(2*np.sqrt(b_star)), 4))
+```
+The optimizer returns $b^\star = (9, 4, 1)$ — equivalently $b_i^\star = B\,a_i^2/\sum_j a_j^2 = 14\,a_i^2/14$ — and the marginals all equal $0.5$, the common shadow price, confirming the capstone.
+
+**A3.** Multi-start on the S-curve problem records the spread of optima.
+```{python}
+import numpy as np
+from scipy.optimize import minimize
+
+def hill(x, K=3.0, n=2.0): return x**n / (K**n + x**n)
+B = 6.0
+neg = lambda b1: -(hill(b1[0]) + hill(B - b1[0]))
+
+totals = []
+for s in np.linspace(0.05, 5.95, 8):
+    r = minimize(neg, x0=[s], method="L-BFGS-B", bounds=[(0, B)])
+    totals.append(round(-r.fun, 3))
+
+distinct = sorted(set(totals))
+print("totals reached:", totals)
+print("distinct optima:", distinct)
+```
+The eight starts split between the interior optimum (total $\approx 1.0$) and the corner optima (total $\approx 0.8$): two distinct values from one problem. Without convexity the starting point selects the basin, exactly as Rung 10 warns — the global optimum is found only because *some* of the starts happened to begin near it.
+
 :::

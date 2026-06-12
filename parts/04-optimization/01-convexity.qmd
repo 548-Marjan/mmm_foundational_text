@@ -2,32 +2,672 @@
 
 *Canonical anchors: Boyd & Vandenberghe.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Parts I through III did the patient work: we built a Bayesian posterior for a marketing mix model, sampled it faithfully, and — in Chapter 10 — checked that the model deserved our belief. That posterior is now an asset, not an end. The whole point of estimating channel response was to *act* on it. A business hands us a fixed budget $B$ and a portfolio of channels, and asks the only question that pays the bills: where should the next dollar go? Take a posterior estimate of each channel's response curve, and finding the spend plan that maximizes total response is an **optimization problem**. Part IV is about solving it.
+
+But optimization is not one subject; it is two, and the boundary between them decides everything. Some problems yield to a simple downhill algorithm that cannot be fooled. Others are minefields where the same algorithm, started from two different points, returns two different answers and tells you nothing about which is right. The question that opens this part — *why is one optimization problem solvable and another a trap?* — has a single-word answer: **convexity**. A convex problem has no false summits. Every local optimum is the global one, so descending until you can descend no further is guaranteed to land you at the best point that exists. A non-convex problem is a ridged landscape of basins and saddles, and a local search can stall in any of them.
+
+This distinction is not abstract for an MMM; it is the difference between two response curves. The budget-allocation problem is
+
+$$
+\max_{b}\ \sum_{i} r_i(b_i)
+\quad \text{subject to} \quad
+\mathbf{1}^\top b = B,
+$$
+
+where $r_i$ is channel $i$'s response curve and the constraint fixes total spend. If each $r_i$ is **concave** — the diminishing-returns saturation curve introduced in Chapter 5, where every extra dollar buys a little less than the last — the problem is convex, and its solution has a clean, unique, and frankly beautiful structure: at the optimum, the **marginal returns are equalized** across all channels. No dollar can be moved to do more good elsewhere. But if the curves are **S-shaped** — a convex "toe" at low spend, where early dollars build momentum before diminishing returns finally set in — the problem turns non-convex. Multiple local optima appear, and a single descent can settle on a genuinely bad allocation. That is precisely why Chapter 13 reaches for multi-start SLSQP instead of trusting one run from one starting point.
+
+The roadmap follows the logic upward. We begin with **convex sets**, then **convex functions**, then the **first- and second-order conditions** that certify when a function is convex without checking every pair of points. From these we prove the keystone — **a local minimum of a convex problem is global** — and then extend it to constrained problems through **Lagrange multipliers and the KKT conditions**. That machinery delivers the MMM capstone, the equal-marginal-returns rule, and then we close with an honest reckoning: real response curves are S-shaped, and we name exactly what that costs us.
+
+This chapter is the theory hub of Part IV. Chapter 12 (Linear Programming) and Chapter 13 (SLSQP) are both engines that exploit the optimality conditions proved here; everything downstream rests on the certificates we build now.
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The theory climbs a ladder, each rung resting on the one below. We begin with **convex sets**, the geometry of feasible regions; then **convex functions**, the shape of objectives; then the **first- and second-order conditions** that certify convexity without testing every pair of points. From these we prove the keystone — that **every local minimum of a convex problem is global** — and then carry it into the **constrained** setting through Lagrange multipliers and the KKT conditions, which deliver the budget capstone: the equal-marginal-returns rule for allocating spend. The section then ends at an honest reckoning with non-convexity, naming exactly what we lose when real response curves refuse to be concave. This part of the chapter builds the first two rungs — the sets and the functions — on which everything above is balanced.
+
+### Rung 1 — Convex sets
+
+Every optimization problem searches over a region of allowable choices, and the geometry of that region decides whether the search is tractable. The simplest, most forgiving geometry is convexity: a set with no dents, no holes, and no disconnected pieces, so that you can never leave it by walking in a straight line from one member to another.
+
+**Definition.** A set $C \subseteq \mathbb{R}^n$ is **convex** if for all $x, y \in C$ and every $\lambda \in [0,1]$, the point $\lambda x + (1-\lambda)y \in C$. In words: the line segment between any two members of the set stays entirely inside the set. As $\lambda$ sweeps from $0$ to $1$, the point $\lambda x + (1-\lambda)y$ traces that segment from $y$ to $x$, and convexity demands every point of it belong to $C$.
+
+**Examples that recur in optimization.** Four convex sets appear again and again in what follows: a **hyperplane** $\{x : a^\top x = b\}$, a **halfspace** $\{x : a^\top x \le b\}$, a Euclidean **norm ball** $\{x : \|x\| \le r\}$, and a **polyhedron** $\{x : Ax \le b\}$ — a finite intersection of halfspaces. The one we care about most is the **budget feasible set**
+
+$$
+\mathcal{B} = \{\, b \in \mathbb{R}^n : b \ge 0,\ \mathbf{1}^\top b \le B \,\},
+$$
+
+the set of nonnegative spend vectors whose total does not exceed the budget $B$. It is a polyhedron — in fact a **simplex** — and it is the region every budget optimizer in Part IV searches over.
+
+**Proposition (intersection preserves convexity).** The intersection of any collection of convex sets is convex.
+
+**Proof.** Let $\{C_k\}$ be a collection of convex sets and take any $x, y$ in the intersection $\bigcap_k C_k$, together with any $\lambda \in [0,1]$. For each index $k$, both $x$ and $y$ lie in $C_k$, and $C_k$ is convex, so $\lambda x + (1-\lambda)y \in C_k$. Since this holds for every $k$, the point $\lambda x + (1-\lambda)y$ lies in every $C_k$ and hence in their intersection. The intersection therefore contains the segment between any two of its points, which is convexity. $\blacksquare$
+
+**Corollary.** The budget feasible set $\mathcal{B}$ is convex. It is the intersection of the $n$ halfspaces $\{b_i \ge 0\}$ — each one convex — and the single halfspace $\{\mathbf{1}^\top b \le B\}$, so the proposition applies directly. This is the feasible region every budget optimizer in Part IV searches over, and its convexity is precisely the hypothesis the later optimality theory will require.
+
+### Rung 2 — Convex functions
+
+A convex feasible region is only half of what makes an optimization problem tractable; the other half is the shape of the objective being minimized over it. The right notion of shape is convexity of the function itself — a curvature condition that, married to a convex domain, is exactly what forces local searches to succeed.
+
+**Definition.** A function $f$ with convex domain is **convex** if for all $x, y$ in the domain and every $\lambda \in [0,1]$,
+
+$$
+f(\lambda x + (1-\lambda)y) \le \lambda f(x) + (1-\lambda)f(y),
+$$
+
+i.e. the chord joining $(x, f(x))$ and $(y, f(y))$ lies on or above the graph of $f$ between them. The function is **strictly convex** if the inequality is strict whenever $x \ne y$ and $\lambda \in (0,1)$. The convex-domain requirement is not a technicality to be waved past: the left-hand side only makes sense if $\lambda x + (1-\lambda)y$ is itself in the domain, so the inequality presupposes exactly the property Rung 1 established for $\mathcal{B}$.
+
+**Epigraph characterization.** Convexity of a function reduces to convexity of a set. The **epigraph** of $f$ is the region lying on or above its graph,
+
+$$
+\text{epi}\,f = \{(x, t) : f(x) \le t\},
+$$
+
+and $f$ is convex if and only if $\text{epi}\,f$ is a convex set [@boyd2004]. The equivalence is geometric: the chord-above-the-graph inequality says exactly that the segment joining two points of the epigraph stays inside the epigraph, which is the definition of a convex set. This is the bridge that lets every theorem about convex sets be read as a theorem about convex functions, and conversely.
+
+**Concavity and the reduction to one theory.** A function $f$ is **concave** if $-f$ is convex; equivalently, the chord lies on or below the graph. A diminishing-returns response curve is concave: each additional dollar of spend buys a little less than the last, so the graph bends downward. The canonical example is the **Hill saturation curve** introduced in Chapter 5,
+
+$$
+f(x; K, n) = \frac{x^n}{K^n + x^n},
+$$
+
+which for exponent $n = 1$ is concave in spend $x \ge 0$ — the textbook shape of an advertising channel that saturates. Concavity and convexity are not two theories but one, and the bridge is a single observation: maximizing a concave function is identical to minimizing its convex negative, since $\arg\max_x f(x) = \arg\min_x \bigl(-f(x)\bigr)$ and the optimal value merely changes sign. So the budget problem's "concave maximization" and the standard "convex minimization" are the same problem wearing different clothes. We therefore state every result for the convex-minimization side, without loss of generality, and read it off for concave maximization whenever the MMM demands it.
+
+### Rung 3 — The first-order condition
+
+The chord definition of Rung 2 is exact but operationally hopeless: to certify a function convex by it, you would have to check the inequality for every pair of points and every $\lambda$ between them — an infinite verification with no obvious starting place. When $f$ is differentiable, there is a far cheaper test, one that examines the function a single point at a time through its gradient. It replaces a global statement about chords with a local statement about tangents.
+
+**Theorem (first-order condition).** Let $f$ be differentiable on a convex domain. Then $f$ is convex if and only if
+
+$$
+f(y) \ge f(x) + \nabla f(x)^\top (y - x) \quad \text{for all } x, y \text{ in the domain.}
+$$
+
+Geometrically, the graph of $f$ lies on or above each of its tangent planes: no matter where you take the tangent, the whole surface stays above it.
+
+**Proof.** We argue both directions.
+
+($\Rightarrow$) Assume $f$ is convex. Fix $x, y$ in the domain and take $\lambda \in (0,1]$. Writing $x + \lambda(y - x) = \lambda y + (1-\lambda)x$, convexity gives
+
+$$
+f\bigl(x + \lambda(y - x)\bigr) \le (1-\lambda)f(x) + \lambda f(y).
+$$
+
+Subtract $f(x)$ from both sides and divide by $\lambda > 0$:
+
+$$
+\frac{f\bigl(x + \lambda(y - x)\bigr) - f(x)}{\lambda} \le f(y) - f(x).
+$$
+
+As $\lambda \to 0^+$ the left-hand side converges to the directional derivative of $f$ at $x$ in the direction $y - x$, which is $\nabla f(x)^\top (y - x)$. Taking the limit preserves the inequality, so $\nabla f(x)^\top (y - x) \le f(y) - f(x)$, and rearranging gives the claimed tangent inequality.
+
+($\Leftarrow$) Assume the tangent inequality holds for every pair of points. Fix $x, y$ and $\lambda \in [0,1]$, and set $z = \lambda x + (1-\lambda)y$, which lies in the domain by convexity. Apply the inequality at the base point $z$ to each endpoint:
+
+$$
+\begin{aligned}
+f(x) &\ge f(z) + \nabla f(z)^\top (x - z), \\
+f(y) &\ge f(z) + \nabla f(z)^\top (y - z).
+\end{aligned}
+$$
+
+Form the combination $\lambda \cdot (\text{first}) + (1-\lambda) \cdot (\text{second})$. The gradient terms collect into $\nabla f(z)^\top\bigl(\lambda x + (1-\lambda)y - z\bigr) = \nabla f(z)^\top (z - z) = 0$, and the constant terms sum to $f(z)$. What remains is
+
+$$
+\lambda f(x) + (1-\lambda) f(y) \ge f(z) = f\bigl(\lambda x + (1-\lambda)y\bigr),
+$$
+
+which is exactly the chord inequality defining convexity. $\blacksquare$
+
+This condition is more than a verification tool; it carries the seed of the whole optimization story. At a **stationary point**, where $\nabla f(x) = 0$, the tangent term vanishes and the inequality collapses to $f(y) \ge f(x)$ for *every* $y$ in the domain — the stationary point is a global minimum. That single line is the keystone Rung 7 will state and prove in full.
+
+### Rung 4 — The second-order condition
+
+The first-order condition tests convexity through the gradient, but for a twice-differentiable function there is an even more intrinsic test, one that speaks the native language of shape: **curvature**. A convex function curves upward everywhere, and curvature is precisely what the second derivative measures. In several variables the second derivative is the Hessian matrix $\nabla^2 f$, and the condition becomes a statement about its eigenvalues.
+
+**Theorem (second-order condition).** Let $f$ be twice continuously differentiable on an open convex domain. Then $f$ is convex if and only if its Hessian is positive semidefinite everywhere: $\nabla^2 f(x) \succeq 0$ for all $x$ in the domain. If $\nabla^2 f(x) \succ 0$ everywhere, then $f$ is strictly convex.
+
+**Proof.** The argument reduces the multivariate claim to a one-dimensional fact by slicing along lines.
+
+A function on a convex domain is convex if and only if its restriction to every line is convex — the chord inequality only ever involves the two points $x, y$ and the segment between them, all of which lie on a single line. So fix a base point $x$ and a direction $v$, and define the scalar function $g(t) = f(x + tv)$ on the interval of $t$ for which $x + tv$ stays in the domain. Differentiating through the chain rule twice gives
+
+$$
+\begin{aligned}
+g'(t) &= \nabla f(x + tv)^\top v, \\
+g''(t) &= v^\top \nabla^2 f(x + tv)\, v.
+\end{aligned}
+$$
+
+Now invoke the one-dimensional fact: a twice-differentiable $g$ is convex if and only if $g''(t) \ge 0$ everywhere. This follows from the first-order condition applied to $g$ — convexity is equivalent to $g'$ being nondecreasing, and by the mean value theorem $g'$ is nondecreasing exactly when $g'' \ge 0$.
+
+Stitching the slices back together, $f$ is convex iff $g$ is convex for every choice of $x$ and $v$, iff $g''(t) = v^\top \nabla^2 f(x + tv)\, v \ge 0$ for all $x, v, t$, iff $v^\top \nabla^2 f(x)\, v \ge 0$ for all $x$ and all $v$. That last statement is precisely the definition of the Hessian being positive semidefinite, $\nabla^2 f(x) \succeq 0$, reusing the PSD characterization from Chapter 1. If the inequalities are strict for $v \ne 0$, each slice is strictly convex and so is $f$. $\blacksquare$
+
+**Application to the Hill curve.** The second-order condition turns the abstract question "is the response curve concave?" into a concrete derivative computation. Take the Hill curve $f(x; K, n) = x^n / (K^n + x^n)$ and read its curvature off the sign of $f''(x)$ for $x > 0$.
+
+For $n = 1$ the curve simplifies to $f(x) = x/(K + x)$, and a direct computation gives
+
+$$
+f''(x) = -\frac{2K}{(K + x)^3} < 0 \quad \text{for all } x > 0.
+$$
+
+The second derivative is strictly negative throughout, so $f$ is strictly **concave** — the clean diminishing-returns shape in which every dollar buys less than the last, and the budget problem stays convex.
+
+For $n > 1$ the story changes. The second derivative is a messier rational function, but the load-bearing fact is its *sign*: $f''$ is positive near the origin and negative far out, so it changes sign exactly once. The crossing — the **inflection point** where $f''(x) = 0$ — sits at
+
+$$
+x^\star = K\left(\frac{n-1}{n+1}\right)^{1/n},
+$$
+
+so $f$ is **convex** on the "toe" $0 \le x < x^\star$ and **concave** for $x > x^\star$. For $n = 2,\ K = 3$ this gives $x^\star = \sqrt{3} \approx 1.7321$. This S-shape — convex toe, concave tail — is the seed of the trouble that Rung 10 confronts head-on: a response curve that is not globally concave makes the budget-allocation problem not globally convex, and a single descent can stall in the wrong basin.
+
+### Rung 5 — Operations that preserve convexity
+
+Certifying a single function convex — by the chord definition, the tangent inequality, or the Hessian — is a self-contained exercise. But real objectives are never handed to us as one tidy function. They are *built up* from pieces: a sum of per-channel costs, a data-fit term plus a regularizer, a worst-case taken over scenarios. Re-deriving convexity from scratch for each composite would be wasteful when the pieces are already known to be convex. What we want instead is a small **calculus of convexity** — a handful of operations that, applied to convex inputs, are guaranteed to return convex outputs. With it, we certify the whole from the parts and never touch a Hessian for the assembled objective at all.
+
+**The toolkit.** Four operations carry almost all the weight in practice:
+
+- **(i) Nonnegative weighted sums.** If $f_1, \dots, f_m$ are convex and $w_1, \dots, w_m \ge 0$, then $\sum_i w_i f_i$ is convex.
+- **(ii) Composition with an affine map.** If $f$ is convex and $g(x) = f(Ax + b)$, then $g$ is convex.
+- **(iii) Pointwise maximum / supremum.** If $f_1, \dots, f_m$ are convex, then $\max_i f_i$ is convex; more generally the pointwise supremum $\sup_{\alpha} f_\alpha$ of any family of convex functions is convex.
+- **(iv) Scalar composition.** If $h$ is convex and nondecreasing and $g$ is convex, then the composition $h \circ g$ is convex.
+
+We prove the first two — the rules that the book's objectives lean on directly — and cite the standard reference for the rest.
+
+**Proof of (i) and (ii).** Take any $x, y$ in the relevant domain and any $\lambda \in [0,1]$.
+
+*(i) Nonnegative weighted sums.* Each $f_i$ is convex, so its chord inequality holds:
+$$
+f_i\bigl(\lambda x + (1-\lambda)y\bigr) \le \lambda f_i(x) + (1-\lambda)f_i(y).
+$$
+Multiply both sides by $w_i \ge 0$ — a nonnegative factor preserves the direction of the inequality — and sum over $i = 1, \dots, m$:
+$$
+\sum_i w_i f_i\bigl(\lambda x + (1-\lambda)y\bigr) \le \lambda \sum_i w_i f_i(x) + (1-\lambda)\sum_i w_i f_i(y).
+$$
+Writing $F = \sum_i w_i f_i$, this reads $F\bigl(\lambda x + (1-\lambda)y\bigr) \le \lambda F(x) + (1-\lambda)F(y)$, which is exactly the chord inequality for $F$. Hence $\sum_i w_i f_i$ is convex.
+
+*(ii) Composition with an affine map.* Let $g(x) = f(Ax + b)$ with $f$ convex, and set $u = Ax + b$, $v = Ay + b$. Because the map $x \mapsto Ax + b$ is affine, it commutes with convex combinations:
+$$
+A\bigl(\lambda x + (1-\lambda)y\bigr) + b = \lambda(Ax + b) + (1-\lambda)(Ay + b) = \lambda u + (1-\lambda)v.
+$$
+Therefore, using convexity of $f$ on the points $u, v$,
+$$
+g\bigl(\lambda x + (1-\lambda)y\bigr) = f\bigl(\lambda u + (1-\lambda)v\bigr) \le \lambda f(u) + (1-\lambda)f(v) = \lambda g(x) + (1-\lambda)g(y),
+$$
+which is the chord inequality for $g$. Hence $g$ is convex. $\blacksquare$
+
+**Rules (iii) and (iv), stated.** The remaining two follow the same spirit and we record them as facts [@boyd2004]. For the **pointwise supremum** (iii), the epigraph of $\sup_\alpha f_\alpha$ is the intersection $\bigcap_\alpha \text{epi}\,f_\alpha$ of the individual epigraphs; each is convex by the epigraph characterization of Rung 2, and intersections of convex sets are convex by Rung 1, so the supremum is convex. For **scalar composition** (iv), monotonicity is what makes it work: since $h$ is nondecreasing, the chord inequality for $g$ may be pushed *through* $h$ without reversing, and then the convexity of $h$ finishes the bound — so $h \circ g$ is convex.
+
+**Payoff: ridge / MAP estimation is convex.** The toolkit lets us certify a built-up objective without computing a single second derivative of the whole. Recall the negative log-posterior of Chapter 5's Gaussian (ridge) model,
+$$
+J(\beta) = \frac{1}{2\sigma^2}\|y - X\beta\|^2 + \frac{1}{2\tau^2}\|\beta\|^2,
+$$
+whose minimizer is the MAP estimate. Read it through the calculus. The squared Euclidean norm $\|\cdot\|^2$ is convex (its Hessian is $2I \succ 0$). The first term is that convex function composed with the affine map $\beta \mapsto y - X\beta$, hence convex by **(ii)**; the second is $\|\cdot\|^2$ composed with the affine — indeed linear — identity map, hence convex by **(ii)** again. Finally $J$ is the nonnegative weighted sum of these two convex pieces, with weights $1/(2\sigma^2) \ge 0$ and $1/(2\tau^2) \ge 0$, so it is convex by **(i)**. Therefore MAP / ridge estimation is a convex optimization problem. The keystone of Rung 7 will then guarantee that its unique minimizer is global — and that minimizer is precisely the closed-form ridge solution $\hat\beta = (X^\top X + \tfrac{\sigma^2}{\tau^2} I)^{-1} X^\top y$ derived by pure linear algebra in Part II. Part IV's curvature theory and Part II's algebra are describing the same point from two directions.
+
+### Rung 6 — Jensen's inequality
+
+The chord inequality of Rung 2 compares a convex function evaluated at a two-point average, $\lambda x + (1-\lambda)y$, to the corresponding average of its values. But an average over two points with weights $\lambda$ and $1-\lambda$ is just the simplest probability distribution — a coin flip. Nothing in the geometry of convexity is special to two points, and the natural generalization replaces the finite average by an expectation over *any* probability distribution. That generalization is Jensen's inequality, and it is the bridge from convexity to probability that the rest of the book will cross repeatedly.
+
+> **Theorem (Jensen's inequality).** Let $f$ be convex and let $X$ be a random vector with finite mean $\mu = \mathbb{E}[X]$, taking values in the domain of $f$. Then
+> $$
+> f(\mathbb{E}[X]) \le \mathbb{E}[f(X)].
+> $$
+> For concave $f$ the inequality reverses.
+
+**Proof.** Assume $f$ is differentiable and apply the first-order condition of Rung 3 with base point $\mu$. For *every* realization $x$ that $X$ may take, the graph lies above the tangent plane at $\mu$:
+$$
+f(X) \ge f(\mu) + \nabla f(\mu)^\top (X - \mu),
+$$
+an inequality that holds pointwise, for each outcome of the random vector. Now take expectations of both sides. Expectation is monotone (it preserves $\ge$) and linear, and $f(\mu)$ and $\nabla f(\mu)$ are constants, so
+$$
+\mathbb{E}[f(X)] \ge f(\mu) + \nabla f(\mu)^\top \mathbb{E}[X - \mu] = f(\mu) + \nabla f(\mu)^\top \cdot 0 = f(\mu) = f(\mathbb{E}[X]),
+$$
+where the middle step uses $\mathbb{E}[X - \mu] = \mathbb{E}[X] - \mu = 0$. This is the claim. If $f$ is convex but not differentiable, the identical argument runs with a subgradient at $\mu$ in place of $\nabla f(\mu)$, since the supporting-hyperplane inequality holds there too. The concave case follows by applying the result to $-f$. $\blacksquare$
+
+**MMM reading: volatility is a tax.** The response curve $r$ is concave, so Jensen runs the other way:
+$$
+r(\mathbb{E}[\text{spend}]) \ge \mathbb{E}[r(\text{spend})].
+$$
+Read the two sides as two flighting plans with the *same* average budget. The left side is steady spend held at the average level; the right side is erratic spend — feast one week, famine the next — that merely averages out to the same total. Jensen says the steady plan produces at least as much expected response as the volatile one. Concavity penalizes volatility, and the size of the gap between the two sides is a quantitative measure of that penalty: it grows with the curvature of $r$, that is, with the strength of diminishing returns. This is the formal reason a smooth, level flighting plan beats a feast-or-famine one at equal total budget — and why, when Chapter 13 allocates spend, it is solving for the level plan rather than chasing spikes.
+
+### Rung 7 — The keystone: every local minimum is global
+
+Rungs 1–6 built the machinery: convex sets, the chord and tangent characterizations of convex functions, the Hessian test, the closure rules, and Jensen. This rung is what all of it was for. A single structural property of convex functions is the reason convex optimization is tractable at all — and it is the reason detecting convexity, through the first- and second-order conditions of Rungs 3–4, is the opening move on any optimization problem. The foreshadowing planted at the end of Rung 3 is paid off here in full.
+
+> **Theorem (local = global).** Let $f$ be convex on a convex set $C$. Then:
+>
+> 1. every local minimizer of $f$ over $C$ is a global minimizer;
+> 2. if $f$ is differentiable, the stationarity condition $\nabla f(x^\star)^\top (y - x^\star) \ge 0$ for all $y \in C$ — which for an interior or unconstrained minimum reduces to $\nabla f(x^\star) = 0$ — is **sufficient** for $x^\star$ to be a global minimizer;
+> 3. if $f$ is strictly convex, the global minimizer is unique.
+
+**Proof.**
+
+*Part 1 (local $\Rightarrow$ global), by contradiction.* Suppose $x^\star$ is a local minimizer but not global, so there exists $z \in C$ with $f(z) < f(x^\star)$. For $\lambda \in (0,1]$ consider the point $x_\lambda = \lambda z + (1-\lambda)x^\star$, which lies in $C$ by convexity of the set. By convexity of $f$,
+$$
+f(x_\lambda) \le \lambda f(z) + (1-\lambda)f(x^\star) = f(x^\star) + \lambda\bigl(f(z) - f(x^\star)\bigr) < f(x^\star),
+$$
+since $f(z) - f(x^\star) < 0$. As $\lambda \to 0^+$, $x_\lambda \to x^\star$, so every neighborhood of $x^\star$ contains points $x_\lambda$ with $f(x_\lambda) < f(x^\star)$ — contradicting that $x^\star$ is a local minimizer. Hence no such $z$ exists and $x^\star$ is global.
+
+*Part 2 (stationarity is sufficient).* Suppose $\nabla f(x^\star)^\top(y - x^\star) \ge 0$ for all $y \in C$. By the first-order condition of Rung 3, for every $y \in C$,
+$$
+f(y) \ge f(x^\star) + \nabla f(x^\star)^\top(y - x^\star) \ge f(x^\star),
+$$
+so $x^\star$ is a global minimizer. For an unconstrained problem — or an interior minimizer, where $y$ may be perturbed from $x^\star$ in every direction — the condition $\nabla f(x^\star)^\top(y - x^\star) \ge 0$ for all directions forces $\nabla f(x^\star) = 0$, since a nonzero gradient would make the inner product negative along its own negative.
+
+*Part 3 (strict convexity $\Rightarrow$ uniqueness).* Suppose $x^\star \ne x^{\star\star}$ are both global minimizers, so $f(x^\star) = f(x^{\star\star}) = p^\star$. The midpoint $m = \tfrac12 x^\star + \tfrac12 x^{\star\star}$ lies in $C$ by convexity, and strict convexity gives
+$$
+f(m) < \tfrac12 f(x^\star) + \tfrac12 f(x^{\star\star}) = p^\star,
+$$
+contradicting that $p^\star$ is the minimum value of $f$ over $C$. Hence the minimizer is unique. $\blacksquare$
+
+**Significance.** This is why convex optimization *works*. A descent method that stops where it can no longer go downhill has, for a convex problem, found the global optimum — not a local trap. There is no need to restart from many initial points, no anxiety about whether the algorithm settled in the best basin: local information at a single stationary point certifies a global fact about the whole domain. Part 2 makes this operational, turning the search for a global optimum into the algebraic problem of solving $\nabla f(x^\star) = 0$, and Part 3 tells us exactly when the answer is the only one.
+
+This also explains the workflow of all of Part IV. The first question to ask about any optimization problem is not "what algorithm should I run?" but "is this problem convex?", because a yes converts local search into a global guarantee — it changes what a stopping point *means*. The first- and second-order conditions of Rungs 3–4 are precisely how that question gets answered, which is why we spent so long sharpening them.
+
+And a forewarning. The guarantee is a property of convexity, not a law of nature. When the response curve is S-shaped — convex toe, concave tail, the very shape glimpsed in Rung 4 and confronted head-on in Rung 10 — the objective is no longer convex, and this keystone evaporates. A single descent can then halt in a local basin that is nowhere near the best, with no way to tell from local information alone that anything is wrong. That single failure is what forces the multi-start machinery of Chapter 13: when local can no longer certify global, the only recourse is to search many basins and compare.
+
+### Rung 8 — Constrained optimality: Lagrange and KKT
+
+The keystone of Rung 7 is a theorem about *unconstrained* minimization: set the gradient to zero and, for a convex objective, you have the global optimum. But the budget problem is not unconstrained. Spend is nonnegative, and it must sum to (or stay within) the budget. Constraints change what "optimal" means. At a constrained optimum the gradient of the objective need *not* vanish — pushing further downhill may simply be forbidden by a constraint. What must instead hold is a balance: the objective's gradient must be exactly cancelled by a combination of the constraint gradients, so that no feasible direction descends. Lagrange multipliers and the Karush–Kuhn–Tucker (KKT) conditions are the apparatus that formalizes that balance, and they are the bridge from Rung 7 to every constrained optimizer in Part IV.
+
+**The setup.** Write the **convex program** in standard form,
+
+$$
+\min_x\ f(x) \quad \text{subject to} \quad g_i(x) \le 0\ (i = 1, \dots, m), \quad h_j(x) = 0\ (j = 1, \dots, p),
+$$
+
+with $f$ and every $g_i$ convex and every $h_j$ affine. These hypotheses are exactly what make the program convex: the inequality sets $\{g_i \le 0\}$ are convex sublevel sets of convex functions, the equality sets $\{h_j = 0\}$ are hyperplanes, and the feasible region is their intersection — convex by Rung 1.
+
+The device that couples objective and constraints is the **Lagrangian**, which attaches a scalar multiplier to each constraint and folds the whole problem into a single function:
+
+$$
+L(x, \lambda, \nu) = f(x) + \sum_{i=1}^m \lambda_i g_i(x) + \sum_{j=1}^p \nu_j h_j(x), \qquad \lambda_i \ge 0,\ \nu_j \in \mathbb{R}.
+$$
+
+The **sign convention** is not arbitrary. An inequality multiplier $\lambda_i$ is constrained to be **nonnegative**: it prices a one-sided constraint $g_i \le 0$, and charging a penalty $\lambda_i g_i$ that only bites when the constraint is pushed toward violation ($g_i \to 0^+$) requires $\lambda_i \ge 0$, so that relaxing the constraint can never look worse than respecting it. An equality multiplier $\nu_j$ is **free** in sign, because an equality constraint can be violated in either direction and the penalty $\nu_j h_j$ must be able to push back both ways.
+
+**The KKT conditions.** A point $(x^\star, \lambda^\star, \nu^\star)$ satisfies the **KKT conditions** when all four of the following hold:
+
+1. **Stationarity:** $\nabla f(x^\star) + \sum_i \lambda_i^\star \nabla g_i(x^\star) + \sum_j \nu_j^\star \nabla h_j(x^\star) = 0$. The objective gradient is balanced by a weighted sum of constraint gradients — no net pull remains.
+2. **Primal feasibility:** $g_i(x^\star) \le 0$ for all $i$ and $h_j(x^\star) = 0$ for all $j$. The candidate point actually obeys the constraints.
+3. **Dual feasibility:** $\lambda_i^\star \ge 0$ for all $i$. The inequality prices respect the sign convention.
+4. **Complementary slackness:** $\lambda_i^\star\, g_i(x^\star) = 0$ for every $i$.
+
+Complementary slackness deserves a word, because it is the condition that encodes which constraints matter. For each $i$ the product $\lambda_i^\star g_i(x^\star)$ is zero, so at least one factor must vanish. Either the constraint is **active** — it holds with equality, $g_i(x^\star) = 0$, and its multiplier $\lambda_i^\star$ is free to be positive, exerting force on the optimum — or it is **inactive**, $g_i(x^\star) < 0$, with strict slack, and then complementary slackness forces $\lambda_i^\star = 0$. An inactive constraint exerts no force: it is not touching the optimum, so it contributes nothing to the stationarity balance. The multipliers thus switch off automatically for the constraints that do not bind.
+
+> **Theorem (KKT sufficiency for convex programs).** For the convex program above — $f$ and all $g_i$ convex, all $h_j$ affine — if $(x^\star, \lambda^\star, \nu^\star)$ satisfies the four KKT conditions, then $x^\star$ is a **global** minimizer of $f$ over the feasible set.
+
+**Proof.** Fix the multipliers at their KKT values and define the **partial Lagrangian**
+
+$$
+\tilde L(x) = f(x) + \sum_i \lambda_i^\star g_i(x) + \sum_j \nu_j^\star h_j(x),
+$$
+
+a function of $x$ alone. The proof has two moves: show $\tilde L$ is globally minimized at $x^\star$ by reducing to the keystone, then convert that into a statement about $f$ on the feasible set.
+
+*Step 1: $\tilde L$ is convex.* The first term $f$ is convex by hypothesis. Each term $\lambda_i^\star g_i$ is a nonnegative multiple — $\lambda_i^\star \ge 0$ by dual feasibility — of a convex $g_i$, hence convex. Each term $\nu_j^\star h_j$ is a scalar multiple of an affine function, hence affine and so convex. By the nonnegative-weighted-sum and affine rules of Rung 5, $\tilde L$ is a sum of convex pieces and is therefore convex on $\mathbb{R}^n$.
+
+*Step 2: $x^\star$ globally minimizes $\tilde L$.* Differentiating $\tilde L$ gives exactly the left-hand side of the stationarity condition, so KKT stationarity says $\nabla \tilde L(x^\star) = 0$. A convex function with a zero gradient is at a global minimum — this is precisely the keystone of Rung 7, Part 2, applied to the unconstrained convex function $\tilde L$. Hence
+
+$$
+\tilde L(x) \ge \tilde L(x^\star) \quad \text{for all } x \in \mathbb{R}^n.
+$$
+
+*Step 3: transfer to $f$ on the feasible set.* Let $y$ be any feasible point, so $g_i(y) \le 0$ and $h_j(y) = 0$. Then
+
+$$
+\begin{aligned}
+f(y) &\ge f(y) + \sum_i \lambda_i^\star g_i(y) + \sum_j \nu_j^\star h_j(y) = \tilde L(y) \\
+     &\ge \tilde L(x^\star) = f(x^\star) + \sum_i \lambda_i^\star g_i(x^\star) + \sum_j \nu_j^\star h_j(x^\star) = f(x^\star).
+\end{aligned}
+$$
+
+Each step earns its place. The **first inequality** holds because the added terms are nonpositive: $\lambda_i^\star \ge 0$ (dual feasibility) times $g_i(y) \le 0$ (primal feasibility of $y$) gives $\sum_i \lambda_i^\star g_i(y) \le 0$, while $h_j(y) = 0$ makes the equality terms vanish — so we have only *subtracted* a nonnegative quantity from $f(y)$, leaving $\tilde L(y) \le f(y)$. The **second inequality** is the global minimization of $\tilde L$ from Step 2. The **final equality** strips the constraint terms at $x^\star$: complementary slackness gives $\lambda_i^\star g_i(x^\star) = 0$ for every $i$, and primal feasibility gives $h_j(x^\star) = 0$ for every $j$, so every term in the two sums is zero and $\tilde L(x^\star) = f(x^\star)$. The chain therefore reads $f(y) \ge f(x^\star)$, and since $y$ was an arbitrary feasible point, $x^\star$ is a global minimizer of $f$ over the feasible set. $\blacksquare$
+
+**Necessity, Slater's condition, and what the multipliers cost.** We proved that KKT is *sufficient* for global optimality — a complete certificate built from convexity and the keystone. The converse, that a global optimum *must* admit KKT multipliers, is more delicate and does not hold without a **constraint qualification**: the constraint gradients must be well-behaved enough that the multipliers exist. For convex programs the cleanest qualification is **Slater's condition** — the existence of a strictly feasible point, some $x$ with $g_i(x) < 0$ for all $i$ (and $h_j(x) = 0$). When Slater holds, every global optimum admits KKT multipliers, and moreover **strong duality** holds: the optimal value of the primal program equals that of its Lagrangian dual, with no gap. The proofs of necessity and strong duality are developed in full by @boyd2004 and @nocedal2006; we take them as given and use sufficiency directly. The payoff of necessity is operational rather than theoretical — it is what licenses the later chapters to *solve* for the optimum by solving the KKT system, confident that the solution they seek actually satisfies those equations.
+
+**The hand-off.** Rung 8 is the theory hub of Part IV, and the two engine chapters specialize it in opposite directions. Chapter 12 takes $f$ and every $g_i$ to be **affine**: the feasible set becomes a polyhedron, complementary slackness becomes the active-set logic of vertices, and the KKT system collapses into the elegant symmetry of **linear-programming duality**. Chapter 13's **SLSQP** keeps the full nonlinear program but attacks the KKT system *iteratively* — at each step it forms a quadratic model of the Lagrangian and a linearization of the constraints, solves that quadratic program for a search direction, and repeats, so that the algorithm is at heart a Newton iteration on the KKT equations. And the very next rung stays closest to home: it applies these conditions by hand to the budget problem, where the single equality constraint $\mathbf{1}^\top b = B$ contributes one multiplier $\nu$, stationarity sets every channel's marginal return equal to that shared $\nu$, and the KKT system delivers the capstone of the chapter — the **equal-marginal-returns rule** for allocating spend.
+
+### Rung 9 — The capstone: equal marginal returns
+
+Every rung so far has been an investment toward a single payoff. Rung 8 left the budget problem one step from solved: a convex program with one equality constraint, its KKT system promising to deliver the rule that governs how spend should be split. This rung collects the debt. The machinery of the whole chapter — concavity from Rung 2, the closure rules of Rung 5, the keystone of Rung 7, the KKT conditions of Rung 8 — converges here on the central result of MMM budget allocation, and it does so by hand.
+
+**The problem.** Allocate a fixed budget $B$ across $n$ channels so as to maximize total response,
+
+$$
+\max_{b \ge 0}\ \sum_{i=1}^n r_i(b_i) \quad \text{subject to} \quad \mathbf{1}^\top b = B,
+$$
+
+where each channel's response $r_i$ is concave, increasing, and differentiable. To put this in the standard convex form of Rung 8, minimize the negative total response. The objective $-\sum_i r_i(b_i)$ is convex because each $-r_i$ is convex (a function is concave exactly when its negative is convex, Rung 2) and a sum of convex functions is convex (Rung 5). The feasible set $\{b \ge 0,\ \mathbf{1}^\top b = B\}$ is convex — the intersection of the nonnegative orthant with a hyperplane (Rung 1). So this is a genuine convex program, and the KKT conditions of Rung 8 are not merely necessary but sufficient: any point that satisfies them is the global optimum.
+
+> **Theorem (equal marginal returns / water-filling).** At the optimal allocation $b^\star$ there is a scalar $\lambda$ — the shadow price of the budget — such that every funded channel ($b_i^\star > 0$) satisfies $r_i'(b_i^\star) = \lambda$, and every unfunded channel ($b_i^\star = 0$) satisfies $r_i'(0) \le \lambda$.
+
+**Proof.** Apply the KKT machinery of Rung 8 to the convex program $\min\ -\sum_i r_i(b_i)$ subject to the equality constraint $\mathbf{1}^\top b - B = 0$, with multiplier $\nu$, and the inequality constraints $-b_i \le 0$, with multipliers $\mu_i \ge 0$. The Lagrangian is
+
+$$
+L(b, \nu, \mu) = -\sum_k r_k(b_k) + \nu\bigl(\mathbf{1}^\top b - B\bigr) - \sum_k \mu_k b_k .
+$$
+
+*Stationarity.* Differentiating with respect to coordinate $b_i$,
+
+$$
+\frac{\partial L}{\partial b_i} = -r_i'(b_i^\star) + \nu - \mu_i = 0 \quad\Longrightarrow\quad r_i'(b_i^\star) = \nu - \mu_i .
+$$
+
+*Complementary slackness.* For the constraint $-b_i \le 0$, the condition reads $\mu_i\, b_i^\star = 0$: at least one of $\mu_i$ and $b_i^\star$ vanishes for every channel.
+
+*Funded channel* ($b_i^\star > 0$). Complementary slackness forces $\mu_i = 0$, so stationarity collapses to $r_i'(b_i^\star) = \nu$. Crucially, $\nu$ carries no channel index — so **every** funded channel shares the same marginal return. Name that common value $\lambda \equiv \nu$.
+
+*Unfunded channel* ($b_i^\star = 0$). Here $\mu_i \ge 0$ is free, and stationarity gives $r_i'(0) = \nu - \mu_i \le \nu = \lambda$. A channel sits at zero spend only when even its first dollar's marginal return falls short of the common level.
+
+*Global optimality.* Because the program is convex, the KKT conditions are sufficient (Rung 8): this stationary point is not merely a candidate but the global optimum. $\blacksquare$
+
+**Interpretation.** The rule is the precise form of an intuition every media planner carries. Spend flows into each channel until its marginal return falls to the common level $\lambda$; a channel is left unfunded only if even its *first* dollar returns less than $\lambda$. At the optimum the marginal returns of all active channels are equal — which is exactly the statement that "no dollar can be moved to do more good elsewhere," made precise. If two funded channels had different marginal returns, shifting a dollar from the lower to the higher would raise total response, so the allocation could not have been optimal. The multiplier $\lambda$ is itself meaningful: it is the marginal value of an extra dollar of total budget, the shadow price that says how much one more dollar of $B$ would buy in additional response.
+
+A concrete instance fixes the idea (the full arithmetic is carried out in the Worked Examples). Take two channels with square-root response $r_i(b) = a_i\sqrt{b}$, coefficients $a = (2, 1)$, and budget $B = 9$. The equal-marginal condition $r_1'(b_1) = r_2'(b_2)$ reads $a_1/(2\sqrt{b_1}) = a_2/(2\sqrt{b_2})$, which on squaring gives $b_1/b_2 = a_1^2/a_2^2 = 4$. With $b_1 + b_2 = 9$ this yields $b^\star = (7.2, 1.8)$, and the common marginal return is $\lambda = a_1/(2\sqrt{7.2}) \approx 0.3727$. The resulting total response is $2\sqrt{7.2} + \sqrt{1.8} \approx 6.7082$, comfortably beating the naive equal split $b = (4.5, 4.5)$, which scores $3\sqrt{4.5} \approx 6.3640$. The stronger channel earns four times the budget of the weaker, not an equal share — and the equal-marginal rule is what dictates the ratio. When Chapter 13 turns the SLSQP solver loose on this same problem, it converges numerically to exactly this equal-marginal condition: the algorithm rediscovers the analytic optimum the KKT system just delivered by hand.
+
+### Rung 10 — When the problem is not convex
+
+The capstone rested on a single hypothesis: each response curve $r_i$ is concave. That hypothesis is what made the program convex, the KKT conditions sufficient, and the equal-marginal allocation a global optimum. Honesty now requires confronting the fact that real media response curves are *not* concave — and tracing exactly what breaks when the assumption fails.
+
+The culprit is a shape we have already met. The Hill curve with exponent $n > 1$ is **S-shaped**: from Rung 4, it is convex on the toe $0 \le x < x^\star$ and concave above the inflection point $x^\star = K\bigl((n-1)/(n+1)\bigr)^{1/n}$. A realistic saturation response is therefore **not globally concave**. Early dollars exhibit *increasing* returns — the convex toe, where spend is building awareness, crossing a perceptual threshold, or priming a market before the message lands — and only after the inflection do diminishing returns finally take over. The curvature changes sign, and that sign change is fatal to convexity.
+
+**The consequence.** If even one $r_i$ fails to be concave, the total $\sum_i r_i(b_i)$ is not concave, so minimizing $-\sum_i r_i$ is **no longer a convex program**. The keystone of Rung 7 — the guarantee that local equals global — no longer applies, and its disappearance is total, not partial. KKT points remain *stationary* points; the conditions of Rung 8 still hold at any optimum. But they are now merely **necessary**, not sufficient. A point can satisfy every KKT equation and still be only a **local** optimum, with a strictly better allocation sitting in another basin entirely. The single certificate that made convex optimization trustworthy is gone, and multiple local optima appear in its place.
+
+**A concrete failure.** Take two channels with Hill responses, $n = 2$, $K = 3$, and budget $B = 6$. The symmetric split $b = (3, 3)$ is a stationary point, with total response near $1.0$. But the corner allocations $b = (6, 0)$ and $b = (0, 6)$ are *also* KKT points, each scoring roughly $0.8$ — worse than the interior split, yet perfectly valid stationary points of the non-convex problem. A local optimizer started near a corner will converge to *that* corner and report success, never discovering the better interior allocation. The Code Tie-in below makes this visible, running a multi-start optimizer that lands on different optima depending on where it begins — a direct demonstration that, without convexity, the starting point determines the answer.
+
+**What practitioners do.** Lacking a global certificate, the working response is threefold. First, run local optimization from **multiple starting points** and keep the best result found — the multi-start strategy that trades a guarantee for coverage. Second, **initialize with domain knowledge**, seeding the optimizer near allocations that experience suggests are sensible, so the local search begins in a promising basin. Third, where the structure permits, **fit concave surrogate curves or use convex relaxations** to bound the achievable response and gauge how far a local solution might be from the true optimum. The intellectually honest position is to report a *certified-local* optimum and to state plainly that global optimality is not guaranteed — to name the limit of what the method can promise rather than paper over it.
+
+**Bridge to the rest of Part IV.** This chapter set out the conditions under which optimization is guaranteed to work, and it has now named, just as precisely, when those conditions fail. The two engine chapters that follow are built for the two sides of that divide. Chapter 12 (Linear Programming) studies the fully convex special case in which the feasible set is a polyhedron and the geometry is completely understood — convexity at its most tractable, where the global optimum sits at a vertex and can be found with certainty. Chapter 13 (SLSQP) is the constrained *local* solver, and it is run from multiple starting points for exactly the reason this rung has laid bare: real response curves are S-shaped, the budget problem is non-convex, and a single descent cannot be trusted to find the global best. The theory of convexity is what tells those algorithms when they have a guarantee and when they are merely doing their honest best — which is precisely the knowledge the next two chapters are built to act on.
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+The three ideas with the most arithmetic — certifying convexity from a Hessian, solving an equal-marginal allocation by hand, and watching a non-convex S-curve produce competing optima — are each small enough to work through fully with pencil and paper. Carrying out the steps once fixes what the theorems of Rungs 4, 9, and 10 actually deliver.
+
+### Example 1 — Certifying convexity with the Hessian
+
+Consider a quadratic spend-interaction cost on two channels,
+
+$$
+c(b) = b^\top Q b, \qquad Q = \begin{pmatrix} 2 & 0.5 \\ 0.5 & 1 \end{pmatrix}.
+$$
+
+**The Hessian.** A quadratic form $c(b) = b^\top Q b$ with symmetric $Q$ has Hessian $\nabla^2 c = 2Q$, so
+
+$$
+\nabla^2 c = 2Q = \begin{pmatrix} 4 & 1 \\ 1 & 2 \end{pmatrix}.
+$$
+
+By Rung 4, $c$ is convex exactly when this Hessian is positive semidefinite, and strictly convex when it is positive definite.
+
+**Eigenvalue check.** The eigenvalues of $Q$ solve $\det(Q - \rho I) = 0$:
+
+$$
+(2 - \rho)(1 - \rho) - (0.5)^2 = \rho^2 - 3\rho + 1.75 = 0,
+$$
+
+so
+
+$$
+\rho = \frac{3 \pm \sqrt{9 - 7}}{2} = \frac{3 \pm \sqrt{2}}{2},
+$$
+
+i.e. $\rho \approx 0.7929$ and $\rho \approx 2.2071$. Both eigenvalues are strictly positive, so $Q \succ 0$, hence $\nabla^2 c = 2Q \succ 0$ and $c$ is **strictly convex**.
+
+**Sylvester's criterion (a second route).** The leading principal minors of $Q$ are $2 > 0$ and $\det Q = 2\cdot 1 - 0.5\cdot 0.5 = 1.75 > 0$. Both positive, so $Q$ is positive definite — the same verdict, reached without computing eigenvalues.
+
+**Contrast with the Hill curve.** Not every MMM-relevant function is globally convex. The Hill response $f(x; K, n)$ with $n = 2$, $K = 3$ has its inflection at
+
+$$
+x^\star = K\left(\frac{n-1}{n+1}\right)^{1/n} = 3\sqrt{\tfrac{1}{3}} = \sqrt{3} \approx 1.7321,
+$$
+
+from Rung 4. It is convex on $[0, \sqrt{3})$ and concave for $x > \sqrt{3}$, so it is neither globally convex nor globally concave. The lesson: the Hessian test must hold over the *whole* region of interest, not merely at a single point — a curve can pass the test in one place and fail it in another.
+
+### Example 2 — Allocating a budget by equal marginal returns
+
+Two channels carry square-root response $r_i(b) = a_i\sqrt{b}$ with coefficients $a = (2, 1)$ and total budget $B = 9$. This is the instance previewed in Rung 9; here we carry out the full arithmetic.
+
+**Marginal returns.** Differentiating,
+
+$$
+r_i'(b) = \frac{a_i}{2\sqrt{b}}.
+$$
+
+**Equal-marginal condition.** The capstone theorem of Rung 9 requires $r_1'(b_1) = r_2'(b_2) = \lambda$ across both funded channels, so
+
+$$
+\frac{a_1}{2\sqrt{b_1}} = \frac{a_2}{2\sqrt{b_2}} \quad\Longrightarrow\quad \frac{a_1}{\sqrt{b_1}} = \frac{a_2}{\sqrt{b_2}}.
+$$
+
+Squaring both sides gives $a_1^2/b_1 = a_2^2/b_2$, hence
+
+$$
+\frac{b_1}{b_2} = \frac{a_1^2}{a_2^2} = \frac{4}{1} = 4.
+$$
+
+**Apply the budget.** With $b_1 + b_2 = 9$ and $b_1 = 4 b_2$, we get $5 b_2 = 9$, so $b_2 = 1.8$ and $b_1 = 7.2$. The optimal allocation is
+
+$$
+b^\star = (7.2,\ 1.8) \qquad \text{— equivalently } b_i^\star = B\,\frac{a_i^2}{\sum_j a_j^2} = 9\cdot\frac{a_i^2}{5}.
+$$
+
+**Common marginal (the shadow price).** The shared value is
+
+$$
+\lambda = \frac{a_1}{2\sqrt{b_1}} = \frac{2}{2\sqrt{7.2}} = \frac{1}{\sqrt{7.2}} \approx 0.3727.
+$$
+
+Checking channel 2: $\dfrac{1}{2\sqrt{1.8}} = \dfrac{1}{2\cdot 1.3416} \approx 0.3727$ — equal, exactly as the theorem demands.
+
+**Optimal vs naive.** The total response at $b^\star$ is
+
+$$
+2\sqrt{7.2} + \sqrt{1.8} = 2(2.6833) + 1.3416 = 5.3666 + 1.3416 = 6.7082.
+$$
+
+The naive equal split $b = (4.5, 4.5)$ scores
+
+$$
+2\sqrt{4.5} + \sqrt{4.5} = 3\sqrt{4.5} = 3(2.1213) = 6.3640.
+$$
+
+The equal-marginal allocation gains $6.7082 - 6.3640 = 0.3442$ in response — about $5.4\%$ more — by directing four times the budget to the stronger channel rather than splitting evenly.
+
+### Example 3 — An S-curve breaks the global guarantee
+
+Now take the Hill response $r(b) = b^2/(K^2 + b^2)$ with $K = 3$ ($n = 2$) on two channels, with budget $B = 6$.
+
+**Why convexity fails.** The single-channel curve has its inflection at $x^\star = \sqrt{3} \approx 1.7321$ (Example 1 / Rung 4): a convex toe below, concave above. Because $r$ is **not concave**, Rung 10 tells us the two-channel allocation problem is **not convex**, and KKT can no longer certify global optimality.
+
+**Multiple KKT points.** Write the total response along the budget line as $R(b_1) = r(b_1) + r(6 - b_1)$ and evaluate it at the candidate stationary allocations:
+
+- *Symmetric interior split* $b = (3, 3)$: each channel returns $r(3) = \dfrac{9}{9 + 9} = 0.5$, so $R = 1.0$.
+- *Corner* $b = (6, 0)$: $r(6) = \dfrac{36}{9 + 36} = \dfrac{36}{45} = 0.8$ and $r(0) = 0$, so $R = 0.8$. By symmetry, $(0, 6)$ also gives $0.8$.
+
+**The verdict.** All three are KKT points of the non-convex problem, yet they carry **different objective values** ($1.0$ at the interior split versus $0.8$ at each corner). KKT no longer certifies global optimality: a local optimizer started near a corner converges to the corner ($0.8$) and never discovers the better interior optimum ($1.0$). This is the concrete face of Rung 10 — and exactly the behavior the Code Tie-in's multi-start will exhibit when it lands on different optima depending on where it begins.
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The single cell below carries the chapter's geometry into running code with nothing but NumPy, SciPy, and Matplotlib — no modelling framework — so that every claim is the few lines of arithmetic it actually is. It draws the Hill response in its two regimes and marks the inflection that separates the convex toe from the concave shoulder; it certifies strict convexity of Worked Example 1's quadratic by reading the sign of its Hessian's eigenvalues, and confirms the same conclusion with a brute-force chord test; it solves the concave allocation of Worked Example 2 with a constrained optimizer and checks that the solution equalizes marginal returns across channels exactly as the capstone theorem demands; and it runs the non-convex S-curve allocation of Worked Example 3 from five different starting points to watch a local optimizer land on competing optima. The point of the cell is that the convex and non-convex cases are separated by a single observable: whether every start reaches the same answer.
+
+```{python}
+# Chapter 11 — Code Tie-in: convexity certificates and budget allocation.
+# NumPy + Matplotlib + SciPy only. We exhibit the chapter's three results on
+# the Hill response curve and the two-channel budget problem: (1) the inflection
+# that separates the convex toe from the concave shoulder, (2) the positive-
+# definite Hessian certifying strict convexity, (3) the equal-marginal optimum
+# of the concave allocation, and (4) the multiple optima of the non-convex
+# S-curve allocation, found by multi-start local optimization.
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
+
+# --- Hill response and its inflection --------------------------------------
+def hill(x, K, n):
+    return x**n / (K**n + x**n)
+
+K = 3.0
+x = np.linspace(0.0, 12.0, 400)
+h_concave = hill(x, K, 1)      # n = 1: concave everywhere on x > 0
+h_scurve = hill(x, K, 2)       # n = 2: convex toe, concave shoulder
+n = 2
+x_star = K * ((n - 1) / (n + 1)) ** (1.0 / n)   # inflection of the n=2 curve
+print(f"Hill n=2 inflection at x* = K*((n-1)/(n+1))^(1/n) = {x_star:.4f}  (sqrt(3) = {np.sqrt(3):.4f})")
+
+# --- Convexity certificate (Worked Example 1) ------------------------------
+Q = np.array([[2.0, 0.5], [0.5, 1.0]])
+eig = np.linalg.eigvalsh(Q)
+print(f"\nQuadratic Hessian Q eigenvalues = {np.round(eig, 4)}  (both > 0 => strictly convex)")
+assert np.all(eig > 0)
+
+# Chord test: -hill(., 1) is convex, so it sits below no chord — i.e. the
+# midpoint value never exceeds the average of the endpoint values.
+def neg_hill1(t):
+    return -hill(t, K, 1)
+grid = np.linspace(0.1, 11.9, 60)
+convex_ok = True
+for i in range(len(grid)):
+    for j in range(i + 1, len(grid)):
+        a, b = grid[i], grid[j]
+        mid = neg_hill1(0.5 * (a + b))
+        chord = 0.5 * (neg_hill1(a) + neg_hill1(b))
+        if mid > chord + 1e-9:
+            convex_ok = False
+assert convex_ok
+print("Chord test: -hill(x, n=1) lies on/below every chord  -> convex confirmed")
+
+# --- Concave budget allocation: equal marginal returns (Worked Example 2) ---
+a = np.array([2.0, 1.0])
+B = 9.0
+res = minimize(
+    lambda b: -(a @ np.sqrt(np.maximum(b, 0))),
+    x0=[4.5, 4.5],
+    method="SLSQP",
+    bounds=[(0, B), (0, B)],
+    constraints={"type": "eq", "fun": lambda b: b.sum() - B},
+)
+b_star = res.x
+marginals = a / (2 * np.sqrt(b_star))
+total_opt = a @ np.sqrt(b_star)
+total_equal = 3 * np.sqrt(4.5)
+print(f"\nConcave allocation r_i(b)=a_i*sqrt(b), a={a.tolist()}, B={B:.0f}:")
+print(f"  b* = {np.round(b_star, 4).tolist()}   (expected [7.2, 1.8])")
+print(f"  marginals a_i/(2 sqrt(b_i)) = {np.round(marginals, 4).tolist()}  (equal shadow price)")
+print(f"  total at b* = {total_opt:.4f}   vs equal-split 3*sqrt(4.5) = {total_equal:.4f}")
+assert np.allclose(b_star, [7.2, 1.8], atol=1e-2)
+assert np.allclose(marginals[0], marginals[1], atol=1e-3)   # equal marginal returns
+assert total_opt > total_equal                              # beats naive split
+print("  asserts: b*=[7.2,1.8], equal marginals, beats equal split  -> PASSED")
+
+# --- Non-convex multi-start (Rung 10 / Worked Example 3) --------------------
+# Hill n=2, K=3, two channels, total budget 6, optimized along the line b2=6-b1.
+def neg(b1):
+    b1 = float(np.ravel(b1)[0])
+    return -(hill(b1, 3, 2) + hill(6 - b1, 3, 2))
+
+starts = [0.1, 1.0, 3.0, 5.0, 5.9]
+reached_totals = []
+print(f"\nNon-convex S-curve allocation (hill n=2, K=3, B=6) — multi-start:")
+print(f"  {'start b1':>9}{'reached b1':>12}{'b2':>8}{'total R':>10}")
+landings = []
+for s in starts:
+    r = minimize(neg, x0=[s], method="L-BFGS-B", bounds=[(0, 6)])
+    b1 = float(r.x[0])
+    b2 = 6 - b1
+    total = -r.fun
+    reached_totals.append(total)
+    landings.append((b1, total))
+    print(f"  {s:>9.1f}{b1:>12.4f}{b2:>8.4f}{total:>10.4f}")
+
+totals = sorted(set(round(t, 3) for t in reached_totals))
+assert len(totals) > 1, totals    # different starts -> different optima
+print(f"  distinct optima reached (rounded totals): {totals}")
+print("  asserts: multiple distinct optima found  -> PASSED")
+
+# --- Figure 1: Hill concave vs S-shaped, inflection marked ------------------
+fig, ax = plt.subplots(figsize=(6.2, 3.6))
+ax.plot(x, h_concave, color="steelblue", lw=2, label=r"$n=1$ (concave)")
+ax.plot(x, h_scurve, color="darkorange", lw=2, label=r"$n=2$ (S-shaped)")
+ax.axvline(x_star, color="gray", ls="--", lw=1.2)
+ax.scatter([x_star], [hill(x_star, K, 2)], color="black", zorder=5)
+ax.annotate(rf"inflection $x^\star={x_star:.3f}$", xy=(x_star, hill(x_star, K, 2)),
+            xytext=(x_star + 1.0, 0.18), fontsize=9,
+            arrowprops=dict(arrowstyle="->", color="gray"))
+ax.set_xlabel("spend $x$")
+ax.set_ylabel("response (saturation)")
+ax.set_title("Hill response: concave vs S-shaped, with inflection", fontsize=10)
+ax.legend(fontsize=9)
+plt.tight_layout()
+plt.show()
+
+# --- Figure 2: the non-convex objective over the budget line ---------------
+b1_grid = np.linspace(0, 6, 400)
+R = hill(b1_grid, 3, 2) + hill(6 - b1_grid, 3, 2)
+fig, ax = plt.subplots(figsize=(6.2, 3.6))
+ax.plot(b1_grid, R, color="purple", lw=2)
+ax.scatter([3.0], [hill(3, 3, 2) + hill(3, 3, 2)], color="green", zorder=5,
+           label="interior optimum $(3,3)$, $R=1.0$")
+ax.scatter([0.0, 6.0], [hill(0, 3, 2) + hill(6, 3, 2)] * 2, color="red", zorder=5,
+           label="corners $(0,6)/(6,0)$, $R=0.8$")
+for b1, total in landings:
+    ax.scatter([b1], [total], color="black", marker="x", s=40, zorder=6)
+ax.set_xlabel("budget on channel 1, $b_1$  (with $b_2 = 6 - b_1$)")
+ax.set_ylabel("total response $R(b_1)$")
+ax.set_title("Non-convex allocation: competing interior vs corner optima", fontsize=10)
+ax.legend(fontsize=8, loc="lower center")
+plt.tight_layout()
+plt.show()
+```
+
+The printed output pins the chapter's arithmetic. The $n=2$ Hill curve inflects at $x^\star = 1.7321 = \sqrt{3}$, the boundary between its convex toe and its concave shoulder, marked by the dashed line in the first figure. Worked Example 1's quadratic returns Hessian eigenvalues $0.7929$ and $2.2071$ — both strictly positive, so $Q$ is positive definite and the quadratic is strictly convex — and the independent chord test confirms that $-\text{hill}(x, n{=}1)$ never rises above any of its chords. The concave allocation of Worked Example 2 is solved exactly: the optimizer returns $b^\star = (7.2004, 1.7996) \approx (7.2, 1.8)$, the per-channel marginals $a_i/(2\sqrt{b_i})$ come back equal at $0.3727$ — the shared shadow price the equal-marginal theorem demands — and the optimal total response $6.7082$ beats the naive equal split's $6.3640$, the $5.4\%$ gain from steering four times the budget to the stronger channel. The non-convex S-curve allocation then breaks the global guarantee in front of us: starting the local optimizer at $b_1 = 1.0,\ 3.0,\ 5.0$ converges to the interior split $(3, 3)$ with total $1.0$, while the extreme starts $b_1 = 0.1$ and $b_1 = 5.9$ slide into the corners $(0, 6)$ and $(6, 0)$ with total $0.8$ — two distinct optima from the same problem, exactly the failure of KKT to certify global optimality that Rung 10 predicts. The convex case rewards any start with the same answer; the non-convex case does not, and that gap is the whole content of the chapter's optimization rung.
 
 ## Exercises
 
-### C -- Conceptual / Reading Comprehension
+### C — Conceptual / Reading Comprehension
 
-### B -- By Hand
+**C1.** Explain why "is this problem convex?" is the first question to ask about any optimization problem, *before* choosing an algorithm. What does a "yes" buy you that no amount of algorithmic cleverness can supply for a non-convex problem, and which theorem of this chapter is the reason?
 
-### P -- Prove It
+**C2.** State the equal-marginal-returns rule in plain words, with no formulas. Why does a concave response curve make the budget-allocation problem convex, and why does the rule say a channel can be left entirely unfunded even though its response curve is increasing?
 
-### A -- Applied / Code
+**C3.** A media response curve is S-shaped: increasing returns at low spend (the convex toe), diminishing returns above an inflection point. A colleague runs a single gradient descent on the budget problem and reports "the optimal allocation." Identify two distinct things that are wrong, or at least unjustified, about calling that result "optimal" — one about what KKT can and cannot certify here, and one about what the starting point determines.
+
+### B — By Hand
+
+**B1.** Determine whether $f(b_1, b_2) = 2b_1^2 + 3b_2^2 + 2b_1 b_2$ is convex. Compute its Hessian, and certify (or refute) positive semidefiniteness two ways: by the signs of the leading principal minors (Sylvester's criterion) and by the sign of the eigenvalues. State your conclusion.
+
+**B2.** Two channels have logarithmic response $r_i(b) = a_i\ln(1 + b)$ with coefficients $a = (3, 1)$ and total budget $B = 6$. Using the equal-marginal-returns condition $r_1'(b_1) = r_2'(b_2)$, find the optimal allocation $b^\star$ and the common shadow price $\lambda$. Compare the optimal total response to that of the naive equal split $b = (3, 3)$.
+
+**B3.** For the Hill curve $f(x; K, n) = x^n/(K^n + x^n)$ with $n = 3$ and $K = 4$, locate the inflection point $x^\star = K\left(\frac{n-1}{n+1}\right)^{1/n}$, and state on which interval the curve is convex and on which it is concave.
+
+### P — Prove It
+
+**P1.** Prove the forward ($\Rightarrow$) direction of the first-order condition: if a differentiable $f$ is convex, then $f(y) \ge f(x) + \nabla f(x)^\top(y - x)$ for all $x, y$ in its domain. (Start from the chord inequality at the point $x + \lambda(y - x)$ and let $\lambda \to 0^+$.)
+
+**P2.** Prove that a nonnegative weighted sum of convex functions is convex: if $f_1, \dots, f_m$ are convex and $w_1, \dots, w_m \ge 0$, then $F = \sum_i w_i f_i$ is convex. Identify precisely where the hypothesis $w_i \ge 0$ is used.
+
+**P3.** Consider $\max_{b \ge 0} \sum_{i=1}^n r_i(b_i)$ subject to $\mathbf{1}^\top b = B$ with each $r_i$ concave, increasing, and differentiable. Using the KKT conditions, prove that at the optimum every funded channel ($b_i^\star > 0$) shares a common marginal return $r_i'(b_i^\star) = \lambda$, while every unfunded channel ($b_i^\star = 0$) satisfies $r_i'(0) \le \lambda$.
+
+### A — Applied / Code
+
+**A1.** Write a function `is_convex_quadratic(Q)` that returns whether $b \mapsto b^\top Q b$ is convex by testing the eigenvalues of the symmetric part of $Q$. Test it on a convex case ($Q = \begin{pmatrix} 3 & 1 \\ 1 & 2 \end{pmatrix}$) and a non-convex (indefinite) case ($Q = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}$); report the eigenvalues and the verdict for each.
+
+**A2.** Solve the three-channel concave allocation $\max \sum_i a_i\sqrt{b_i}$ subject to $\mathbf{1}^\top b = 14$, $b \ge 0$, with $a = (3, 2, 1)$, using a constrained optimizer. Confirm numerically that the solution is $b^\star = (9, 4, 1)$ and that the per-channel marginals $a_i/(2\sqrt{b_i^\star})$ are all equal.
+
+**A3.** Build a two-channel S-curve allocation with Hill responses ($n = 2$, $K = 3$, $B = 6$). Run a local optimizer from at least eight starting points spread across $[0, 6]$, record the total response each one reaches, and report how many distinct optima are found and their values. Relate the result to Rung 10's claim that, without convexity, the starting point determines the answer.
+
+## Summary
+
+Optimization splits into two worlds, and convexity is the border. On one side a local optimum is the global one and a downhill algorithm cannot be fooled; on the other, the same algorithm is at the mercy of where it starts. This chapter built the tools to tell the two worlds apart and to exploit the easy one — the theory hub on which Chapters 12 and 13 stand.
+
+**Key concepts.**
+
+- A **convex set** contains the segment between any two of its points; the budget feasible set $\{b \ge 0,\ \mathbf{1}^\top b \le B\}$ is one, and intersections of convex sets are convex.
+- A **convex function** has every chord on or above its graph; **concave** is its mirror, and maximizing a concave function is minimizing a convex one — one theory. A diminishing-returns response is concave.
+- Two conditions certify convexity for smooth functions: the **first-order** condition (the graph lies above every tangent) and the **second-order** condition (the Hessian is positive semidefinite). A small calculus of **operations** — nonnegative sums, affine composition, pointwise maxima — certifies built-up objectives without re-derivation.
+- **Jensen's inequality** $f(\mathbb{E}[X]) \le \mathbb{E}[f(X)]$ makes concavity penalize volatility: steady spend beats erratic spend of the same average.
+- The **keystone**: for a convex problem, every local minimum is global, and a stationary point is a global optimum. This is why convex optimization works.
+- **Lagrange multipliers and the KKT conditions** (stationarity, primal and dual feasibility, complementary slackness) extend the keystone to constrained problems; for a convex program KKT is sufficient for global optimality, and under Slater's condition it is also necessary.
+- The **capstone**: at the optimal budget allocation over concave responses, every funded channel shares a common marginal return — equal marginal returns, or water-filling.
+- The **honest limit**: real Hill curves with exponent $n > 1$ are S-shaped, so the budget problem is non-convex, the global guarantee is lost, and practitioners turn to multi-start search — the motivation for Chapter 13.
+
+**Key identities (inline).** Chord inequality $f(\lambda x + (1-\lambda)y) \le \lambda f(x) + (1-\lambda)f(y)$; first-order condition $f(y) \ge f(x) + \nabla f(x)^\top(y - x)$; second-order condition $\nabla^2 f \succeq 0$; Jensen $f(\mathbb{E}[X]) \le \mathbb{E}[f(X)]$; KKT stationarity $\nabla f(x^\star) + \sum_i \lambda_i^\star \nabla g_i(x^\star) + \sum_j \nu_j^\star \nabla h_j(x^\star) = 0$ with complementary slackness $\lambda_i^\star g_i(x^\star) = 0$; equal marginal returns $r_i'(b_i^\star) = \lambda$; Hill inflection $x^\star = K\left(\frac{n-1}{n+1}\right)^{1/n}$. A problem certified convex by these tools hands Chapters 12 and 13 a global guarantee; one that is not tells them, just as precisely, to search more than one basin.
