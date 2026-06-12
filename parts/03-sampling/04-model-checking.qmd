@@ -452,3 +452,242 @@ $$
 one of the $L + 1 = 10$ possible values $0, 1, \dots, 9$ — ten bins in all.
 
 **Interpretation.** One rank is almost uninformative: a single draw of a $\text{Uniform}\{0, \dots, 9\}$ variable, by the theorem of Rung 7, tells us essentially nothing on its own. The diagnosis lives in the aggregate histogram over many replications, and its *shape* is what convicts or acquits the inference. Two contrasting cases make the point. A **flat** histogram, with the ranks spread evenly across all ten bins, is exactly the uniform signal the theorem demands — the inference is calibrated. A **$\cup$-shaped** histogram, with mass piled into bins $0$ and $9$, is the signature of an **overconfident** posterior: the truth keeps landing in the extreme bins because the posterior intervals are too narrow, so the ground truth falls into the tails — at rank $0$ or rank $L$ — far more often than chance allows. This is precisely the reading of histogram shapes set out in Rung 7, where the $\cup$ shape diagnoses a posterior that is too narrow.
+
+## Code Tie-in
+
+The single cell below runs the entire chapter on the eight-schools / geo-MMM model with nothing but NumPy and Matplotlib — no PyMC, Stan, or ArviZ — so that every diagnostic is visible as the few lines of arithmetic it actually is. It fits the model twice: once in the **centered** parameterization $(\mu, \log\tau, \theta_1..\theta_J)$ with $\theta_g \sim \mathcal{N}(\mu, \tau^2)$, and once in the **non-centered** parameterization $\theta_g = \mu + \tau\tilde\theta_g$ with $\tilde\theta_g \sim \mathcal{N}(0,1)$, both under a half-normal prior $\tau \sim \text{HalfNormal}(5)$ carried on the $\log\tau$ scale with its Jacobian. A from-scratch leapfrog HMC sampler — lifted directly from Chapter 9 — drives four chains of each, and the diagnostics of Part A and Part B are then computed by hand from the raw draws: split-$\hat{R}$ and effective sample size from the autocorrelation sum, a divergence count flagged whenever the leapfrog energy error $|\Delta H|$ exceeds $1000$ or goes non-finite, a posterior predictive check on the test quantity $T = \max_g y_g$, and a simulation-based-calibration loop run on a cheap conjugate model so the rank histogram is exact and fast. The single experiment is the funnel reckoning Chapter 9 set up: the same $(\varepsilon, L)$ that the centered geometry cannot survive, the non-centered geometry handles cleanly.
+
+```{python}
+# Chapter 10 — Code Tie-in: convergence + calibration diagnostics, from scratch.
+# NumPy + Matplotlib only. We compare the CENTERED and NON-CENTERED
+# parameterizations of the eight-schools / geo-MMM model, implementing R-hat,
+# ESS, divergence counting, a posterior predictive check, and an SBC loop by
+# hand — no PyMC/Stan/ArviZ.
+import numpy as np
+import matplotlib.pyplot as plt
+
+np.seterr(over="ignore", invalid="ignore", divide="ignore")
+rng = np.random.default_rng(0)
+
+# --- Data: eight schools, read as eight geos -------------------------------
+# y_g = geo-level effect estimate, sigma_g = its known standard error.
+y = np.array([28.0, 8.0, -3.0, 7.0, -1.0, 1.0, 18.0, 12.0])
+sigma = np.array([15.0, 10.0, 16.0, 11.0, 9.0, 11.0, 10.0, 18.0])
+J = 8
+TAU_PRIOR2 = 25.0   # HalfNormal(5) on tau  ->  variance term uses 5^2 = 25
+MU_PRIOR2 = 25.0    # mu ~ N(0, 5^2)
+
+# --- Centered log-posterior over (mu, log tau, theta_1..theta_J) -----------
+# theta_j ~ N(mu, tau^2),  y_j ~ N(theta_j, sigma_j^2),  tau ~ HalfNormal(5).
+# The log-tau Jacobian contributes +log tau = +u to the log density.
+def logp_c(p):
+    mu, u, theta = p[0], p[1], p[2:]
+    tau = np.exp(u)
+    lp = -mu**2 / (2 * MU_PRIOR2)
+    lp += -tau**2 / (2 * TAU_PRIOR2) + u
+    lp += -0.5 * np.sum((theta - mu) ** 2) / tau**2 - J * u
+    lp += -0.5 * np.sum((y - theta) ** 2 / sigma**2)
+    return lp
+
+def grad_c(p):
+    mu, u, theta = p[0], p[1], p[2:]
+    tau2 = np.exp(2 * u)
+    S = np.sum((theta - mu) ** 2)
+    dmu = -mu / MU_PRIOR2 + np.sum(theta - mu) / tau2
+    du = -tau2 / TAU_PRIOR2 + (1.0 - J) + S / tau2
+    dtheta = -(theta - mu) / tau2 + (y - theta) / sigma**2
+    return np.concatenate([[dmu, du], dtheta])
+
+# --- Non-centered log-posterior over (mu, log tau, theta~_1..theta~_J) ------
+# theta_j = mu + tau * theta~_j,  theta~_j ~ N(0,1): the funnel is flattened.
+def logp_nc(p):
+    mu, u, tt = p[0], p[1], p[2:]
+    tau = np.exp(u)
+    theta = mu + tau * tt
+    lp = -mu**2 / (2 * MU_PRIOR2)
+    lp += -tau**2 / (2 * TAU_PRIOR2) + u
+    lp += -0.5 * np.sum(tt**2)
+    lp += -0.5 * np.sum((y - theta) ** 2 / sigma**2)
+    return lp
+
+def grad_nc(p):
+    mu, u, tt = p[0], p[1], p[2:]
+    tau = np.exp(u)
+    r = y - mu - tau * tt                      # = y - theta
+    dmu = -mu / MU_PRIOR2 + np.sum(r / sigma**2)
+    du = -tau**2 / TAU_PRIOR2 + 1.0 + tau * np.sum(tt * r / sigma**2)
+    dtt = -tt + tau * r / sigma**2
+    return np.concatenate([[dmu, du], dtt])
+
+# --- Leapfrog HMC sampler (adapted from Ch9), with divergence counting ------
+def hmc(logp, grad, init, n_samples, step_size, n_leapfrog, rng, n_warmup=500):
+    q = np.array(init, dtype=float)
+    d = len(q)
+    draws = np.empty((n_samples, d))
+    n_div = 0
+    out = 0
+    for it in range(n_warmup + n_samples):
+        p0 = rng.standard_normal(d)
+        H0 = -logp(q) + 0.5 * p0 @ p0
+        qn, pn = q.copy(), p0.copy()
+        pn = pn + 0.5 * step_size * grad(qn)          # opening half-kick
+        for _ in range(n_leapfrog - 1):
+            qn = qn + step_size * pn
+            pn = pn + step_size * grad(qn)
+        qn = qn + step_size * pn
+        pn = pn + 0.5 * step_size * grad(qn)          # closing half-kick
+        H1 = -logp(qn) + 0.5 * pn @ pn
+        dH = H1 - H0
+        divergent = (not np.isfinite(dH)) or (abs(dH) > 1000.0)
+        if divergent:
+            if it >= n_warmup:
+                n_div += 1
+        elif np.log(rng.random()) < -dH:
+            q = qn
+        if it >= n_warmup:
+            draws[out] = q
+            out += 1
+    return draws, n_div
+
+# --- Diagnostics from raw draws --------------------------------------------
+def split_rhat(chains):
+    """Split-R-hat from an (M, N) array of scalar chains."""
+    chains = np.asarray(chains)
+    M, N = chains.shape
+    h = N // 2
+    s = np.concatenate([chains[:, :h], chains[:, h:2 * h]], axis=0)
+    m, n = s.shape
+    means = s.mean(axis=1)
+    B = n / (m - 1) * np.sum((means - means.mean()) ** 2)
+    W = np.mean(s.var(axis=1, ddof=1))
+    var_plus = (n - 1) / n * W + B / n
+    return np.sqrt(var_plus / W)
+
+def ess_1d(x):
+    """Single-chain ESS via the initial-positive autocorrelation sum."""
+    x = np.asarray(x, dtype=float)
+    n = len(x)
+    x = x - x.mean()
+    v = np.dot(x, x) / n
+    if v < 1e-12:
+        return float(n)
+    total = 0.0
+    for k in range(1, n):
+        rho = np.dot(x[: n - k], x[k:]) / n / v
+        if rho < 0:
+            break
+        total += rho
+    return n / (1.0 + 2.0 * total)
+
+def ess(chains):
+    """Total ESS across chains (sum of per-chain ESS)."""
+    return float(np.sum([ess_1d(c) for c in chains]))
+
+# --- Run four chains for each parameterization ------------------------------
+N_SAMP, N_WARM, N_CHAINS = 1500, 500, 4
+STEP, NLF = 0.15, 10
+
+def run(logp, grad, centered):
+    mu_ch, tau_ch, div = [], [], 0
+    keep = []
+    for c in range(N_CHAINS):
+        mu0 = rng.normal(0, 3)
+        u0 = np.log(5.0) + rng.normal(0, 0.3)
+        rest = (y + rng.normal(0, 3, J)) if centered else rng.normal(0, 1, J)
+        init = np.concatenate([[mu0, u0], rest])
+        dr, nd = hmc(logp, grad, init, N_SAMP, STEP, NLF, rng, N_WARM)
+        div += nd
+        mu_ch.append(dr[:, 0])
+        tau_ch.append(np.exp(dr[:, 1]))
+        keep.append(dr)
+    return np.array(mu_ch), np.array(tau_ch), div, keep
+
+mu_c, tau_c, div_centered, draws_c = run(logp_c, grad_c, True)
+mu_nc, tau_nc, div_noncentered, draws_nc = run(logp_nc, grad_nc, False)
+
+rhat_mu_c = split_rhat(mu_c)
+rhat_tau_c = split_rhat(tau_c)
+rhat_mu_nc = split_rhat(mu_nc)
+rhat_tau_noncentered = split_rhat(tau_nc)
+ess_tau_c = ess(tau_c)
+ess_tau_nc = ess(tau_nc)
+
+# --- Comparison table -------------------------------------------------------
+print("=== Centered vs non-centered eight-schools / geo-MMM (HMC, 4 chains) ===")
+print(f"  {'parameterization':<16}{'divergences':>13}{'R-hat(tau)':>13}{'ESS(tau)':>12}")
+print(f"  {'centered':<16}{div_centered:>13d}{rhat_tau_c:>13.3f}{ess_tau_c:>12.1f}")
+print(f"  {'non-centered':<16}{div_noncentered:>13d}{rhat_tau_noncentered:>13.3f}{ess_tau_nc:>12.1f}")
+print(f"  R-hat(mu): centered={rhat_mu_c:.3f}, non-centered={rhat_mu_nc:.3f}")
+
+assert div_centered > 10 * max(div_noncentered, 1), (div_centered, div_noncentered)
+assert rhat_tau_noncentered < 1.05, rhat_tau_noncentered
+print("  asserts: div_centered > 10x AND R-hat(tau) non-centered < 1.05  -> PASSED")
+
+# --- Posterior predictive check on the non-centered draws -------------------
+# Reconstruct theta from each draw, simulate y^rep ~ N(theta, sigma^2),
+# test quantity T = max_g y^rep_g, compared to observed max(y) = 28.
+flat = np.concatenate(draws_nc, axis=0)
+sub = flat[rng.integers(0, len(flat), 4000)]
+mu_d, tau_d, tt_d = sub[:, 0], np.exp(sub[:, 1]), sub[:, 2:]
+theta_d = mu_d[:, None] + tau_d[:, None] * tt_d
+y_rep = theta_d + sigma[None, :] * rng.standard_normal(theta_d.shape)
+T_rep = y_rep.max(axis=1)
+T_obs = y.max()
+ppc_p = np.mean(T_rep >= T_obs)
+print(f"\nPosterior predictive check:  T = max_g y_g,  T_obs = {T_obs:.0f}")
+print(f"  Bayesian p-value  P(T_rep >= T_obs) = {ppc_p:.3f}")
+assert 0.01 < ppc_p < 0.99, ppc_p
+
+# --- Simulation-based calibration on a cheap conjugate model ----------------
+# prior theta ~ N(0,1), one obs y ~ N(theta,1), exact posterior N(y/2, 1/2).
+N_SBC, L = 2000, 9
+ranks = np.empty(N_SBC, dtype=int)
+for i in range(N_SBC):
+    th0 = rng.standard_normal()
+    yi = th0 + rng.standard_normal()
+    post = yi / 2.0 + np.sqrt(0.5) * rng.standard_normal(L)
+    ranks[i] = np.sum(post < th0)
+counts = np.bincount(ranks, minlength=L + 1)
+expected = N_SBC / (L + 1)
+print(f"\nSBC ({N_SBC} reps, L={L}, {L + 1} bins, expected/bin = {expected:.0f}):")
+print(f"  bin counts: {counts.tolist()}")
+assert np.all(counts > 0.5 * expected) and np.all(counts < 1.5 * expected), counts.tolist()
+print("  rank histogram within 0.5x-1.5x of uniform  -> PASSED (calibrated)")
+
+# --- Figure 1: SBC rank histogram (should look flat) ------------------------
+fig, ax = plt.subplots(figsize=(6, 3.2))
+ax.bar(np.arange(L + 1), counts, color="steelblue", edgecolor="white")
+ax.axhline(expected, color="tomato", lw=1.5, ls="--", label="uniform")
+ax.set_xlabel("rank")
+ax.set_ylabel("count")
+ax.set_title("SBC rank histogram — conjugate model (flat = calibrated)", fontsize=9)
+ax.legend(fontsize=9)
+plt.tight_layout()
+plt.show()
+
+# --- Figure 2: the funnel, centered vs non-centered -------------------------
+fig, axes = plt.subplots(1, 2, figsize=(10, 4.0), sharex=True)
+axes[0].scatter(draws_c[0][:, 1], draws_c[0][:, 2], s=2, alpha=0.3, color="steelblue")
+axes[0].set_xlabel(r"$\log\tau$")
+axes[0].set_ylabel(r"$\theta_1$")
+axes[0].set_title(f"Centered (divergences = {div_centered})", fontsize=9)
+axes[1].scatter(draws_nc[0][:, 1], draws_nc[0][:, 2], s=2, alpha=0.3, color="darkorange")
+axes[1].set_xlabel(r"$\log\tau$")
+axes[1].set_ylabel(r"$\tilde\theta_1$")
+axes[1].set_title(f"Non-centered (divergences = {div_noncentered})", fontsize=9)
+plt.suptitle("Funnel geometry: centered coords pinch shut; non-centered coords stay flat", fontsize=10)
+plt.tight_layout()
+plt.show()
+
+# --- Adstock coda: same ESS diagnostic on a realistic MMM parameter ---------
+# A synthetic AR(1) chain stands in for posterior draws of an adstock-decay
+# parameter; we measure how many independent draws it is worth.
+phi, n_ad = 0.85, 2000
+ad = np.empty(n_ad)
+ad[0] = rng.standard_normal()
+for t in range(1, n_ad):
+    ad[t] = phi * ad[t - 1] + rng.standard_normal()
+print(f"\nAdstock-decay draws: AR(1) phi={phi}, N={n_ad}  ->  ESS = {ess_1d(ad):.1f}")
+```
+
+The printed table makes Chapter 9's funnel warning quantitative. Under identical settings $\varepsilon = 0.15$, $L = 10$, four chains of $1500$ post-warmup draws, the **centered** parameterization logs $56$ divergent transitions, a split-$\hat{R}(\tau)$ of $1.046$, and an effective sample size for $\tau$ of only $104$ — barely a hundred independent draws from six thousand, with $\hat{R}(\mu) = 1.077$ flagging chains that have not agreed. The **non-centered** parameterization records $0$ divergences, $\hat{R}(\tau) = 1.000$, and an ESS of $6000$ — every draw effectively independent — so the first assertion ($56 > 10 \times \max(0,1)$) and the second ($\hat{R}(\tau) = 1.000 < 1.05$) both pass. The geometry, not the sampler, was the obstacle: the funnel scatter shows the centered $\theta_1$ pinching toward zero as $\log\tau$ falls, the exact neck the leapfrog cannot integrate, while the non-centered $\tilde\theta_1$ stays a flat independent band across all $\log\tau$. The posterior predictive check returns a Bayesian p-value of $0.302$ for the test quantity $T = \max_g y_g$ against the observed $\max_g y_g = 28$ — comfortably interior, so the model reproduces the largest geo effect without strain. The SBC loop on the conjugate model spreads $2000$ ranks across ten bins with counts ranging $182$–$215$ against an expected $200$, a flat histogram that certifies the inference is calibrated, and the closing adstock coda applies the very same `ess_1d` to a synthetic AR(1) draw of a decay parameter, reporting an ESS of $162$ from $2000$ correlated samples — the identical diagnostic a real MMM posterior would receive.
