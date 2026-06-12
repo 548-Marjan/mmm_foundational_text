@@ -410,3 +410,99 @@ The piecewise-linear-as-LP trick is powerful, and it is bounded. Honesty about a
 **It rests entirely on concavity.** The deeper limit is structural. The "fill steepest first" rule — and with it the clean vertex optimum, the cutoff slope, the single dual price — is correct *only because the slopes decrease*. That ordering is what made the exchange argument of Rung 8 go through. Strip away concavity and the whole edifice collapses. Consider Chapter 11's **S-shaped** Hill response with exponent $n > 1$: convex on the toe, concave only past the inflection point. A piecewise-linear fit of such a curve has **increasing-then-decreasing** slopes — the steepest segments sit in the *middle* of the curve, not at its start. Filling steepest first is now simply wrong: to reach the lucrative middle segments you may first have to fund the shallow, unprofitable toe, and whether it is worth funding the toe at all is a genuinely **discrete, all-or-nothing decision** — fund this channel up past its inflection, or skip it entirely. That is an **integer** decision, and the relaxed problem is **non-concave**, with the multiple local optima Chapter 11 exhibited. The clean LP structure is gone: such problems belong to **integer programming**, attacked by branch-and-bound — solving a tree of LP relaxations while branching on the discrete choices — which we note as the discrete tool but do not develop here.
 
 **The boundary, stated.** Linear programming owns the **linear and concave-separable** world *exactly*. There it delivers a global optimum, sitting at a vertex, accompanied by a duality certificate that proves no better point exists — and, as Rung 8 showed, it absorbs the concave budget problem whole, reproducing Chapter 11's equal-marginal rule as a dual price. The **smooth, possibly non-concave** world — real saturating, S-shaped channel response — lies outside that boundary. That world is the domain of **Chapter 13's SLSQP**, which attacks the nonlinear KKT system directly and iteratively, exactly as Chapter 11 foreshadowed, and which is launched from multiple starting points precisely because the landscape may carry several local optima and no single descent can be trusted to find the global best. Linear programming tells us where optimization is *certain*; Chapter 13 takes up the terrain where it is merely *diligent*. That is where the next chapter begins.
+
+## Worked Examples
+
+The three steps with the most arithmetic — solving a small LP both graphically and by simplex, reading shadow prices off its dual, and water-filling a piecewise-linear budget — are each small enough to carry out by hand. Working them once fixes what the Fundamental Theorem (Rung 3), the simplex pivots (Rung 4), duality and complementary slackness (Rungs 5–6), and the budget LP (Rung 8) actually deliver. The same two-channel LP threads through Examples 1 and 2, so the primal and its dual can be checked against each other.
+
+### Example 1 — A two-variable media LP
+
+Two channels split a budget. Let $x_1, x_2 \ge 0$ be the spend on each, with constant returns of $3$ and $2$ per unit. A total budget caps spend at $4$, and channel 1 carries its own cap of $2$. The plan that maximizes return is the linear program
+
+$$
+\max\ 3x_1 + 2x_2 \quad\text{s.t.}\quad x_1 + x_2 \le 4,\ \ x_1 \le 2,\ \ x \ge 0.
+$$
+
+**(a) Graphically.** The two upper bounds and the two nonnegativity constraints cut out a feasible polygon with four vertices: the origin $(0,0)$, the cap corner $(2,0)$, the corner $(2,2)$ where both upper bounds meet, and the budget corner $(0,4)$. The Fundamental Theorem says the optimum sits at one of these corners, so we simply evaluate the objective $3x_1 + 2x_2$ at each:
+
+$$
+(0,0)\to 0,\qquad (2,0)\to 6,\qquad (2,2)\to 10,\qquad (0,4)\to 8.
+$$
+
+The maximum is $10$, attained at $(2,2)$ — the Fundamental Theorem made concrete, the optimum landing at a corner rather than in the flat interior. At that corner **both** constraints $x_1 + x_2 \le 4$ and $x_1 \le 2$ bind: spend is at the budget *and* channel 1 is at its cap.
+
+**(b) By simplex.** Put the problem in standard form by minimizing the negated objective and adding one slack per inequality:
+
+$$
+\min\ -(3x_1 + 2x_2) \quad\text{s.t.}\quad
+\begin{aligned}
+x_1 + x_2 + s_1 &= 4,\\
+x_1 \qquad\;\; + s_2 &= 2,
+\end{aligned}
+\qquad x, s \ge 0,
+$$
+
+with cost vector $c = (-3, -2, 0, 0)$ on $(x_1, x_2, s_1, s_2)$. The slacks give an obvious starting basis $B = \{s_1, s_2\}$ with $A_B = I$, basic solution $(x_1, x_2, s_1, s_2) = (0, 0, 4, 2)$, and cost $0$. We record each pivot as basis, basic solution, entering/leaving choice, and ratio.
+
+- **Pivot 1.** With $A_B = I$ the reduced costs of the nonbasic variables are just their objective coefficients, $\bar c_1 = -3$ and $\bar c_2 = -2$. Both are negative, so the vertex is not optimal; the more negative one, $x_1$, **enters**. The min-ratio test over the two rows is
+$$
+t^\star = \min\!\left(\frac{4}{1},\ \frac{2}{1}\right) = 2,
+$$
+attained in the $s_2$ row, so $s_2$ **leaves**. New basis $\{s_1, x_1\}$, basic solution $(2, 0, 2, 0)$, cost $-6$.
+
+- **Pivot 2.** Updating the reduced costs at the new basis, $x_2$ now carries a negative reduced cost ($\bar c_2 = -2$ still pays, since raising $x_2$ uses budget slack $s_1$, not the exhausted cap), so $x_2$ **enters**. The basic variables are $x_1 = 2$ (held by the cap row) and $s_1 = 2$ (budget slack); raising $x_2$ draws down $s_1$ at rate $1$ while leaving $x_1$ fixed, so the binding ratio is $2/1 = 2$ in the $s_1$ row and $s_1$ **leaves**. New basis $\{x_2, x_1\}$, basic solution $(2, 2, 0, 0)$, cost $-10$.
+
+- **Optimality.** At $\{x_1, x_2\}$ every reduced cost is now $\ge 0$ — raising either slack off zero would only add cost — so the test passes and we stop. The optimum is $(x_1, x_2) = (2, 2)$ with objective $-(-10) = 10$, exactly the graphical answer, reached in two pivots along the edges $(0,0) \to (2,0) \to (2,2)$.
+
+### Example 2 — The dual and its shadow prices
+
+Keep the LP of Example 1 and build its dual. Attach a dual variable to each $\le$ constraint: $y_1$ to the budget $x_1 + x_2 \le 4$ and $y_2$ to the cap $x_1 \le 2$. Reading the primal columns gives one dual constraint per primal variable — the $x_1$ column $(1, 1)$ with objective coefficient $3$, and the $x_2$ column $(1, 0)$ with coefficient $2$:
+
+$$
+\min\ 4y_1 + 2y_2 \quad\text{s.t.}\quad y_1 + y_2 \ge 3,\ \ y_1 \ge 2,\ \ y \ge 0.
+$$
+
+**Solve by complementary slackness.** At the primal optimum both variables are positive, $x_1 = 2 > 0$ and $x_2 = 2 > 0$, so complementary slackness forces *both* dual constraints to bind:
+
+$$
+y_1 + y_2 = 3, \qquad y_1 = 2 \quad\Longrightarrow\quad y^\star = (2, 1).
+$$
+
+Its dual objective is $4(2) + 2(1) = 8 + 2 = 10$.
+
+**Strong duality.** The primal optimum $10$ equals the dual optimum $10$: the duality gap is exactly zero, precisely as Rung 6 promised, and the matching pair $(x^\star, y^\star)$ certifies that neither can be improved.
+
+**Shadow prices.** Both primal constraints bind at $(2,2)$, so both dual prices are positive and each is the marginal value of its resource (Rung 7).
+
+- $y_1 = 2$ is the **budget** shadow price: one extra unit of budget should raise the objective by $2$. Check it directly — relaxing the budget to $x_1 + x_2 \le 5$ moves the optimum to $(2, 3)$ with value $3(2) + 2(3) = 12$, an increase of exactly $2$.
+- $y_2 = 1$ is the **cap** shadow price: one extra unit of channel-1 cap should raise the objective by $1$. Relaxing the cap to $x_1 \le 3$ moves the optimum to $(3, 1)$ with value $3(3) + 2(1) = 11$, an increase of exactly $1$.
+
+Each dual variable is literally the marginal worth of the resource its constraint rations — solve once, and read off the price of every binding resource.
+
+### Example 3 — Allocating a budget over piecewise-linear response
+
+Now the budget LP of Rung 8. Two channels have concave piecewise-linear response: channel 1's segment slopes are $[5, 3, 1]$ and channel 2's are $[4, 2, 1]$, every segment has width $2$, and the total budget is $B = 5$. Because the slopes decrease within each channel, the optimum is the water-filling rule — fund the steepest segments first, across both channels, until the budget runs out.
+
+**Fill steepest first.** Order all six segments by slope:
+
+$$
+5\ (\text{ch }1),\quad 4\ (\text{ch }2),\quad 3\ (\text{ch }1),\quad 2\ (\text{ch }2),\quad 1\ (\text{ch }1),\quad 1\ (\text{ch }2).
+$$
+
+Pour budget in that order. The slope-$5$ segment takes its full width $2$ (budget used: $2$); the slope-$4$ segment takes its full width $2$ (used: $4$); the slope-$3$ segment then takes $1$ of its $2$ units before the budget hits $5$ and stops.
+
+**Allocation.** Channel 1 received $2$ (its slope-$5$ segment) plus $1$ (part of its slope-$3$ segment) $= 3$; channel 2 received $2$ (its slope-$4$ segment). So
+
+$$
+b^\star = (3, 2), \qquad 3 + 2 = 5 = B.
+$$
+
+**Total response.** Sum slope times width filled over the funded segments:
+
+$$
+5\cdot 2 + 3\cdot 1 + 4\cdot 2 = 10 + 3 + 8 = 21.
+$$
+
+**Budget shadow price.** The marginal (last-funded) segment is the slope-$3$ segment of channel 1, so the budget's marginal value is $\lambda = 3$. The water-filling condition checks out: every *funded* segment has slope $\ge 3$ (the values $5, 4, 3$), and every *unfunded* segment has slope $\le 3$ (the slope-$3$ remainder, then $2, 1, 1$). The cutoff slope $3$ separates funded from unfunded; one more dollar of budget would buy $3$ more units of response by filling more of that slope-$3$ segment — exactly the shadow price the dual would report.
+
+**Tie to Chapter 11.** This $\lambda = 3$ is the discrete equal-marginal return — Chapter 11's multiplier, here read straight off the LP rather than derived from KKT stationarity. The marginal segments of the active channels share the cutoff slope. And the discreteness is not a limitation: refining a smooth concave response into many narrow segments recovers Chapter 11's exact answer. For square-root response $r_i(b) = a_i\sqrt{b}$ with $a = (2, 1)$ and $B = 9$, the refined LP converges to $b^\star = (7.2, 1.8)$ with budget price $\lambda \to 0.3727$ — the convergence demonstrated in the Code Tie-in.
