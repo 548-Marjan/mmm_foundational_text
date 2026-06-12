@@ -37,20 +37,27 @@ book:
         - parts/04-optimization/01-convexity.qmd
         - parts/04-optimization/02-linear-programming.qmd
         - parts/04-optimization/03-slsqp.qmd
-    - part: "Part V — Marketing Mix Modeling: Synthesis"
+    - part: "Part V — Marketing Mix Modeling: Modeling"
       chapters:
-        - parts/05-mmm-synthesis/01-mmm-dgp.qmd
-        - parts/05-mmm-synthesis/02-building-fitting.qmd
-        - parts/05-mmm-synthesis/03-budget-optimization.qmd
-    - part: "Part VI — Software Engineering & Computer Science"
+        - parts/05-mmm-modeling/01-mmm-dgp.qmd
+        - parts/05-mmm-modeling/02-building-fitting.qmd
+        - parts/05-mmm-modeling/03-dlm.qmd
+        - parts/05-mmm-modeling/04-budget-optimization.qmd
+    - part: "Part VI — Causal Grounding & Calibration"
       chapters:
-        - parts/06-swe-cs/01-cs-foundations.qmd
-        - parts/06-swe-cs/02-software-architecture.qmd
-        - parts/06-swe-cs/03-data-engineering.qmd
-        - parts/06-swe-cs/04-testing-reliability.qmd
-    - part: "Part VII — Capstone"
+        - parts/06-causal-calibration/01-causal-foundations.qmd
+        - parts/06-causal-calibration/02-quasi-experimental.qmd
+        - parts/06-causal-calibration/03-advanced-calibration.qmd
+        - parts/06-causal-calibration/04-prior-store.qmd
+    - part: "Part VII — Software Engineering & Computer Science"
       chapters:
-        - parts/07-capstone/01-putting-it-together.qmd
+        - parts/07-swe-cs/01-cs-foundations.qmd
+        - parts/07-swe-cs/02-software-architecture.qmd
+        - parts/07-swe-cs/03-data-engineering.qmd
+        - parts/07-swe-cs/04-testing-reliability.qmd
+    - part: "Part VIII — Capstone"
+      chapters:
+        - parts/08-capstone/01-putting-it-together.qmd
   appendices:
     - appendix/solutions.qmd
 

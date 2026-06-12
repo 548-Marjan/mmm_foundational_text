@@ -1,0 +1,33 @@
+# Quasi-Experimental Design
+
+*Canonical anchors: Angrist & Pischke; Abadie, Diamond & Hainmueller (synthetic control); Brodersen et al. (BSTS).*
+
+::: {.callout-note appearance="simple"}
+**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
+:::
+
+## Motivation
+
+_Why this matters, and where it shows up in an MMM._
+
+## Theory & Proofs
+
+_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+
+## Worked Examples
+
+_Worked numerical example(s)._
+
+## Code Tie-in
+
+_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+
+## Exercises
+
+### C -- Conceptual / Reading Comprehension
+
+### B -- By Hand
+
+### P -- Prove It
+
+### A -- Applied / Code
