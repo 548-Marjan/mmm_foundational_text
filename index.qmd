@@ -1,26 +1,122 @@
 # Preface {.unnumbered}
 
+::: {.callout-note appearance="simple"}
+## In one paragraph
+
+A rigorous, self-contained path from undergraduate mathematics to a
+production-grade Bayesian **Marketing Mix Model** — built from scratch, deriving
+the math instead of calling a library. You assemble the whole stack yourself:
+regression → Bayesian inference → MCMC → optimization → a dynamic,
+causally-calibrated MMM → the software engineering to ship it. If you have ever
+run an MMM framework and wanted to know *why* it works — and where it quietly
+misleads you — this is that book.
+:::
+
 This is a self-contained textbook on the mathematics and the software engineering
-that underlie modern **Marketing Mix Modeling (MMM)**. It is built to take a
-reader from standard quantitative prerequisites all the way to advanced practice,
-without hand-waving and without assuming you already know Bayesian modeling,
-MCMC, or constrained optimization.
+that underlie modern **Marketing Mix Modeling (MMM)**. It takes you from standard
+quantitative prerequisites all the way to advanced practice — without hand-waving,
+and without assuming you already know Bayesian modeling, MCMC, causal inference,
+or constrained optimization.
+
+**What you will be able to do.**
+
+- Build a full Bayesian MMM end-to-end — from the data-generating process through
+  prior elicitation and MCMC inference to budget optimization.
+- *Calibrate* that model against experiments, so its budget recommendations rest
+  on causal evidence rather than on a curve the observational data can't pin down.
+- Engineer the whole thing into a reproducible, testable, trustworthy system.
+
+**What makes it different.** It is theory-first. Most MMM material shows you which
+library functions to call; this book derives the mathematics so you understand
+what those functions assume, when they break, and how to fix them — including the
+causal calibration step most treatments skip entirely.
 
 ## Who this book is for
 
 You will get the most out of this book if you arrive with:
 
-- **Calculus 2** — limits, derivatives, integrals, sequences and series.
+- **Calculus** — derivatives, integrals, sequences and series.
 - **Linear algebra** — vectors, matrices, solving linear systems.
 - **Calculus-based statistics** — random variables, expectation, common
   distributions, the idea of a likelihood.
+- **Mathematical maturity** — comfort reading and writing short proofs, of the
+  kind built in discrete mathematics, an introduction-to-proofs /
+  mathematical-structures course, or real analysis. The book proves results where
+  the proof is illuminating; you should be willing to follow and reproduce them.
 
 You will leave able to reason about — and build — a full Bayesian MMM: from the
 data-generating process, through prior elicitation and MCMC inference, to budget
-optimization with a correct economic interpretation, and the software
-engineering that makes such a system reproducible and trustworthy.
+optimization grounded in experiments you can actually trust, and the software
+engineering that makes such a system reproducible.
 
 ## How the book is organized
+
+```{python}
+#| label: fig-learning-path
+#| fig-cap: "The learning path. Each part builds strictly on the ones before it. The turn from Part V to Part VI — from *building* the model to *trusting* it — is the book's intellectual spine."
+#| fig-align: center
+#| echo: false
+import matplotlib.pyplot as plt
+from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+
+FOUND = "#3b6ea5"  # foundations (Parts I–IV)
+CORE = "#c1654f"   # the MMM core (Parts V–VI)
+ENG = "#5f7a6b"    # engineering & capstone (Parts VII–VIII)
+PRE = "#8a9099"    # prerequisites
+
+rows = [
+    ("Prerequisites", PRE, True),
+    ("Part I · Mathematical Foundations", FOUND, False),
+    ("Part II · Regression & Bayesian Inference", FOUND, False),
+    ("Part III · Computation: Sampling (MCMC / HMC)", FOUND, False),
+    ("Part IV · Optimization", FOUND, False),
+    ("Part V · Marketing Mix Modeling: Modeling", CORE, False),
+    ("Part VI · Causal Grounding & Calibration", CORE, False),
+    ("Part VII · Software Engineering & Computer Science", ENG, False),
+    ("Part VIII · Capstone", ENG, False),
+]
+PRE_DETAIL = "calculus · linear algebra · calculus-based statistics · proof literacy"
+
+n = len(rows)
+bw, bh, gap = 9.0, 0.68, 0.28
+fig_h = n * (bh + gap) + 0.4
+fig, ax = plt.subplots(figsize=(8.5, fig_h))
+ax.set_xlim(0, 10)
+ax.set_ylim(0, fig_h)
+ax.axis("off")
+
+cx = 5.0
+ys = []
+y = fig_h - 0.2 - bh
+for label, color, is_pre in rows:
+    ys.append(y)
+    ax.add_patch(FancyBboxPatch(
+        (cx - bw / 2, y), bw, bh,
+        boxstyle="round,pad=0.02,rounding_size=0.09",
+        linewidth=0, facecolor=color))
+    if is_pre:
+        ax.text(cx, y + bh * 0.66, label, ha="center", va="center",
+                color="white", fontsize=11, fontweight="bold")
+        ax.text(cx, y + bh * 0.30, PRE_DETAIL, ha="center", va="center",
+                color="white", fontsize=8.5)
+    else:
+        ax.text(cx, y + bh / 2, label, ha="center", va="center",
+                color="white", fontsize=11, fontweight="bold")
+    y -= (bh + gap)
+
+for i in range(n - 1):
+    ax.add_patch(FancyArrowPatch(
+        (cx, ys[i]), (cx, ys[i + 1] + bh),
+        arrowstyle="-|>", mutation_scale=13, linewidth=1.4, color="#444"))
+
+i_v = 5  # Part V → Part VI
+y_mid = (ys[i_v] + (ys[i_v + 1] + bh)) / 2
+ax.text(cx + bw / 2 + 0.15, y_mid, "build → trust", ha="left", va="center",
+        fontsize=9.5, style="italic", color=CORE, fontweight="bold")
+
+fig.tight_layout()
+plt.show()
+```
 
 The book runs **foundations → applications**. Each part builds strictly on the
 ones before it.
@@ -31,15 +127,21 @@ ones before it.
 - **Part II — Regression & Bayesian Inference.** From ordinary least squares to
   Bayesian and hierarchical regression.
 - **Part III — Computation: Sampling.** Markov chains, MCMC, and Hamiltonian
-  Monte Carlo / NUTS — the engine that actually fits the models.
+  Monte Carlo / NUTS — the engine that actually fits the models — and how to tell
+  a good fit from a broken one.
 - **Part IV — Optimization.** Convexity, linear programming (with duality and
   shadow prices), and constrained nonlinear optimization via SLSQP.
-- **Part V — Marketing Mix Modeling: Synthesis.** Adstock, saturation, fitting,
-  and budget optimization, tying the prior parts together.
-- **Part VI — Software Engineering & Computer Science.** The engineering — from
-  CS first principles to architecture, data engineering, and testing — that
-  turns the math into a reliable system.
-- **Part VII — Capstone.** A worked, end-to-end engagement on synthetic data.
+- **Part V — Marketing Mix Modeling: Modeling.** Adstock, saturation, fitting,
+  and dynamic (state-space) models, through to budget optimization — the best
+  *observational* MMM you can build.
+- **Part VI — Causal Grounding & Calibration.** Why that observational model is
+  untrustworthy for the decision you built it for — causal inference,
+  quasi-experimental designs, calibrating the response curve to experiments, and
+  accumulating that evidence into a reusable prior store.
+- **Part VII — Software Engineering & Computer Science.** The engineering — from
+  CS first principles to architecture, data engineering, and testing — that turns
+  the math into a reliable system.
+- **Part VIII — Capstone.** A worked, end-to-end engagement on synthetic data.
 
 The mathematics starts at the undergraduate level and ramps up toward advanced
 master's / first-year-PhD rigor as the book progresses. Where a result is
@@ -79,5 +181,13 @@ Every field in this book is anchored to its canonical references — Strang and
 Axler for linear algebra; Casella & Berger for statistics; Gelman et al. (BDA3),
 Gelman & Hill, and McElreath for Bayesian modeling; Robert & Casella, Neal, and
 Betancourt for MCMC/HMC; Boyd & Vandenberghe, Bertsimas & Tsitsiklis, and
-Nocedal & Wright for optimization; and the published MMM literature (Jin et al.)
-for the application. Full citations are in the bibliography.
+Nocedal & Wright for optimization; Imbens & Rubin and Angrist & Pischke for causal
+inference and quasi-experimental design; and the published MMM literature
+(Jin et al.) for the application. Full citations are in the bibliography.
+
+## Getting the complete book
+
+*This preface is a free sample.* The complete book — all chapters, worked
+solutions, and the runnable code behind every figure — is available at
+**[link TBD]**.
+<!-- TODO(CTA): replace [link TBD] with the purchase/landing URL once finalized. -->
