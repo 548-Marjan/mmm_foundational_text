@@ -21,3 +21,55 @@ where $r_i$ is channel $i$'s response curve and the constraint fixes total spend
 The roadmap follows the logic upward. We begin with **convex sets**, then **convex functions**, then the **first- and second-order conditions** that certify when a function is convex without checking every pair of points. From these we prove the keystone — **a local minimum of a convex problem is global** — and then extend it to constrained problems through **Lagrange multipliers and the KKT conditions**. That machinery delivers the MMM capstone, the equal-marginal-returns rule, and then we close with an honest reckoning: real response curves are S-shaped, and we name exactly what that costs us.
 
 This chapter is the theory hub of Part IV. Chapter 12 (Linear Programming) and Chapter 13 (SLSQP) are both engines that exploit the optimality conditions proved here; everything downstream rests on the certificates we build now.
+
+## Theory & Proofs
+
+The theory climbs a ladder, each rung resting on the one below. We begin with **convex sets**, the geometry of feasible regions; then **convex functions**, the shape of objectives; then the **first- and second-order conditions** that certify convexity without testing every pair of points. From these we prove the keystone — that **every local minimum of a convex problem is global** — and then carry it into the **constrained** setting through Lagrange multipliers and the KKT conditions, which deliver the budget capstone: the equal-marginal-returns rule for allocating spend. The section then ends at an honest reckoning with non-convexity, naming exactly what we lose when real response curves refuse to be concave. This part of the chapter builds the first two rungs — the sets and the functions — on which everything above is balanced.
+
+### Rung 1 — Convex sets
+
+Every optimization problem searches over a region of allowable choices, and the geometry of that region decides whether the search is tractable. The simplest, most forgiving geometry is convexity: a set with no dents, no holes, and no disconnected pieces, so that you can never leave it by walking in a straight line from one member to another.
+
+**Definition.** A set $C \subseteq \mathbb{R}^n$ is **convex** if for all $x, y \in C$ and every $\lambda \in [0,1]$, the point $\lambda x + (1-\lambda)y \in C$. In words: the line segment between any two members of the set stays entirely inside the set. As $\lambda$ sweeps from $0$ to $1$, the point $\lambda x + (1-\lambda)y$ traces that segment from $y$ to $x$, and convexity demands every point of it belong to $C$.
+
+**Examples that recur in optimization.** Four convex sets appear again and again in what follows: a **hyperplane** $\{x : a^\top x = b\}$, a **halfspace** $\{x : a^\top x \le b\}$, a Euclidean **norm ball** $\{x : \|x\| \le r\}$, and a **polyhedron** $\{x : Ax \le b\}$ — a finite intersection of halfspaces. The one we care about most is the **budget feasible set**
+
+$$
+\mathcal{B} = \{\, b \in \mathbb{R}^n : b \ge 0,\ \mathbf{1}^\top b \le B \,\},
+$$
+
+the set of nonnegative spend vectors whose total does not exceed the budget $B$. It is a polyhedron — in fact a **simplex** — and it is the region every budget optimizer in Part IV searches over.
+
+**Proposition (intersection preserves convexity).** The intersection of any collection of convex sets is convex.
+
+**Proof.** Let $\{C_k\}$ be a collection of convex sets and take any $x, y$ in the intersection $\bigcap_k C_k$, together with any $\lambda \in [0,1]$. For each index $k$, both $x$ and $y$ lie in $C_k$, and $C_k$ is convex, so $\lambda x + (1-\lambda)y \in C_k$. Since this holds for every $k$, the point $\lambda x + (1-\lambda)y$ lies in every $C_k$ and hence in their intersection. The intersection therefore contains the segment between any two of its points, which is convexity. $\blacksquare$
+
+**Corollary.** The budget feasible set $\mathcal{B}$ is convex. It is the intersection of the $n$ halfspaces $\{b_i \ge 0\}$ — each one convex — and the single halfspace $\{\mathbf{1}^\top b \le B\}$, so the proposition applies directly. This is the feasible region every budget optimizer in Part IV searches over, and its convexity is precisely the hypothesis the later optimality theory will require.
+
+### Rung 2 — Convex functions
+
+A convex feasible region is only half of what makes an optimization problem tractable; the other half is the shape of the objective being minimized over it. The right notion of shape is convexity of the function itself — a curvature condition that, married to a convex domain, is exactly what forces local searches to succeed.
+
+**Definition.** A function $f$ with convex domain is **convex** if for all $x, y$ in the domain and every $\lambda \in [0,1]$,
+
+$$
+f(\lambda x + (1-\lambda)y) \le \lambda f(x) + (1-\lambda)f(y),
+$$
+
+i.e. the chord joining $(x, f(x))$ and $(y, f(y))$ lies on or above the graph of $f$ between them. The function is **strictly convex** if the inequality is strict whenever $x \ne y$ and $\lambda \in (0,1)$. The convex-domain requirement is not a technicality to be waved past: the left-hand side only makes sense if $\lambda x + (1-\lambda)y$ is itself in the domain, so the inequality presupposes exactly the property Rung 1 established for $\mathcal{B}$.
+
+**Epigraph characterization.** Convexity of a function reduces to convexity of a set. The **epigraph** of $f$ is the region lying on or above its graph,
+
+$$
+\text{epi}\,f = \{(x, t) : f(x) \le t\},
+$$
+
+and $f$ is convex if and only if $\text{epi}\,f$ is a convex set [@boyd2004]. The equivalence is geometric: the chord-above-the-graph inequality says exactly that the segment joining two points of the epigraph stays inside the epigraph, which is the definition of a convex set. This is the bridge that lets every theorem about convex sets be read as a theorem about convex functions, and conversely.
+
+**Concavity and the reduction to one theory.** A function $f$ is **concave** if $-f$ is convex; equivalently, the chord lies on or below the graph. A diminishing-returns response curve is concave: each additional dollar of spend buys a little less than the last, so the graph bends downward. The canonical example is the **Hill saturation curve** introduced in Chapter 5,
+
+$$
+f(x; K, n) = \frac{x^n}{K^n + x^n},
+$$
+
+which for exponent $n = 1$ is concave in spend $x \ge 0$ — the textbook shape of an advertising channel that saturates. Concavity and convexity are not two theories but one, and the bridge is a single observation: maximizing a concave function is identical to minimizing its convex negative, since $\arg\max_x f(x) = \arg\min_x \bigl(-f(x)\bigr)$ and the optimal value merely changes sign. So the budget problem's "concave maximization" and the standard "convex minimization" are the same problem wearing different clothes. We therefore state every result for the convex-minimization side, without loss of generality, and read it off for concave maximization whenever the MMM demands it.
