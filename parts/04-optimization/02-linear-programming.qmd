@@ -665,3 +665,54 @@ plt.show()
 ```
 
 The printed output pins the chapter's arithmetic exactly. Worked Example 1's LP returns the optimal vertex $x = (2, 2)$ with objective $10$, and the solver hands back the two **shadow prices** $(2, 1)$ — the magnitudes of `ineqlin.marginals` — whose dual objective $4(2) + 2(1) = 10$ matches the primal value to the digit: **strong duality**, with zero gap, certified automatically rather than argued by hand. The piecewise-linear budget LP of Worked Example 3 water-fills to the allocation $(b_1, b_2) = (3, 2)$ with total response $21$, and the multiplier on its budget equality comes back at magnitude $3$ — the cutoff slope, exactly the **budget shadow price** $\lambda = 3$ the exchange argument predicted. Then the payoff: as the secant mesh refines, the LP marches to Chapter 11's smooth optimum. At $K = 3$ segments per channel the LP reports $b \approx (6, 3)$, $\lambda \approx 0.3670$, response $6.6310$; by $K = 10$ the allocation has already snapped to $b = (7.2, 1.8)$ with response $6.7082$ and $\lambda \approx 0.3617$; and at $K = 200$ the budget price has climbed to $\lambda \approx 0.3721$ with response $6.7082$ — converging to Chapter 11's hand-derived $b^\star = (7.2, 1.8)$, $\lambda = 1/\sqrt{7.2} = 0.3727$, and total response $2\sqrt{7.2} + \sqrt{1.8} = 6.7082$. The dashed line in the third figure is that smooth $\lambda$, and the LP's discrete budget price rises to meet it. Linear programming did not merely approximate Chapter 11's capstone; refined far enough, it reproduced it — equal marginal returns, recovered as a dual price.
+
+## Exercises
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** The Fundamental Theorem says that if a linear program has an optimal solution, it has one at a vertex. Explain what this buys you algorithmically — why does reducing the search to vertices make an LP solvable "with certainty," and why can the simplex method afford to examine only vertices rather than the whole feasible region?
+
+**C2.** At the optimum of an LP, one constraint has shadow price $0$ and another has shadow price $7$. Using complementary slackness, state what each tells you about whether that constraint binds, and explain the economic reading: which resource is scarce, which is in surplus, and what one more unit of each is worth.
+
+**C3.** The piecewise-linear-as-LP trick lets you solve a concave budget problem by linear programming, but it fails for an S-shaped (convex-toe) response curve. Explain precisely why the "fill steepest first" rule requires the segment slopes to be *decreasing*, and what goes wrong — both for the rule and for the LP structure itself — when the response has a convex toe.
+
+### B — By Hand
+
+**B1.** Solve the linear program $\max\ 4x_1 + 3x_2$ subject to $2x_1 + x_2 \le 10$, $x_1 + x_2 \le 6$, $x \ge 0$, graphically: list the vertices of the feasible polygon, evaluate the objective at each, and identify the optimum. Which constraints bind there?
+
+**B2.** Write the dual of the LP in B1 (dual variables $y_1, y_2$ on the two constraints). Using complementary slackness — both primal variables are positive at the optimum — solve the dual by hand, verify strong duality (equal optimal values), and interpret each dual value as a shadow price.
+
+**B3.** Two channels have concave piecewise-linear response: channel 1's segment slopes are $[6, 4, 2]$ and channel 2's are $[5, 3, 1]$, every segment has width $2$, and the budget is $B = 5$. Apply the water-filling rule: order the segments by slope, fill until the budget is exhausted, and report the allocation $b^\star$, the total response, and the budget shadow price $\lambda$ (the cutoff slope). Confirm that every funded segment has slope $\ge \lambda$ and every unfunded one $\le \lambda$.
+
+### P — Prove It
+
+**P1.** Prove **weak duality** for the primal–dual pair $\min\{c^\top x : Ax \ge b,\ x \ge 0\}$ and $\max\{b^\top y : A^\top y \le c,\ y \ge 0\}$: show that for any primal-feasible $x$ and dual-feasible $y$, $b^\top y \le c^\top x$. State precisely where each feasibility/sign condition is used.
+
+**P2.** Prove that a basic feasible solution is a vertex: if $x$ is a BFS of $\{x : Ax = b,\ x \ge 0\}$ with basis $B$, and $x = \tfrac12(u + v)$ for feasible $u, v$, show $u = v = x$. (Hint: argue first that $u$ and $v$ vanish on the nonbasic coordinates, then use invertibility of $A_B$.)
+
+**P3.** Prove the **water-filling / fill-steepest-first** optimality for a concave piecewise-linear budget LP: if an allocation funds a segment of slope $m'$ while leaving room in a segment of strictly larger slope $m > m'$, exhibit a feasible perturbation that strictly increases total response — concluding that at the optimum every funded segment's slope is at least every unfunded segment's slope.
+
+### A — Applied / Code
+
+**A1.** Use `scipy.optimize.linprog` (method `"highs"`) to solve an LP of your choice with at least two binding constraints, and extract the **shadow prices** from `res.ineqlin.marginals` (taking magnitudes). Verify strong duality numerically by forming the dual objective from those prices and checking it equals the primal optimum.
+
+**A2.** Build a piecewise-linear secant approximation of a concave response $r(b) = a\sqrt{b}$ over $[0, B]$ with $K$ segments, set up the budget LP for two channels, and solve it with `linprog` for increasing $K$. Show that the allocation and the budget shadow price converge to the smooth optimum as $K$ grows (for $a = (2,1)$, $B = 9$, toward $b^\star = (7.2, 1.8)$, $\lambda = 0.3727$).
+
+**A3.** Take an S-shaped response (e.g. a Hill curve with exponent $n = 2$) and build a piecewise-linear fit whose segment slopes *increase then decrease*. Show numerically that "fill steepest first" produces a different — and worse — allocation than the true optimum found by a global search over the budget split, demonstrating that the LP relaxation no longer matches the problem once concavity is lost.
+
+## Summary
+
+When the objective and every constraint are linear, optimization reaches its most tractable form. The feasible region is a polyhedron, an optimum sits at one of its finitely many vertices, the simplex method walks there along edges, and Chapter 11's Lagrangian duality sharpens into a symmetric pair of problems whose dual variables are shadow prices. The chapter's payoff is that the concave budget problem — solved by hand with KKT in Chapter 11 — becomes a linear program under a piecewise-linear model, and the equal-marginal-return $\lambda$ reappears as the dual price the solver computes for free.
+
+**Key concepts.**
+
+- **Standard form** $\min c^\top x$ s.t. $Ax = b,\ x \ge 0$; any LP converts to it via slack/surplus variables. The feasible set is a **polyhedron**.
+- A **vertex** (extreme point) of the polyhedron is exactly a **basic feasible solution** — choose $m$ independent columns, zero the rest, solve. There are finitely many.
+- The **Fundamental Theorem of LP**: if an optimum exists, one occurs at a vertex; every LP is infeasible, unbounded, or has a finite optimum at a vertex.
+- The **simplex method** walks vertex to vertex via reduced costs, an entering variable, and the min-ratio test for the leaving variable; it stops when all reduced costs are nonnegative. Degeneracy is handled by Bland's rule.
+- **LP duality**: every primal LP has a dual built from the same data. **Weak duality** — every dual value lower-bounds every primal value. **Strong duality** — for a feasible LP the gap is zero (the LP face of Chapter 11's KKT/strong-duality result).
+- **Complementary slackness**: a primal–dual feasible pair is optimal iff each constraint is either binding or has zero dual price — the LP form of $\lambda_i g_i = 0$.
+- **Shadow prices**: the optimal dual variable $y_i^\star = \partial p^\star/\partial b_i$ is the marginal value of relaxing constraint $i$; a slack constraint prices at zero, a binding one may price positive.
+- **Budget allocation as an LP**: a piecewise-linear concave response makes the budget problem an LP whose "fill steepest first" optimum equalizes the marginal slopes; the budget dual price is Chapter 11's $\lambda$. Refining the mesh converges to the smooth optimum. The trick needs concavity — an S-shaped curve breaks it, which is Chapter 13's territory.
+
+**Key identities (inline).** Standard form $\min c^\top x$ s.t. $Ax = b,\ x \ge 0$; primal–dual pair $\min\{c^\top x : Ax \ge b,\ x \ge 0\}$ ↔ $\max\{b^\top y : A^\top y \le c,\ y \ge 0\}$; reduced costs $\bar c_N = c_N - A_N^\top y$ with $y = (A_B^{-1})^\top c_B$; weak duality $b^\top y \le c^\top x$; strong duality $b^\top y^\star = c^\top x^\star$; complementary slackness $y_i(a_i^\top x - b_i) = 0$ and $x_j(c_j - (A^\top y)_j) = 0$; shadow price $\partial p^\star/\partial b_i = y_i^\star$; and the budget LP's dual price equal to Chapter 11's equal-marginal return $\lambda$. Linear programming owns the linear and concave-separable world exactly; the smooth, non-concave world is the subject of Chapter 13.
