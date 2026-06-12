@@ -6,7 +6,7 @@ show-solutions: false
 
 book:
   title: "The Mathematics and Engineering of Marketing Mix Modeling"
-  subtitle: "A self-contained path from Calculus 2, linear algebra, and calculus-based statistics to advanced MMM practice."
+  subtitle: "A self-contained path from calculus, linear algebra, and calculus-based statistics to advanced MMM practice."
   author: "548 / Marjan"
   date: today
   search: true
