@@ -506,3 +506,162 @@ $$
 **Budget shadow price.** The marginal (last-funded) segment is the slope-$3$ segment of channel 1, so the budget's marginal value is $\lambda = 3$. The water-filling condition checks out: every *funded* segment has slope $\ge 3$ (the values $5, 4, 3$), and every *unfunded* segment has slope $\le 3$ (the slope-$3$ remainder, then $2, 1, 1$). The cutoff slope $3$ separates funded from unfunded; one more dollar of budget would buy $3$ more units of response by filling more of that slope-$3$ segment — exactly the shadow price the dual would report.
 
 **Tie to Chapter 11.** This $\lambda = 3$ is the discrete equal-marginal return — Chapter 11's multiplier, here read straight off the LP rather than derived from KKT stationarity. The marginal segments of the active channels share the cutoff slope. And the discreteness is not a limitation: refining a smooth concave response into many narrow segments recovers Chapter 11's exact answer. For square-root response $r_i(b) = a_i\sqrt{b}$ with $a = (2, 1)$ and $B = 9$, the refined LP converges to $b^\star = (7.2, 1.8)$ with budget price $\lambda \to 0.3727$ — the convergence demonstrated in the Code Tie-in.
+
+## Code Tie-in
+
+The single cell below runs the chapter on a real solver, with nothing but NumPy, SciPy's `linprog` (the `"highs"` interior-point/simplex backend), and Matplotlib — no modelling framework, so every claim is the few lines of linear algebra it actually is. It solves Worked Example 1's LP and reads the **dual / shadow prices** straight off the solver, checking that strong duality holds to the digit; it water-fills the piecewise-linear budget LP of Worked Example 3 and recovers the budget price $\lambda = 3$ as the multiplier on the budget equality; and then it delivers the chapter's payoff — refining a piecewise-linear secant fit of square-root response and watching the LP optimum and its budget shadow price **converge to Chapter 11's smooth answer** $b^\star = (7.2, 1.8)$, $\lambda = 1/\sqrt{7.2} = 0.3727$, response $6.7082$. One observable carries the whole chapter: the dual price the solver prints for free is the equal-marginal return Chapter 11 derived by hand, and as the mesh refines, the discrete price marches to the smooth one.
+
+A note on SciPy's sign convention, made explicit in the code: for an upper-bound minimization `linprog` returns `ineqlin.marginals` and `eqlin.marginals` that are $\le 0$, so the economic shadow prices are their **magnitudes** (absolute values), which is what the cell prints and asserts on.
+
+```{python}
+# Chapter 12 — Code Tie-in: linear programming, duality, and the convergence of
+# a piecewise-linear (PWL) budget LP to Chapter 11's smooth concave optimum.
+# NumPy + SciPy (scipy.optimize.linprog, method="highs") + Matplotlib only.
+# We (1) solve Worked Example 1's LP and read its dual / shadow prices, checking
+# strong duality; (2) water-fill the PWL budget LP of Worked Example 3 and read
+# the budget shadow price off the equality multiplier; and (3) refine a PWL fit
+# of square-root response and watch the LP optimum and its budget price converge
+# to Chapter 11's b*=(7.2,1.8), lambda=1/sqrt(7.2)=0.3727, response 6.7082.
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import linprog
+
+# --- Worked Example 1: a two-variable LP, solved by linprog -----------------
+# max 3 x1 + 2 x2  s.t. x1 + x2 <= 4,  x1 <= 2,  x >= 0,
+# cast as a minimization of the negated objective.
+c = np.array([-3.0, -2.0])
+A_ub = np.array([[1.0, 1.0], [1.0, 0.0]])
+b_ub = np.array([4.0, 2.0])
+res1 = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=[(0, None), (0, None)], method="highs")
+x = res1.x
+obj = -res1.fun  # undo the sign flip to recover the maximization value
+# SciPy's ineqlin.marginals are <= 0 for an upper-bound min problem; the
+# economic shadow prices are their magnitudes.
+mags = np.abs(res1.ineqlin.marginals)
+dual_obj = b_ub @ mags  # dual objective 4 y1 + 2 y2 with y = shadow prices
+print("Worked Example 1 LP:  max 3 x1 + 2 x2  s.t. x1+x2<=4, x1<=2, x>=0")
+print(f"  optimal x        = {np.round(x, 6).tolist()}   (expected [2, 2])")
+print(f"  optimal objective= {obj:.6f}                  (expected 10)")
+print(f"  shadow prices    = {np.round(mags, 6).tolist()}   (expected [2, 1])")
+print(f"  dual objective   = {dual_obj:.6f}  =  primal {obj:.6f}  (strong duality)")
+assert np.allclose(x, [2, 2], atol=1e-6)
+assert np.allclose(sorted(mags), [1, 2], atol=1e-6)
+assert np.isclose(dual_obj, obj, atol=1e-6)
+print("  asserts: x=[2,2], shadow prices {1,2}, strong duality  -> PASSED")
+
+# --- Worked Example 3: piecewise-linear budget allocation via linprog -------
+# Channel 1 slopes [5,3,1], channel 2 slopes [4,2,1], every segment width 2,
+# budget B = 5.  max slopes . s  s.t. sum(s) = B,  0 <= s <= width.
+slopes = np.array([5.0, 3.0, 1.0, 4.0, 2.0, 1.0])  # ch1 then ch2
+widths = np.array([2.0] * 6)
+B3 = 5.0
+res3 = linprog(-slopes, A_eq=[np.ones(6)], b_eq=[B3],
+               bounds=[(0, w) for w in widths], method="highs")
+s = res3.x
+b1 = s[0] + s[1] + s[2]
+b2 = s[3] + s[4] + s[5]
+resp3 = slopes @ s
+# eqlin.marginals is the multiplier on sum(s)=B; its magnitude is the budget price.
+lam3 = abs(res3.eqlin.marginals[0])
+print("\nWorked Example 3 PWL budget LP:  slopes [5,3,1 | 4,2,1], width 2, B=5")
+print(f"  allocation (b1, b2) = ({b1:.4f}, {b2:.4f})   (expected (3, 2))")
+print(f"  total response      = {resp3:.4f}            (expected 21)")
+print(f"  budget shadow price = {lam3:.4f}             (expected 3)")
+assert np.allclose([b1, b2], [3.0, 2.0], atol=1e-6)
+assert np.isclose(resp3, 21.0, atol=1e-6)
+assert np.isclose(lam3, 3.0, atol=1e-6)
+print("  asserts: (b1,b2)=(3,2), response 21, lambda=3  -> PASSED")
+
+# --- PWL -> smooth convergence (THE PAYOFF) --------------------------------
+# Response r_i(b) = a_i sqrt(b), a = (2, 1), B = 9.  Build a PWL secant model
+# with K segments per channel over [0, 9]; concatenate both channels into one LP.
+a = np.array([2.0, 1.0])
+Btot = 9.0
+
+def pwl_budget_lp(K):
+    edges = np.linspace(0.0, Btot, K + 1)
+    lo, hi = edges[:-1], edges[1:]
+    seg_slopes, seg_widths, owner = [], [], []
+    for i, ai in enumerate(a):
+        slope = ai * (np.sqrt(hi) - np.sqrt(lo)) / (hi - lo)  # secant slope
+        seg_slopes.append(slope)
+        seg_widths.append(hi - lo)
+        owner.append(np.full(K, i))
+    seg_slopes = np.concatenate(seg_slopes)
+    seg_widths = np.concatenate(seg_widths)
+    owner = np.concatenate(owner)
+    r = linprog(-seg_slopes, A_eq=[np.ones(2 * K)], b_eq=[Btot],
+                bounds=[(0, w) for w in seg_widths], method="highs")
+    svec = r.x
+    bch = np.array([svec[owner == i].sum() for i in range(len(a))])
+    lam = abs(r.eqlin.marginals[0])
+    response = seg_slopes @ svec
+    return bch, lam, response
+
+smooth_b = np.array([7.2, 1.8])
+smooth_resp = 2 * np.sqrt(7.2) + np.sqrt(1.8)   # 6.7082...
+smooth_lam = 1.0 / np.sqrt(7.2)                 # 0.3727...
+print(f"\nPWL -> smooth convergence: r_i(b)=a_i sqrt(b), a={a.tolist()}, B={Btot:.0f}")
+print(f"  smooth optimum b*=(7.2,1.8), lambda={smooth_lam:.4f}, response={smooth_resp:.4f}")
+print(f"  {'K':>4}{'b=(b1,b2)':>22}{'lambda':>10}{'response':>11}")
+Ks = [3, 10, 50, 200]
+records = []
+for K in Ks:
+    bch, lam, response = pwl_budget_lp(K)
+    records.append((K, bch, lam, response))
+    print(f"  {K:>4}   ({bch[0]:8.4f}, {bch[1]:8.4f}){lam:>10.4f}{response:>11.4f}")
+b200, lam200, resp200 = records[-1][1], records[-1][2], records[-1][3]
+assert np.allclose(b200, smooth_b, atol=0.05)
+assert np.isclose(resp200, smooth_resp, atol=0.01)
+print(f"  asserts: K=200 -> b within 0.05 of (7.2,1.8), response within 0.01 of "
+      f"{smooth_resp:.4f}  -> PASSED")
+
+# --- Figure (a): WE1 feasible polygon with the optimal vertex --------------
+fig, ax = plt.subplots(figsize=(5.4, 4.4))
+verts = np.array([[0, 0], [2, 0], [2, 2], [0, 4]])
+poly = plt.Polygon(verts, closed=True, facecolor="steelblue", alpha=0.30,
+                   edgecolor="steelblue", lw=1.5)
+ax.add_patch(poly)
+ax.scatter(verts[:, 0], verts[:, 1], color="steelblue", zorder=5)
+ax.scatter([2], [2], color="crimson", s=70, zorder=6, label="optimum $(2,2)$, value $10$")
+ax.annotate("$(2,2)$", xy=(2, 2), xytext=(2.05, 2.15), fontsize=9, color="crimson")
+ax.set_xlim(-0.4, 3.2)
+ax.set_ylim(-0.4, 4.6)
+ax.set_xlabel("spend on channel 1, $x_1$")
+ax.set_ylabel("spend on channel 2, $x_2$")
+ax.set_title("Worked Example 1: feasible polygon and optimal vertex", fontsize=10)
+ax.legend(fontsize=9, loc="upper right")
+plt.tight_layout()
+plt.show()
+
+# --- Figure (b): PWL secant approximations hugging 2 sqrt(b) ----------------
+bb = np.linspace(0.0, Btot, 400)
+fig, ax = plt.subplots(figsize=(6.2, 4.0))
+ax.plot(bb, 2 * np.sqrt(bb), color="black", lw=2.2, label=r"smooth $2\sqrt{b}$")
+for K, color in [(3, "darkorange"), (10, "seagreen")]:
+    edges = np.linspace(0.0, Btot, K + 1)
+    ax.plot(edges, 2 * np.sqrt(edges), color=color, lw=1.4, marker="o", ms=3,
+            label=f"PWL secants, $K={K}$")
+ax.set_xlabel("spend $b$ on channel 1")
+ax.set_ylabel(r"response $2\sqrt{b}$")
+ax.set_title("Piecewise-linear secants converging to the smooth curve", fontsize=10)
+ax.legend(fontsize=9, loc="lower right")
+plt.tight_layout()
+plt.show()
+
+# --- Figure (c): budget shadow price lambda vs K, converging to Ch11's value
+fig, ax = plt.subplots(figsize=(6.2, 4.0))
+lam_vals = [rec[2] for rec in records]
+ax.plot(Ks, lam_vals, color="purple", lw=1.8, marker="o", label=r"LP budget price $\lambda(K)$")
+ax.axhline(smooth_lam, color="gray", ls="--", lw=1.3,
+           label=rf"Ch11 smooth $\lambda={smooth_lam:.4f}$")
+ax.set_xscale("log")
+ax.set_xlabel("number of PWL segments per channel, $K$ (log scale)")
+ax.set_ylabel(r"budget shadow price $\lambda$")
+ax.set_title("Budget shadow price converging to Chapter 11's $\\lambda$", fontsize=10)
+ax.legend(fontsize=9)
+plt.tight_layout()
+plt.show()
+```
+
+The printed output pins the chapter's arithmetic exactly. Worked Example 1's LP returns the optimal vertex $x = (2, 2)$ with objective $10$, and the solver hands back the two **shadow prices** $(2, 1)$ — the magnitudes of `ineqlin.marginals` — whose dual objective $4(2) + 2(1) = 10$ matches the primal value to the digit: **strong duality**, with zero gap, certified automatically rather than argued by hand. The piecewise-linear budget LP of Worked Example 3 water-fills to the allocation $(b_1, b_2) = (3, 2)$ with total response $21$, and the multiplier on its budget equality comes back at magnitude $3$ — the cutoff slope, exactly the **budget shadow price** $\lambda = 3$ the exchange argument predicted. Then the payoff: as the secant mesh refines, the LP marches to Chapter 11's smooth optimum. At $K = 3$ segments per channel the LP reports $b \approx (6, 3)$, $\lambda \approx 0.3670$, response $6.6310$; by $K = 10$ the allocation has already snapped to $b = (7.2, 1.8)$ with response $6.7082$ and $\lambda \approx 0.3617$; and at $K = 200$ the budget price has climbed to $\lambda \approx 0.3721$ with response $6.7082$ — converging to Chapter 11's hand-derived $b^\star = (7.2, 1.8)$, $\lambda = 1/\sqrt{7.2} = 0.3727$, and total response $2\sqrt{7.2} + \sqrt{1.8} = 6.7082$. The dashed line in the third figure is that smooth $\lambda$, and the LP's discrete budget price rises to meet it. Linear programming did not merely approximate Chapter 11's capstone; refined far enough, it reproduced it — equal marginal returns, recovered as a dual price.
