@@ -122,3 +122,69 @@ The plain statistic above has two blind spots, each closed by a refinement.
 **Split-$\hat{R}$.** A single chain that drifts steadily — never settling, but moving slowly enough that its overall mean still resembles the others' — can pass the whole-chain test while being plainly non-stationary. Split-$\hat{R}$ catches this by cutting each chain into its first and second halves and treating the $2M$ halves as separate chains before computing $\hat{R}$. A drifting chain has mismatched halves, which inflates the between-chain term and exposes the non-stationarity that the undivided statistic concealed [@vehtari2021].
 
 **Rank-normalized $\hat{R}$.** The variance-based statistic presumes the target has a finite variance; for a heavy-tailed posterior — and an MMM ROAS posterior can be heavy-tailed — $\operatorname{var}(\theta)$ may be enormous or undefined, and $\hat{R}$ becomes unstable or meaningless. The fix is to replace each draw by the normal score of its rank across all chains and all draws, then compute $\hat{R}$ on these rank-normalized values. Ranks are always finite, so the transformed quantity has a well-defined variance and the diagnostic stays valid even for heavy-tailed or infinite-variance targets [@vehtari2021]. The split and rank-normalized refinements are applied together, and their combination is the $\hat{R}$ that Stan and PyMC report by default.
+
+### Rung 3 — Effective sample size
+
+Rung 1 wrote the Monte Carlo standard error as $\sigma_\theta/\sqrt{N_{\text{eff}}}$ and then deferred the definition of $N_{\text{eff}}$ to here. The deferral was not evasion: the effective sample size cannot be read off the draws one at a time, because it is a property of how the draws *relate* to one another. It is built from the autocorrelation structure of the chain — the same structure Chapter 8 introduced as the cost of dependent sampling — and the construction is a single theorem about the variance of a correlated average.
+
+> **Theorem (variance inflation).** For a stationary sequence $\theta^{(1)}, \dots, \theta^{(N)}$ with marginal variance $\sigma^2$ and lag-$k$ autocorrelation $\rho_k = \operatorname{corr}(\theta^{(i)}, \theta^{(i+k)})$, the variance of the sample mean is
+> $$
+> \operatorname{var}(\bar\theta) = \frac{\sigma^2}{N}\left(1 + 2\sum_{k=1}^{N-1}\Bigl(1 - \frac{k}{N}\Bigr)\rho_k\right),
+> $$
+> and as $N \to \infty$ this tends to $\frac{\sigma^2}{N}\bigl(1 + 2\sum_{k=1}^{\infty}\rho_k\bigr)$. The **effective sample size** is therefore
+> $$
+> N_{\text{eff}} = \frac{N}{1 + 2\sum_{k=1}^{\infty}\rho_k}.
+> $$
+
+**Proof.** Begin from the variance of the sample mean written as a double sum over all pairs of draws:
+
+$$
+\operatorname{var}(\bar\theta) = \operatorname{var}\!\left(\frac{1}{N}\sum_{i=1}^{N}\theta^{(i)}\right) = \frac{1}{N^2}\sum_{i=1}^{N}\sum_{j=1}^{N}\operatorname{cov}(\theta^{(i)}, \theta^{(j)}).
+$$
+
+By stationarity the covariance between two draws depends only on the lag between them: $\operatorname{cov}(\theta^{(i)}, \theta^{(j)}) = \sigma^2 \rho_{|i-j|}$, with $\rho_0 = 1$. Group the $N^2$ pairs by their lag $k = |i - j|$. The $N$ diagonal pairs ($i = j$) contribute lag $0$; for each lag $k = 1, \dots, N-1$ there are exactly $2(N-k)$ ordered pairs $(i, j)$ with $|i - j| = k$ — the factor of two counting $i < j$ and $i > j$ separately. Hence
+
+$$
+\begin{aligned}
+\operatorname{var}(\bar\theta)
+  &= \frac{1}{N^2}\left(N\sigma^2 + \sum_{k=1}^{N-1} 2(N-k)\,\sigma^2 \rho_k\right) \\
+  &= \frac{\sigma^2}{N^2}\left(N + 2\sum_{k=1}^{N-1}(N-k)\,\rho_k\right) \\
+  &= \frac{\sigma^2}{N}\left(1 + 2\sum_{k=1}^{N-1}\Bigl(1 - \frac{k}{N}\Bigr)\rho_k\right),
+\end{aligned}
+$$
+
+which is the finite-$N$ formula. As $N \to \infty$ the triangular weights $1 - k/N \to 1$ for each fixed lag $k$; assuming the autocorrelations are summable, $\sum_k |\rho_k| < \infty$, the weighted sum converges to $\sum_{k=1}^{\infty}\rho_k$ and
+
+$$
+\operatorname{var}(\bar\theta) \;\to\; \frac{\sigma^2}{N}\left(1 + 2\sum_{k=1}^{\infty}\rho_k\right).
+$$
+
+Finally, define $N_{\text{eff}}$ by demanding that the correlated average have the same variance as an average of $N_{\text{eff}}$ independent draws, $\operatorname{var}(\bar\theta) = \sigma^2/N_{\text{eff}}$. Matching the two expressions and solving gives
+
+$$
+N_{\text{eff}} = \frac{N}{1 + 2\sum_{k=1}^{\infty}\rho_k}. \qquad \blacksquare
+$$
+
+The denominator has a name: the **integrated autocorrelation time** $\tau_{\text{int}} = 1 + 2\sum_{k\ge 1}\rho_k$, so that $N_{\text{eff}} = N/\tau_{\text{int}}$. This closes the loop with Rung 1: substituting back, the MCSE is $\sigma_\theta/\sqrt{N_{\text{eff}}} = \sigma_\theta\sqrt{\tau_{\text{int}}/N}$, and the autocorrelation time is exactly the factor by which dependence inflates the Monte Carlo error above the i.i.d. baseline $\sigma_\theta/\sqrt{N}$.
+
+A worked AR(1) case fixes intuition. For a first-order autoregressive chain with lag-1 autocorrelation $\phi = 0.5$, the autocorrelations decay geometrically, $\rho_k = \phi^k$, so the integrated time is a single geometric series:
+
+$$
+\tau_{\text{int}} = 1 + 2\sum_{k\ge1}\phi^k = 1 + 2\cdot\frac{\phi}{1-\phi} = 1 + 2\cdot\frac{0.5}{0.5} = 3.
+$$
+
+A run of $N$ such draws is worth only $N/3$ independent ones — ten thousand iterations carry the information of roughly three thousand. Push $\phi$ toward one, the regime of a sticky chain crawling along a posterior ridge, and $\tau_{\text{int}}$ diverges while $N_{\text{eff}}$ collapses, exactly the pathology Chapter 8 traced to collinear channel spend.
+
+**Bulk-ESS versus tail-ESS.** A single effective sample size is not enough, because different posterior summaries draw on different parts of the distribution [@vehtari2021]. **Bulk-ESS** is computed on the rank-normalized draws and governs estimates of central tendency — the posterior mean and median. **Tail-ESS** is computed from the indicator series for the $5\%$ and $95\%$ quantiles and governs the reliability of the interval endpoints. The two can diverge sharply: a chain may have ample bulk-ESS, so its point estimate is well resolved, yet poor tail-ESS, so its credible-interval bounds are noisy. Reporting one number hides this. For an MMM ROAS the credible interval is often what drives the decision — whether a channel's lower bound clears the cost of capital — so tail-ESS matters every bit as much as bulk, and both should be checked before a posterior interval is trusted.
+
+### Rung 4 — Divergences and the energy diagnostics
+
+$\hat{R}$ and effective sample size are necessary but not sufficient. Both are computed from the draws the sampler actually collected, and so both are silent about the draws it never collected. A chain can post a perfect $\hat{R}$ and a generous ESS while an entire region of the posterior — the narrow neck of a hierarchical funnel — goes wholly unvisited, because the statistics summarize only the territory already explored. Detecting the unexplored requires diagnostics that look not at the draws but at the *geometry* the sampler is moving through. Hamiltonian Monte Carlo, which simulates physical trajectories across that geometry, supplies exactly such diagnostics.
+
+**Divergences.** A divergent transition is one in which the leapfrog integrator's energy error explodes (Chapter 9). The simulated Hamiltonian trajectory should conserve energy exactly; when the step size is too coarse to resolve a region of high curvature — the funnel neck, where the posterior pinches as $\tau \to 0$ and the dependent effects are squeezed into a sliver — the discretized dynamics instead fly apart, and the energy of the simulated path diverges from its starting value. The sampler flags the transition and refuses to follow it. Even a handful of divergences is a warning, not a nuisance: it means the sampler is *systematically* avoiding a part of the posterior it cannot integrate through, so the draws it returns are biased toward the regions it can reach, not merely noisier than their count suggests. This is a *geometry* alarm, not a convergence statistic. It can fire while $\hat{R}$ and ESS look immaculate, precisely because those statistics never inspect the territory the divergences mark as missing [@betancourt2017].
+
+**BFMI (energy Bayesian fraction of missing information).** Where divergences probe local curvature, the energy diagnostic probes global exploration. Between trajectories, HMC resamples the momentum and thereby moves the chain from one energy level to another; the **BFMI** measures how effectively that resampling explores the marginal distribution of the energy. A low BFMI means successive energy levels are too similar — the momentum refreshment is not carrying the chain across the full range of energies the posterior occupies — so the sampler cannot reach the tails efficiently. It is a flag for slow mixing in the heavy-tailed directions, the directions where an MMM's weakly identified variance parameters live [@betancourt2017].
+
+**Tree-depth saturation (NUTS).** The No-U-Turn Sampler grows each trajectory until a U-turn criterion signals that continuing would double back, subject to a maximum tree depth that caps the work per iteration. When NUTS *repeatedly* hits that maximum, its trajectories are being truncated before the U-turn would naturally stop them: the sampler is exploring correctly but is cut short, taking many small, expensive steps where a longer trajectory would have moved farther for less cost. This is an efficiency alarm, not a bias alarm — the draws are valid, just dearer than they should be.
+
+The three signals partition cleanly. **Divergences are a bias alarm; BFMI and tree-depth saturation are efficiency alarms.** A bias alarm says the answer may be wrong; an efficiency alarm says the answer is right but costlier than necessary. This is why the convergence diagnostics of Rungs 2 and 3 ($\hat{R}$, ESS) and the geometric diagnostics of this rung (divergences above all) are complementary rather than redundant: the former certify that the draws you have are a faithful sample of where the chain went, the latter warn when where the chain went is not where the posterior actually lives. A trustworthy MMM fit must clear both.
