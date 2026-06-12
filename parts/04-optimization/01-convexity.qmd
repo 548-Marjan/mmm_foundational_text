@@ -228,3 +228,39 @@ $$
 r(\mathbb{E}[\text{spend}]) \ge \mathbb{E}[r(\text{spend})].
 $$
 Read the two sides as two flighting plans with the *same* average budget. The left side is steady spend held at the average level; the right side is erratic spend — feast one week, famine the next — that merely averages out to the same total. Jensen says the steady plan produces at least as much expected response as the volatile one. Concavity penalizes volatility, and the size of the gap between the two sides is a quantitative measure of that penalty: it grows with the curvature of $r$, that is, with the strength of diminishing returns. This is the formal reason a smooth, level flighting plan beats a feast-or-famine one at equal total budget — and why, when Chapter 13 allocates spend, it is solving for the level plan rather than chasing spikes.
+
+### Rung 7 — The keystone: every local minimum is global
+
+Rungs 1–6 built the machinery: convex sets, the chord and tangent characterizations of convex functions, the Hessian test, the closure rules, and Jensen. This rung is what all of it was for. A single structural property of convex functions is the reason convex optimization is tractable at all — and it is the reason detecting convexity, through the first- and second-order conditions of Rungs 3–4, is the opening move on any optimization problem. The foreshadowing planted at the end of Rung 3 is paid off here in full.
+
+> **Theorem (local = global).** Let $f$ be convex on a convex set $C$. Then:
+>
+> 1. every local minimizer of $f$ over $C$ is a global minimizer;
+> 2. if $f$ is differentiable, the stationarity condition $\nabla f(x^\star)^\top (y - x^\star) \ge 0$ for all $y \in C$ — which for an interior or unconstrained minimum reduces to $\nabla f(x^\star) = 0$ — is **sufficient** for $x^\star$ to be a global minimizer;
+> 3. if $f$ is strictly convex, the global minimizer is unique.
+
+**Proof.**
+
+*Part 1 (local $\Rightarrow$ global), by contradiction.* Suppose $x^\star$ is a local minimizer but not global, so there exists $z \in C$ with $f(z) < f(x^\star)$. For $\lambda \in (0,1]$ consider the point $x_\lambda = \lambda z + (1-\lambda)x^\star$, which lies in $C$ by convexity of the set. By convexity of $f$,
+$$
+f(x_\lambda) \le \lambda f(z) + (1-\lambda)f(x^\star) = f(x^\star) + \lambda\bigl(f(z) - f(x^\star)\bigr) < f(x^\star),
+$$
+since $f(z) - f(x^\star) < 0$. As $\lambda \to 0^+$, $x_\lambda \to x^\star$, so every neighborhood of $x^\star$ contains points $x_\lambda$ with $f(x_\lambda) < f(x^\star)$ — contradicting that $x^\star$ is a local minimizer. Hence no such $z$ exists and $x^\star$ is global.
+
+*Part 2 (stationarity is sufficient).* Suppose $\nabla f(x^\star)^\top(y - x^\star) \ge 0$ for all $y \in C$. By the first-order condition of Rung 3, for every $y \in C$,
+$$
+f(y) \ge f(x^\star) + \nabla f(x^\star)^\top(y - x^\star) \ge f(x^\star),
+$$
+so $x^\star$ is a global minimizer. For an unconstrained problem — or an interior minimizer, where $y$ may be perturbed from $x^\star$ in every direction — the condition $\nabla f(x^\star)^\top(y - x^\star) \ge 0$ for all directions forces $\nabla f(x^\star) = 0$, since a nonzero gradient would make the inner product negative along its own negative.
+
+*Part 3 (strict convexity $\Rightarrow$ uniqueness).* Suppose $x^\star \ne x^{\star\star}$ are both global minimizers, so $f(x^\star) = f(x^{\star\star}) = p^\star$. The midpoint $m = \tfrac12 x^\star + \tfrac12 x^{\star\star}$ lies in $C$ by convexity, and strict convexity gives
+$$
+f(m) < \tfrac12 f(x^\star) + \tfrac12 f(x^{\star\star}) = p^\star,
+$$
+contradicting that $p^\star$ is the minimum value of $f$ over $C$. Hence the minimizer is unique. $\blacksquare$
+
+**Significance.** This is why convex optimization *works*. A descent method that stops where it can no longer go downhill has, for a convex problem, found the global optimum — not a local trap. There is no need to restart from many initial points, no anxiety about whether the algorithm settled in the best basin: local information at a single stationary point certifies a global fact about the whole domain. Part 2 makes this operational, turning the search for a global optimum into the algebraic problem of solving $\nabla f(x^\star) = 0$, and Part 3 tells us exactly when the answer is the only one.
+
+This also explains the workflow of all of Part IV. The first question to ask about any optimization problem is not "what algorithm should I run?" but "is this problem convex?", because a yes converts local search into a global guarantee — it changes what a stopping point *means*. The first- and second-order conditions of Rungs 3–4 are precisely how that question gets answered, which is why we spent so long sharpening them.
+
+And a forewarning. The guarantee is a property of convexity, not a law of nature. When the response curve is S-shaped — convex toe, concave tail, the very shape glimpsed in Rung 4 and confronted head-on in Rung 10 — the objective is no longer convex, and this keystone evaporates. A single descent can then halt in a local basin that is nowhere near the best, with no way to tell from local information alone that anything is wrong. That single failure is what forces the multi-start machinery of Chapter 13: when local can no longer certify global, the only recourse is to search many basins and compare.
