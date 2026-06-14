@@ -2,32 +2,14 @@
 
 *Canonical anchors: Nocedal & Wright.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+This is the chapter the whole of Part IV has been climbing toward. Chapter 11 built the *theory* of constrained optimization — convexity, the local-is-global keystone, Lagrange multipliers, and the KKT conditions, distilled into the equal-marginal-returns rule that an optimal budget equalizes the marginal return of every active channel. Chapter 12 made that theory *compute*: when the response is linear or piecewise-linear-concave, the problem is a linear program, solvable to a global optimum with a certificate, its budget shadow price reproducing Chapter 11's multiplier $\lambda$ exactly. But Chapter 12 closed by marking its own boundary. Real channel response is not piecewise-linear. It is a **smooth curve** — saturating, often **S-shaped** and therefore **non-concave** — and that world lies just past where linear programming stops. This chapter solves *that* problem.
 
-## Theory & Proofs
+The governing question is blunt and practical: *how do you actually compute the optimal budget when the response is a smooth, possibly non-concave curve?* We cannot enumerate vertices — there are none — and we cannot lean on global guarantees that non-convexity has revoked. What we *can* do is take the KKT conditions of Chapter 11 seriously as what they literally are: a **system of nonlinear equations** in the decision variables and the multipliers. Solve it and you have a KKT point. The canonical tool for solving nonlinear equations is **Newton's method**, and applying it to the KKT system is the engine of this chapter — carrying a beautiful surprise: each Newton step is itself the solution of a **quadratic program**, a quadratic model of the Lagrangian minimized under a linearization of the constraints. That equivalence is the keystone of the chapter, and the method it names is **Sequential Quadratic Programming (SQP)**. **SLSQP** — Sequential Least-Squares Quadratic Programming, Dieter Kraft's implementation — is the production-grade version, the solver a real budget optimizer actually runs.
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+So this chapter pays off two promises made earlier in the part. Chapter 11 called SLSQP "a Newton iteration on the KKT equations"; we prove that. Chapter 12 said SLSQP owns "the smooth, possibly non-concave world... launched from multiple starting points"; we deliver that too. The concrete payoff is sharp. On a *concave* smooth response, SLSQP recovers Chapter 11's hand-derived optimum — the same allocation $(7.2, 1.8)$ with the same budget multiplier $\lambda = 0.3727$ that Chapter 12 reached as a refined LP dual price — but now with **no piecewise-linear approximation**: the Lagrange multiplier SLSQP returns *is* $\lambda$. On an *S-shaped* response the problem is genuinely non-convex, so we run SLSQP from **many starting points** and keep the best.
 
-## Worked Examples
+We must be honest about what that buys. SLSQP converges to a *local* KKT point; it is global only when the problem is convex, which is precisely Chapter 11's keystone. Multi-start is a practical strategy for the non-convex case, not a certificate of global optimality.
 
-_Worked numerical example(s)._
-
-## Code Tie-in
-
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
-
-## Exercises
-
-### C -- Conceptual / Reading Comprehension
-
-### B -- By Hand
-
-### P -- Prove It
-
-### A -- Applied / Code
+The roadmap follows the construction. We state the **smooth NLP and its KKT conditions**; take the **root-finding view** of them; develop **Newton's method** and its quadratic convergence; prove the **SQP keystone** that each Newton step is a QP subproblem; replace the exact Hessian with a **quasi-Newton (BFGS)** update; open up the **SLSQP internals** — the least-squares recast, the active-set machinery, the merit-function line search; confront the **non-convex reality** of S-shaped curves; and finally run the **real budget optimization**. This is the bridge into Part V: a fitted MMM supplies the response curves, and the budget-optimization chapter there runs exactly this solver on them.
