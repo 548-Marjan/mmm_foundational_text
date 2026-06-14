@@ -1,57 +1,43 @@
 # Preface {.unnumbered}
 
-::: {.callout-note appearance="simple"}
-## In one paragraph
+This book develops Marketing Mix Modeling (MMM) from first principles. It begins
+from a standard undergraduate quantitative background and builds, in order, the
+linear algebra, probability, Bayesian inference, sampling, and optimization that a
+modern MMM depends on; it then constructs the MMM itself, its calibration against
+experiments, and the software engineering required to run it. Bayesian modeling,
+MCMC, causal inference, and constrained optimization are each built up rather than
+assumed.
 
-A rigorous, self-contained path from undergraduate mathematics to a
-production-grade Bayesian **Marketing Mix Model** — built from scratch, deriving
-the math instead of calling a library. You assemble the whole stack yourself:
-regression → Bayesian inference → MCMC → optimization → a dynamic,
-causally-calibrated MMM → the software engineering to ship it. If you have ever
-run an MMM framework and wanted to know *why* it works — and where it quietly
-misleads you — this is that book.
-:::
-
-This is a self-contained textbook on the mathematics and the software engineering
-that underlie modern **Marketing Mix Modeling (MMM)**. It takes you from standard
-quantitative prerequisites all the way to advanced practice — without hand-waving,
-and without assuming you already know Bayesian modeling, MCMC, causal inference,
-or constrained optimization.
-
-**What you will be able to do.**
-
-- Build a full Bayesian MMM end-to-end — from the data-generating process through
-  prior elicitation and MCMC inference to budget optimization.
-- *Calibrate* that model against experiments, so its budget recommendations rest
-  on causal evidence rather than on a curve the observational data can't pin down.
-- Engineer the whole thing into a reproducible, testable, trustworthy system.
-
-**What makes it different.** It is theory-first. Most MMM material shows you which
-library functions to call; this book derives the mathematics so you understand
-what those functions assume, when they break, and how to fix them — including the
-causal calibration step most treatments skip entirely.
+The emphasis throughout is on building intuition rather than supplying recipes.
+Where most treatments show which library functions to call, this one derives the
+underlying mathematics, so that the reader can see what each method assumes, why
+it works, and how it breaks. MMM serves as the application that motivates and
+connects the material; the mathematics is developed on its own terms.
 
 ## Who this book is for
 
-You will get the most out of this book if you arrive with:
+The book assumes familiarity with:
 
 - **Calculus** — derivatives, integrals, sequences and series.
-- **Linear algebra** — vectors, matrices, solving linear systems.
+- **Linear algebra** — vectors, matrices, and the solution of linear systems.
 - **Calculus-based statistics** — random variables, expectation, common
-  distributions, the idea of a likelihood.
-- **Mathematical maturity** — comfort reading and writing short proofs, of the
-  kind built in discrete mathematics, an introduction-to-proofs /
-  mathematical-structures course, or real analysis. The book proves results where
-  the proof is illuminating; you should be willing to follow and reproduce them.
+  distributions, and the notion of a likelihood.
+- **Mathematical maturity** — some experience reading and writing proofs, as
+  acquired in discrete mathematics, an introduction-to-proofs course, or real
+  analysis.
 
-You will leave able to reason about — and build — a full Bayesian MMM: from the
-data-generating process, through prior elicitation and MCMC inference, to budget
-optimization grounded in experiments you can actually trust, and the software
-engineering that makes such a system reproducible.
+The mathematics begins at the undergraduate level and rises to advanced
+master's / early-PhD rigor as the book proceeds. A result is proved where the
+proof is illuminating and cited where it is merely mechanical.
+
+By the end, the reader should be able to derive and build a full Bayesian MMM —
+from the data-generating process, through prior specification and MCMC inference,
+to budget optimization grounded in experiment — and to understand each component
+well enough to diagnose it when it misbehaves.
 
 ## Table of contents
 
-The book runs **foundations → applications** — each part builds strictly on the
+The book proceeds from foundations to applications, with each part building on the
 ones before it.
 
 **Part I · Mathematical Foundations**
@@ -108,51 +94,38 @@ ones before it.
 
 - Worked Solutions
 
-The mathematics starts at the undergraduate level and ramps up toward advanced
-master's / first-year-PhD rigor as the book progresses. Where a result is
-genuinely illuminating we prove it; where a proof is mechanical we cite it.
-
 ## How to use this book
 
-Each chapter follows the same rhythm: **intuition → theory and proofs → worked
-examples → a runnable code tie-in → exercises → a summary**. The exercises come
-in four escalating tiers:
+Each chapter follows the same structure: intuition, then theory and proofs, then
+worked examples, then a runnable code tie-in, then exercises, then a summary. The
+exercises come in four tiers:
 
 - **C — Conceptual / reading comprehension.**
 - **B — By hand** (compute or derive manually).
-- **P — Prove it** (short, useful proofs).
+- **P — Prove it** (short proofs).
 - **A — Applied / code.**
 
-Worked solutions live in a single appendix at the very back of the book, with no
-inline links from the exercises. This is deliberate: reach for them only after a
-real attempt. (Instructor builds can render the full solutions; reader builds can
-omit them entirely.)
+Worked solutions are collected in a single appendix at the back of the book, with
+no inline links from the exercises, so they are reached only after a genuine
+attempt. (Instructor builds render the full solutions; reader builds omit them.)
 
-Every chapter closes with a **Summary**: the handful of concepts you must be able
-to state and the key identities you should be able to reproduce from memory before
-moving on. Treat it as a self-check and a quick reference to come back to.
+Each chapter closes with a summary: the concepts to be able to state and the
+identities to be able to reproduce before moving on.
 
 ## Reproducibility
 
-Code in this book is original and self-contained — minimal PyMC / SciPy snippets
-that teach the same patterns a production MMM uses, with no proprietary source,
-firm priors, or client data. Pinned dependencies live in `requirements.txt`. Heavy
-sampling cells are cached via Quarto's `freeze`, so the book renders quickly and
+The code is original and self-contained — minimal PyMC / SciPy snippets that
+illustrate the same patterns a production MMM uses, with no proprietary source,
+priors, or client data. Pinned dependencies live in `requirements.txt`. Heavy
+sampling cells are cached with Quarto's `freeze`, so the book renders quickly and
 reproducibly.
 
 ## Canonical sources
 
-Every field in this book is anchored to its canonical references — Strang and
-Axler for linear algebra; Casella & Berger for statistics; Gelman et al. (BDA3),
-Gelman & Hill, and McElreath for Bayesian modeling; Robert & Casella, Neal, and
-Betancourt for MCMC/HMC; Boyd & Vandenberghe, Bertsimas & Tsitsiklis, and
-Nocedal & Wright for optimization; Imbens & Rubin and Angrist & Pischke for causal
-inference and quasi-experimental design; and the published MMM literature
-(Jin et al.) for the application. Full citations are in the bibliography.
-
-## Getting the complete book
-
-*This preface is a free sample.* The complete book — all chapters, worked
-solutions, and the runnable code behind every figure — is available at
-**[link TBD]**.
-<!-- TODO(CTA): replace [link TBD] with the purchase/landing URL once finalized. -->
+Each topic is anchored to standard references — Strang and Axler for linear
+algebra; Casella & Berger for statistics; Gelman et al. (BDA3), Gelman & Hill, and
+McElreath for Bayesian modeling; Robert & Casella, Neal, and Betancourt for
+MCMC/HMC; Boyd & Vandenberghe, Bertsimas & Tsitsiklis, and Nocedal & Wright for
+optimization; Imbens & Rubin and Angrist & Pischke for causal inference and
+quasi-experimental design; and the published MMM literature (Jin et al.) for the
+application. Full citations are in the bibliography.
