@@ -234,3 +234,79 @@ This is *exactly* the Newton block system derived above, with the QP multiplier 
 **Inequalities.** The theorem above is stated for equality constraints, which carry the essential geometry. With inequality constraints the QP subproblem gains **linearized inequalities** $\nabla c_i(x_k)^\top p + c_i(x_k) \le 0$ for $i \in \mathcal{I}$ alongside the linearized equalities. Solving that inequality-constrained QP requires deciding which linearized inequalities are active — the **active-set** computation, which is the machinery the SLSQP rung develops in detail [@nocedal2006]. But the heart of SQP is the equality result proved here: once the active set is fixed, the inequality QP reduces to an equality QP of exactly the form above, and the active-set logic is the orchestration *around* that core, not a replacement for it.
 
 **The redemption.** State it plainly, because the whole part has been waiting for it. This is the result Chapter 11 named when it called SLSQP "a Newton iteration on the KKT equations" that "forms a quadratic model of the Lagrangian and a linearization of the constraints," and the result Chapter 12 pointed to when it sent the smooth, non-concave world on to a solver that "attacks the nonlinear KKT system directly and iteratively." Those phrases are no longer descriptions or promises. They are this theorem. SQP is Newton on the KKT system, the Newton step is a quadratic program, and the quadratic program is a model of the Lagrangian under a linearization of the constraints — one identity, proved. The keystone is set, and every rung above it now has something to rest on.
+
+### Rung 5 — The quasi-Newton Hessian
+
+The keystone of Rung 4 hands us a clean algorithm — solve a QP at each iterate — but it hides a demand that, taken literally, would sink the method in practice: every QP subproblem needs the **Lagrangian Hessian** $\nabla^2_{xx}\mathcal{L}_k$ for its quadratic term. Forming that matrix exactly is both expensive and, away from a solution, structurally dangerous. This rung confronts both problems and resolves them with a single device — a **quasi-Newton (BFGS)** approximation $B_k$ that is built from first derivatives alone and is positive definite by construction. It is the modification that turns the elegant SQP iteration into something a solver can actually run.
+
+**Two problems with the exact Hessian.** The quadratic model of Rung 4 calls for $\nabla^2_{xx}\mathcal{L}_k = \nabla^2 f_k + \sum_i (\lambda_k)_i \nabla^2 c_i(x_k)$, and that object resists use on two fronts. *(i) Cost.* It requires the **second derivatives** of the objective *and of every constraint* — a full Hessian for $f$ and one for each $c_i$, assembled and weighted by the current multipliers. For real problems those second derivatives are frequently unavailable in closed form or far too expensive to compute and store at every iteration. *(ii) Indefiniteness.* Even when the exact Hessian is in hand, away from a solution $\nabla^2_{xx}\mathcal{L}_k$ may be **indefinite** — it carries directions of negative curvature. A QP whose quadratic term is indefinite is **nonconvex**: it has no unique minimizer, and on the linearized feasible set its objective may be **unbounded below**, so the QP solver has nothing well-defined to return. The subproblem the keystone hands us is only as useful as the QP solver's ability to minimize it, and that solver needs a **convex** model.
+
+**The BFGS approximation.** Both problems dissolve if we never form the exact Hessian at all and instead **maintain** a symmetric positive-definite matrix $B_k \approx \nabla^2_{xx}\mathcal{L}_k$, updated from the first-derivative information the iteration already produces. Across a step we observe two vectors — how far the iterate moved, and how the Lagrangian's gradient changed over that move:
+
+$$
+s_k = x_{k+1} - x_k, \qquad y_k = \nabla_x \mathcal{L}(x_{k+1}, \lambda_{k+1}) - \nabla_x \mathcal{L}(x_k, \lambda_{k+1}).
+$$
+
+Both gradients are taken at the *same* multiplier $\lambda_{k+1}$, so $y_k$ isolates the change in curvature of the Lagrangian in $x$ alone. The **BFGS update** folds this observed curvature into the next approximation,
+
+$$
+B_{k+1} = B_k - \frac{B_k s_k s_k^\top B_k}{s_k^\top B_k s_k} + \frac{y_k y_k^\top}{y_k^\top s_k}.
+$$
+
+It is the **rank-two** update — two symmetric rank-one corrections, one subtracted and one added — that satisfies the **secant equation**
+
+$$
+B_{k+1} s_k = y_k
+$$
+
+while keeping $B_{k+1}$ symmetric. The secant equation is the demand that the new approximation **reproduce the observed curvature** along $s_k$: applied to the step just taken, $B_{k+1}$ returns exactly the gradient change that step produced. This is the finite-difference analogue of the defining Hessian relation, and it is the sense in which $B_k$ accumulates true second-order information from a trail of first-order evaluations.
+
+**Curvature condition and Powell damping.** The construction's prize is that positive definiteness **propagates**: if $B_k \succ 0$, then $B_{k+1} \succ 0$ — *provided* the **curvature condition**
+
+$$
+s_k^\top y_k > 0
+$$
+
+holds, which keeps the added rank-one term $y_k y_k^\top / (y_k^\top s_k)$ well-defined and positive. For a convex problem the curvature condition is automatic, but on a **nonconvex** problem it can fail — $s_k^\top y_k$ may be zero or negative, and a raw BFGS update would then destroy definiteness. **Powell's damping** repairs this by replacing $y_k$ with a convex combination of $y_k$ and $B_k s_k$,
+
+$$
+\hat y_k = \theta y_k + (1 - \theta) B_k s_k, \qquad \theta \in (0, 1],
+$$
+
+with $\theta$ chosen as large as possible subject to $s_k^\top \hat y_k \ge 0.2\, s_k^\top B_k s_k$. Because $B_k \succ 0$ makes $s_k^\top B_k s_k > 0$, the damped vector always satisfies $s_k^\top \hat y_k > 0$, so updating with $\hat y_k$ in place of $y_k$ guarantees $B_{k+1} \succ 0$ **unconditionally**. The payoff is exactly the property the QP solver demanded: with $B_k \succ 0$ in the quadratic term, every QP subproblem is a **convex** QP, with a unique, well-defined minimizer.
+
+**Convergence and a key consequence.** Substituting $B_k$ for the exact Hessian is not free: with an approximate Jacobian the iteration is no longer pure Newton, so the exact **quadratic** convergence of Rung 3 is lost. What survives is **superlinear** convergence — slower than quadratic, but still decisively faster than the linear rate of gradient methods, and fast enough that the digit count climbs sharply near the solution [@nocedal2006]. There is a second consequence that matters even more for what follows. Because $B_k \succ 0$, the step $p$ returned by the convex QP is a **descent direction** for a merit function that balances objective and constraint violation — moving along $p$ decreases that merit. This is the hook that the **line search** of Rung 6 will grip when it globalizes the method: positive definiteness of $B_k$ is precisely what guarantees there is something to descend along. Flag it now; the next rung collects on it.
+
+### Rung 6 — Inside SLSQP
+
+With the BFGS Hessian in place we have a complete *conceptual* algorithm; this rung opens the three engineering pieces that turn that algorithm into the production solver **SLSQP** — a numerically stable **least-squares** solve of each QP subproblem (part a), an **active-set** strategy that decides which inequalities bind (part b), and a **merit-function line search** that delivers global convergence (part c). We develop the least-squares recast here and take up the active set and the line search next.
+
+#### (a) The least-squares recast
+
+The positive definiteness won in Rung 5 is not merely a convexity guarantee — it is the structural fact that lets the QP be solved in its most numerically stable form. Because $B_k \succ 0$, it admits a **Cholesky factorization** (Chapter 1)
+
+$$
+B_k = L_k L_k^\top,
+$$
+
+with $L_k$ lower-triangular and carrying a strictly positive diagonal. This factor is exactly what turns the QP's quadratic objective into a **perfect square** plus a constant:
+
+$$
+\tfrac12 p^\top B_k p + \nabla f_k^\top p = \tfrac12 \big\| L_k^\top p + L_k^{-1}\nabla f_k \big\|^2 - \tfrac12 \big\| L_k^{-1}\nabla f_k\big\|^2.
+$$
+
+To see this, complete the square — expand the squared norm on the right and use $L_k L_k^\top = B_k$ together with $L_k L_k^{-1} = I$:
+
+$$
+\begin{aligned}
+\tfrac12 \big\| L_k^\top p + L_k^{-1}\nabla f_k \big\|^2
+&= \tfrac12 p^\top L_k L_k^\top p + p^\top L_k L_k^{-1}\nabla f_k + \tfrac12 \big\| L_k^{-1}\nabla f_k \big\|^2 \\
+&= \tfrac12 p^\top B_k p + \nabla f_k^\top p + \tfrac12 \big\| L_k^{-1}\nabla f_k \big\|^2.
+\end{aligned}
+$$
+
+Subtracting the constant $\tfrac12 \| L_k^{-1}\nabla f_k\|^2$ from both sides returns the QP objective exactly, which is the identity displayed above.
+
+**Consequence.** The constant term carries no $p$, so minimizing the QP objective is identical to minimizing the **Euclidean norm** $\| L_k^\top p + L_k^{-1}\nabla f_k\|$ — a **linear least-squares** objective in the step $p$. Subject to the linearized constraints of Rung 4, the QP subproblem is therefore a **linearly-constrained linear least-squares problem**: a least-squares objective under the equality and inequality linearizations, the structure known in the numerical-optimization literature as **LSEI** (least squares with equality and inequality constraints), itself reducible to a **nonnegative least squares** (NNLS) problem.
+
+**Why this matters numerically.** Casting the QP as least squares lets SLSQP solve each step with stable **orthogonal (QR) factorizations** and never form $B_k^{-1}$ or factor the **indefinite** KKT matrix of Rung 4 directly. Working through the Cholesky factor $L_k$ rather than the matrix $B_k$ keeps the computation on the **square root** of the problem's conditioning — the conditioning is never squared, as it would be by forming and factoring $B_k$ or its inverse — and the positive definiteness of $B_k$ is exploited *structurally*, as the very thing that makes the Cholesky factor exist. This is the "Sequential **Least Squares**" in the name SLSQP: each SQP step is solved as a constrained least-squares problem. The algorithm is **Kraft's** (1988); its underlying theory is developed in full by @nocedal2006.
