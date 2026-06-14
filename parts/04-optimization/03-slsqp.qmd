@@ -310,3 +310,43 @@ Subtracting the constant $\tfrac12 \| L_k^{-1}\nabla f_k\|^2$ from both sides re
 **Consequence.** The constant term carries no $p$, so minimizing the QP objective is identical to minimizing the **Euclidean norm** $\| L_k^\top p + L_k^{-1}\nabla f_k\|$ — a **linear least-squares** objective in the step $p$. Subject to the linearized constraints of Rung 4, the QP subproblem is therefore a **linearly-constrained linear least-squares problem**: a least-squares objective under the equality and inequality linearizations, the structure known in the numerical-optimization literature as **LSEI** (least squares with equality and inequality constraints), itself reducible to a **nonnegative least squares** (NNLS) problem.
 
 **Why this matters numerically.** Casting the QP as least squares lets SLSQP solve each step with stable **orthogonal (QR) factorizations** and never form $B_k^{-1}$ or factor the **indefinite** KKT matrix of Rung 4 directly. Working through the Cholesky factor $L_k$ rather than the matrix $B_k$ keeps the computation on the **square root** of the problem's conditioning — the conditioning is never squared, as it would be by forming and factoring $B_k$ or its inverse — and the positive definiteness of $B_k$ is exploited *structurally*, as the very thing that makes the Cholesky factor exist. This is the "Sequential **Least Squares**" in the name SLSQP: each SQP step is solved as a constrained least-squares problem. The algorithm is **Kraft's** (1988); its underlying theory is developed in full by @nocedal2006.
+
+#### (b) The active-set strategy
+
+Part (a) showed how to solve a QP whose constraints are all **equalities** — the least-squares form. But the QP subproblem of Rung 4 carries **linearized inequality** constraints $\nabla c_i(x_k)^\top p + c_i(x_k) \le 0$ for $i \in \mathcal{I}$, and an inequality-constrained QP must first decide *which* of them hold with equality at its solution before any equality-form solve can run. The **active-set method** makes that decision, and it makes it by repeatedly invoking part (a).
+
+**Working set.** Maintain a **working set** $\mathcal{W}$ of inequality constraints provisionally treated as *equalities*, sitting alongside the genuine equalities $\mathcal{E}$. With $\mathcal{W}$ held fixed, every constraint in play is an equality, and the QP collapses to exactly the **equality-constrained least-squares** problem of part (a) — the one solvable form we possess. Solving it yields a candidate step $p$ together with a multiplier for each working-set constraint. The whole strategy is a loop that guesses $\mathcal{W}$, solves the resulting equality QP, and then corrects the guess.
+
+**The two checks that update $\mathcal{W}$.** After each equality-constrained solve, two tests decide whether the current working set is right, and if not, how to amend it:
+
+- **Drop a constraint.** If a working-set inequality has a **negative** multiplier, KKT dual feasibility ($\lambda_i \ge 0$) is violated: that constraint is "pulling the wrong way," holding the step back against the objective rather than truly binding. Removing it from $\mathcal{W}$ and re-solving lowers the objective. Drop the constraint with the **most negative** multiplier.
+- **Add a constraint.** If a constraint *outside* $\mathcal{W}$ is **violated** by the candidate step — its linearized inequality would be exceeded — then $p$ is infeasible and must be reined in. Add that constraint to $\mathcal{W}$, typically via a **ratio test** that finds the first constraint hit as one moves along $p$, and re-solve.
+- **Termination of the inner loop.** Iterate until **no working-set multiplier is negative and no outside constraint is violated**. At that point the working set is consistent with the QP's KKT conditions: every constraint in $\mathcal{W}$ binds with a nonnegative multiplier, every constraint outside is satisfied with slack, and the equality solve over $\mathcal{W}$ is the QP's true optimum.
+
+**This is complementary slackness, computed.** The loop is **complementary slackness enforced combinatorially**. Recall from Chapter 11 that KKT optimality demands $\lambda_i\, c_i = 0$ for each inequality — each constraint is either *active* (binding, with multiplier $\ge 0$) or *inactive* (slack, with multiplier $0$), never both. The active-set method does not assume that partition; it **searches** for it, dropping constraints whose multipliers turn negative and adding constraints that the step violates until the active/inactive split is self-consistent. This is precisely the logic Chapter 12's **simplex** method used as it moved between LP vertices, each vertex a choice of which constraints are tight — here transplanted inside every QP subproblem of the nonlinear iteration. Because there are only **finitely many** possible working sets, the inner loop terminates (with the standard **anti-cycling** safeguards, exactly as in LP).
+
+#### (c) The merit-function line search
+
+The SQP step $p$ inherits Newton's bargain: the fast **quadratic/superlinear** convergence of Rungs 3 and 5 holds only *near* a solution. From a poor starting point the full step can *increase* the objective, or *worsen* the constraint violation, or both — the local model is simply not yet trustworthy. To globalize the method we need two things: a single scalar that measures progress when objective and feasibility may pull in opposite directions, and a rule for **shortening** the step when it overreaches. The **merit function** supplies the measure; the **line search** supplies the shortening.
+
+**The $\ell_1$ merit function.** Fold the objective and the *total* constraint violation into one scalar,
+
+$$
+\phi(x; \mu) = f(x) + \mu \Big( \sum_{i\in\mathcal{E}} |c_i(x)| + \sum_{i\in\mathcal{I}} \max\{0,\, c_i(x)\} \Big),
+$$
+
+with penalty parameter $\mu > 0$. The second term is **zero exactly at feasible points** and grows with the amount of violation — equalities penalized by $|c_i|$, inequalities by their positive part $\max\{0, c_i\}$. Thus $\phi$ is small only where $f$ is small *and* the constraints are nearly satisfied, so a decrease in $\phi$ is a single, honest measure of progress toward a KKT point — it cannot be fooled by an objective that drops only by fleeing feasibility.
+
+**The line search.** Take a damped step $x_{k+1} = x_k + \alpha_k p$ with $\alpha_k \in (0, 1]$ chosen by **backtracking**: start at $\alpha = 1$ — the full SQP step, so that the fast local rate is preserved the moment it becomes available — and **halve** $\alpha$ until $\phi$ decreases sufficiently, an **Armijo-type** condition imposed on $\phi$ rather than on $f$ alone.
+
+**The descent property.** Here Rung 5's flag is collected. For $\mu$ chosen **large enough** — in particular exceeding the largest multiplier magnitude, $\mu > \|\lambda_{k+1}\|_\infty$ — the SQP direction $p$ is a **descent direction** for $\phi$: the directional derivative satisfies
+
+$$
+D_p\, \phi(x_k; \mu) < 0.
+$$
+
+The reason joins the two halves of the construction. The QP step reduces the *linearized model* of $f$ along $p$ by an amount controlled by $B_k$, and because $B_k \succ 0$ (Rung 5) that reduction is a **genuine decrease**, not a numerical accident. At the same time the linearized constraints in the QP drive the *linearized* violation to zero along $p$. With $\mu$ large enough, the guaranteed violation-reduction term dominates any first-order increase in the objective, so $\phi$ **strictly decreases** for small $\alpha$. A satisfactory step length therefore always exists, which is exactly what backtracking finds — yielding **global convergence to a KKT point from arbitrary starting points** (the full proof is in @nocedal2006).
+
+**The Maratos effect.** One subtlety: very near the solution the $\ell_1$ merit function can occasionally **reject** the full, well-converged step — forcing $\alpha < 1$ and stalling the fast local rate — even though that step is excellent; a **second-order correction** to the step repairs the pathology and restores the superlinear rate.
+
+**Synthesis.** Assembling Rung 6 closes the algorithmic core of the chapter. **SLSQP** is **damped-BFGS SQP** — a convex quadratic model of the Lagrangian (Rungs 4–5) — **plus the least-squares QP solve** (part a), **plus the active-set strategy** (part b), **plus the merit-function line search** (part c). Local superlinear speed *and* global reliability, in one method. And this is no abstraction: it is precisely the algorithm invoked by `scipy.optimize.minimize(method="SLSQP")` — the solver a real budget optimizer runs.
