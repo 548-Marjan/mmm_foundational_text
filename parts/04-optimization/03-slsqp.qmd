@@ -482,3 +482,123 @@ the classical Babylonian square-root iteration. Starting from $x_0 = 1$, tabulat
 | 4 | $1.414213562375$ | $1.59\times10^{-12}$ |
 
 **Interpretation.** Each error is roughly the **square** of the previous one, times a constant $\approx \frac{1}{2\sqrt2} \approx 0.354$. Reading down the error column, $8.6\times10^{-2} \to 2.5\times10^{-3} \to 2.1\times10^{-6} \to 1.6\times10^{-12}$: the exponent roughly **doubles** at each step, which is the digit-doubling of Rung 3's theorem made concrete. Three correct digits become six become twelve in just two iterations. This is exactly why SLSQP — which Rung 4 proved to be Newton's method on the KKT system — needs only a **handful** of iterations to reach high accuracy once it is near the optimum: the same squaring that drives this scalar error to $10^{-12}$ in four steps drives the constrained iteration to its KKT point, and it is precisely the $7$ iterations the Code Tie-in's concave solve will take.
+
+## Code Tie-in
+
+The single cell below runs the chapter on the production solver itself — `scipy.optimize.minimize(method="SLSQP")` — with nothing but NumPy and Matplotlib alongside it, so every claim is the few lines of optimization it actually is. It does three things in order. First it solves the **concave** square-root budget problem of Worked Example 2 *directly*, with no piecewise-linear approximation, and watches SLSQP land on Chapter 11's allocation $b^\star = (7.2, 1.8)$ with the budget multiplier $\lambda = 0.3727$ recovered as the common marginal return — the **vindication** of Rung 8(a). Then it runs a **multi-start** sweep on an S-shaped Hill response, the non-convex case of Rung 8(b), where a single start can stall at an inferior corner and only a spread of starts uncovers the better interior optimum. Finally it reproduces the **digit-doubling** of Rung 3 and Worked Example 3 on the scalar root $g(x) = x^2 - 2$, the quadratic convergence that is the engine inside every SLSQP step. One observable carries the chapter: the Lagrange information SLSQP returns *for free* — the equal marginal return $\lambda$ — is the very shadow price Chapter 11 derived by hand and Chapter 12 reached as an LP dual price, now read off a smooth solve directly.
+
+```{python}
+# Chapter 13 — Code Tie-in: constrained nonlinear optimization with SLSQP.
+# NumPy + SciPy (scipy.optimize.minimize, method="SLSQP") + Matplotlib only.
+# We (a) solve the concave square-root budget problem directly with SLSQP and
+# recover Chapter 11's b*=(7.2,1.8), lambda=0.3727, response 6.7082 — with NO
+# piecewise-linear approximation; (b) run a multi-start SLSQP on an S-shaped
+# (Hill) response, where a single start can land on an inferior corner and
+# only multi-start finds the interior optimum; and (c) reproduce Newton's
+# digit-doubling on g(x)=x^2-2, the squaring that drives SLSQP near a solution.
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
+
+# --- (a) Concave budget via SLSQP: the vindication -------------------------
+# max sum_i a_i sqrt(b_i)  s.t.  sum b = B,  b >= 0,  solved as a minimization
+# of the negated response.  a = (2, 1), B = 9.
+a = np.array([2.0, 1.0])
+B = 9.0
+neg_response = lambda b: -(a @ np.sqrt(np.maximum(b, 1e-12)))
+budget_eq = {"type": "eq", "fun": lambda b: b.sum() - B}
+res = minimize(neg_response, x0=[4.5, 4.5], method="SLSQP",
+               constraints=[budget_eq], bounds=[(0, B), (0, B)])
+marg = a / (2 * np.sqrt(res.x))          # marginal return a_i / (2 sqrt(b_i))
+print("(a) Concave budget via SLSQP:  max 2 sqrt(b1) + 1 sqrt(b2)  s.t. b1+b2=9")
+print(f"  optimal b*       = {np.round(res.x, 4).tolist()}      (expected [7.2, 1.8])")
+print(f"  total response   = {-res.fun:.4f}              (expected 6.7082)")
+print(f"  iterations nit   = {res.nit}                     (expected ~7)")
+print(f"  marginal returns = {np.round(marg, 4).tolist()}   (equal => budget lambda)")
+print(f"  budget lambda    = {marg[0]:.4f}              (expected 0.3727)")
+assert np.allclose(res.x, [7.2, 1.8], atol=1e-2)
+assert abs(-res.fun - 6.7082) < 1e-3
+assert np.allclose(marg[0], marg[1], atol=1e-3) and abs(marg[0] - 0.3727) < 1e-3
+print("  SLSQP recovers Ch11/Ch12's optimum exactly — no piecewise-linear approximation.")
+
+# --- (b) S-curve multi-start: why we need SLSQP ----------------------------
+# Two channels with S-shaped Hill response r(b) = b^2 / (3^2 + b^2), budget 6.
+# Optimize over the split b1 in [0, 6]; b2 = 6 - b1.  Run SLSQP from many starts.
+hill = lambda b: b ** 2 / (3.0 ** 2 + b ** 2)
+neg_total = lambda b1: -(hill(b1[0]) + hill(6.0 - b1[0]))
+starts = np.linspace(0.05, 5.95, 12)
+print("\n(b) S-curve multi-start:  r(b)=b^2/(9+b^2), two channels, B=6")
+print(f"  {'start b1':>10}{'b1 reached':>13}{'total':>9}")
+totals = []
+landings = []
+for s in starts:
+    r = minimize(neg_total, x0=[s], method="SLSQP", bounds=[(0.0, 6.0)])
+    total = round(-r.fun, 3)
+    totals.append(total)
+    landings.append(r.x[0])
+    print(f"  {s:>10.3f}{r.x[0]:>13.4f}{total:>9.3f}")
+best = max(totals)
+distinct = sorted(float(t) for t in set(totals))
+print(f"  best total found  = {best}            (interior (3,3) optimum)")
+print(f"  distinct optima   = {distinct}   (corner 0.8, interior 1.0)")
+assert max(totals) >= 0.99
+assert len(set(totals)) > 1          # multi-start finds different optima
+print("  A single start can land on the 0.8 corner; multi-start finds the 1.0 interior optimum.")
+
+# --- (c) Newton's method from scratch: digit-doubling ----------------------
+# Solve g(x) = x^2 - 2 = 0 by Newton, x <- 0.5 (x + 2/x), from x0 = 1.
+root = np.sqrt(2.0)
+x = 1.0
+newton_rows = []
+for k in range(7):
+    err = abs(x - root)
+    newton_rows.append((k, x, err))
+    x = 0.5 * (x + 2.0 / x)
+print("\n(c) Newton on g(x)=x^2-2 (Babylonian sqrt), x0=1:")
+print(f"  {'k':>3}{'x_k':>18}{'error |x_k - sqrt2|':>24}")
+for k, xk, err in newton_rows:
+    print(f"  {k:>3}{xk:>18.12f}{err:>24.3e}")
+err4 = newton_rows[4][2]
+assert err4 < 1e-10
+print(f"  error at iteration 4 = {err4:.3e}  <  1e-10  (quadratic convergence)")
+
+print("\nAll asserts passed.")
+
+# --- Figure (a): Newton error vs iteration on a log scale ------------------
+ks = np.array([r[0] for r in newton_rows])
+errs = np.array([max(r[2], 1e-16) for r in newton_rows])
+fig, ax = plt.subplots(figsize=(6.2, 4.0))
+ax.semilogy(ks, errs, color="crimson", lw=1.8, marker="o", label="Newton error (quadratic)")
+# Linear-rate reference: error halving each step, anchored at the first error.
+linref = errs[0] * 0.5 ** ks
+ax.semilogy(ks, linref, color="gray", ls="--", lw=1.3, label=r"linear rate $0.5^k$ (reference)")
+ax.set_xlabel("iteration $k$")
+ax.set_ylabel(r"error $|x_k - \sqrt{2}|$ (log scale)")
+ax.set_title("Newton's method: the quadratic plunge to machine precision", fontsize=10)
+ax.legend(fontsize=9, loc="upper right")
+plt.tight_layout()
+plt.show()
+
+# --- Figure (b): S-curve total response with multi-start landing points ----
+b1grid = np.linspace(0.0, 6.0, 400)
+total_curve = hill(b1grid) + hill(6.0 - b1grid)
+fig, ax = plt.subplots(figsize=(6.2, 4.0))
+ax.plot(b1grid, total_curve, color="black", lw=2.0, label="total response $r(b_1)+r(6-b_1)$")
+land_b1 = np.array(landings)
+land_tot = -np.array([minimize(neg_total, x0=[s], method="SLSQP",
+                               bounds=[(0.0, 6.0)]).fun for s in starts])
+ax.scatter(land_b1, land_tot, color="crimson", s=45, zorder=5,
+           label="SLSQP landing points")
+ax.scatter([3.0], [hill(3.0) + hill(3.0)], color="seagreen", s=90, marker="*",
+           zorder=6, label="interior optimum $(3,3)$, total $1.0$")
+ax.scatter([0.0, 6.0], [hill(0.0) + hill(6.0)] * 2, color="darkorange", s=60,
+           marker="s", zorder=6, label="corner optima, total $0.8$")
+ax.set_xlabel("budget split $b_1$ (with $b_2 = 6 - b_1$)")
+ax.set_ylabel("total response")
+ax.set_title("S-shaped response: multiple local optima the multi-start reveals", fontsize=10)
+ax.legend(fontsize=8, loc="lower center")
+plt.tight_layout()
+plt.show()
+```
+
+The printed output pins the chapter's numbers exactly. The **concave** solve (a) converges in $7$ SLSQP iterations to $b^\star = (7.2004, 1.7996)$ — Chapter 11's $(7.2, 1.8)$ to four digits — with total response $6.7082$ and, crucially, *equal* marginal returns $a_i / (2\sqrt{b_i^\star}) = (0.3727, 0.3727)$: that common value is the budget multiplier $\lambda = 0.3727$, the shadow price the solver hands back for free. This is Rung 8(a)'s vindication run live — the same allocation and the same $\lambda$ Chapter 11 derived by hand and Chapter 12 reached only in the refinement limit, here produced by SLSQP on the *smooth* problem directly, with no piecewise-linear approximation. The **multi-start** sweep (b) makes the non-convex trap concrete: of the $12$ starts spread across the budget split, the two nearest the boundary ($b_1 = 0.05$ and $b_1 = 5.95$) slide to the corners and certify the inferior total $0.8$, while the other ten converge to the interior split $b_1 = 3.0$ with the superior total $1.0$. The distinct optima found are exactly $\{0.8, 1.0\}$ — a single descent run started near a corner would report $0.8$ and stop, and only sweeping a spread of starts uncovers the $1.0$ interior optimum. Finally the **Newton** table (c) exhibits the quadratic convergence that powers it all: the error column reads $4.14\times10^{-1},\ 8.58\times10^{-2},\ 2.45\times10^{-3},\ 2.12\times10^{-6},\ 1.59\times10^{-12}$ — the exponent roughly doubles each step, three correct digits becoming six becoming twelve, reaching $1.59\times10^{-12}$ by iteration $4$. That digit-doubling is why the concave solve in (a) needed only those $7$ iterations. The two figures make the contrast visible: the log-scale error plunge against a linear-rate reference line, and the S-curve total-response landscape with its interior maximum at $b_1 = 3$ and corner optima at $b_1 = 0, 6$, every multi-start landing point marked on it.
