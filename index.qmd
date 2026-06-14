@@ -8,11 +8,11 @@ experiments, and the software engineering required to run it. Bayesian modeling,
 MCMC, causal inference, and constrained optimization are each built up rather than
 assumed.
 
-The emphasis throughout is on building intuition rather than supplying recipes.
-Where most treatments show which library functions to call, this one derives the
-underlying mathematics, so that the reader can see what each method assumes, why
-it works, and how it breaks. MMM serves as the application that motivates and
-connects the material; the mathematics is developed on its own terms.
+The emphasis throughout is on understanding and intuition. The book derives the
+underlying mathematics so that the reader can see what each method assumes, why it
+works, and the conditions under which it fails. MMM serves as the application that
+motivates and connects the material; the mathematics is developed on its own
+terms.
 
 ## Who this book is for
 
@@ -32,8 +32,8 @@ proof is illuminating and cited where it is merely mechanical.
 
 By the end, the reader should be able to derive and build a full Bayesian MMM —
 from the data-generating process, through prior specification and MCMC inference,
-to budget optimization grounded in experiment — and to understand each component
-well enough to diagnose it when it misbehaves.
+to budget optimization grounded in experiment — and to understand the assumptions
+and limitations of each component.
 
 ## Table of contents
 
