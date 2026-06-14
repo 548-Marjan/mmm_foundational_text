@@ -1,6 +1,6 @@
 # The MMM Data-Generating Process
 
-*Canonical anchors: Jin et al. 2017; pymc-marketing.*
+*Canonical anchors: @jin2017; @pymcmarketing.*
 
 ::: {.callout-note appearance="simple"}
 **Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
