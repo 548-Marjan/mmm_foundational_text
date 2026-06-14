@@ -754,4 +754,13 @@ A converged sampler and a trustworthy model are two different achievements, and 
 - **Simulation-based calibration (SBC)** is the keystone: under exact inference the rank of a prior-drawn truth among posterior draws is uniform on $\{0, \dots, L\}$. A $\cup$-shaped rank histogram means overconfidence, $\cap$ means under-confidence, a slope means bias. SBC automatically catches the Chapter 9 funnel.
 - **ELPD, WAIC, and PSIS-LOO** score out-of-sample prediction (B2), distinct from self-consistency (B1). The log score is a proper scoring rule; WAIC subtracts a posterior-variance penalty; PSIS-LOO carries a per-point Pareto-$\hat{k}$ reliability flag. Compare models by ELPD difference and its standard error.
 
-**Key identities.** Between- and within-chain variance $B = \frac{N}{M-1}\sum_m(\bar\theta_m - \bar\theta)^2$ and $W = \frac{1}{M}\sum_m s_m^2$; marginal variance estimate $\widehat{\operatorname{var}}^+ = \frac{N-1}{N}W + \frac{1}{N}B$; convergence statistic $\hat{R} = \sqrt{\widehat{\operatorname{var}}^+/W}$; variance inflation $\operatorname{var}(\bar\theta) = \frac{\sigma^2}{N}(1 + 2\sum_k \rho_k)$ giving $N_{\text{eff}} = N/(1 + 2\sum_k \rho_k)$ and $\text{MCSE} = \sigma/\sqrt{N_{\text{eff}}}$; posterior predictive p-value $p_B = \Pr(T(y^{\text{rep}}, \theta) \ge T(y, \theta) \mid y)$; the SBC identity $\int p(\theta\mid y)\,p(y)\,dy = p(\theta)$ making the rank uniform on $\{0, \dots, L\}$; and $\widehat{\text{elpd}}_{\text{WAIC}} = \text{lppd} - p_{\text{WAIC}}$ with $p_{\text{WAIC}} = \sum_i \operatorname{var}_s(\log p(y_i\mid\theta^{(s)}))$. A checked, trustworthy posterior is exactly the input the optimization of Part IV assumes.
+**Key identities**
+
+- **Between- and within-chain variance.** $B = \frac{N}{M-1}\sum_m(\bar\theta_m - \bar\theta)^2$ and $W = \frac{1}{M}\sum_m s_m^2$.
+- **Marginal variance and $\hat{R}$.** $\widehat{\operatorname{var}}^+ = \frac{N-1}{N}W + \frac{1}{N}B$, giving the convergence statistic $\hat{R} = \sqrt{\widehat{\operatorname{var}}^+/W}$.
+- **Variance inflation, ESS, and MCSE.** $\operatorname{var}(\bar\theta) = \frac{\sigma^2}{N}(1 + 2\sum_k \rho_k)$, so $N_{\text{eff}} = N/(1 + 2\sum_k \rho_k)$ and $\text{MCSE} = \sigma/\sqrt{N_{\text{eff}}}$.
+- **Posterior predictive p-value.** $p_B = \Pr(T(y^{\text{rep}}, \theta) \ge T(y, \theta) \mid y)$.
+- **SBC identity.** $\int p(\theta\mid y)\,p(y)\,dy = p(\theta)$, making the rank uniform on $\{0, \dots, L\}$.
+- **WAIC.** $\widehat{\text{elpd}}_{\text{WAIC}} = \text{lppd} - p_{\text{WAIC}}$ with $p_{\text{WAIC}} = \sum_i \operatorname{var}_s(\log p(y_i\mid\theta^{(s)}))$.
+
+A checked, trustworthy posterior is exactly the input the optimization of Part IV assumes.
