@@ -30,6 +30,68 @@ book* rather than an applied-math book is still scaffolding.
       complete book is available at [link TBD]*" framing overpromises. Either gate the
       claim or finish the payload.
 
+## P0a — Authoring note: Chapter 16 (DLM / State-Space MMM) — DLM vs. BTVC arc
+
+Captured from a review session comparing the foundational MMM literature
+(Jin et al. 2017), **BTVC** (Ng, Wang & Dai, Uber 2021,
+[arXiv 2106.03322](https://arxiv.org/pdf/2106.03322)), and Bayes R² (Gelman et al.
+2018). Use this as the spine for ch. 16's time-varying-coefficient section —
+present DLM/Kalman as the principled baseline, then BTVC as the production-driven
+reframing. Follows the chapter template (intuition → theory/proofs → tradeoffs →
+code tie-in).
+
+- [ ] **Frame the shared problem.** After a log-log transform the MMM is additive
+      with time-varying coefficients:
+      `ln(ŷ_t) = l_t + s_t + Σ_p ln(x_{t,p}) β_{t,p}` (trend, seasonality,
+      channel coefficients `β_{t,p}`). The "natural" fit is a state-space model —
+      DLM or Kalman filter. Derive the Kalman filter at the foundations' rigor
+      standard (this is also a credibility requirement flagged under P0/Part VI).
+
+- [ ] **Why BTVC argues DLMs break down (teach all three points).**
+  - *Caveat 1 — DLM + MCMC is too costly at MMM scale.* A DLM models the
+    coefficient as a latent state evolving every time step (random walk), so
+    inference samples a state for **every regressor × every time step** — a
+    high-dimensional problem under MMM's "small *n*, large *p*" reality.
+  - *Caveat 2 — the Kalman filter is fast but too rigid.* Closed-form updates buy
+    speed but forbid the customizations MMM needs: **non-negative** spend
+    coefficients (Gaussian conjugacy can't impose sign constraints) and a
+    **t-distributed / robust** noise process for outlier resistance.
+  - *Deeper structural reason (the unifying point).* A DLM **couples the parameter
+    count to the number of time steps** — the recursive `β_t | β_{t-1}` state
+    forces a sequential, `T`-dimensional inference problem. That creates the
+    dilemma: pay for MCMC over a huge state space (caveat 1) or buy speed with
+    Kalman's restrictive assumptions (caveat 2). You can't get scalable *and*
+    flexible in the state-space framing.
+
+- [ ] **BTVC's solution (kernel-smoothed latent knots).** Stop modeling the
+      coefficient as a sequential stochastic process; represent the coefficient
+      *curve* as a smooth function of a small set of latent **knots** (GAM /
+      kernel-regression view). For each regressor place `J ≪ T` knots `b_{j,p}` at
+      times `t_j`:
+      `β_{t,p} = Σ_j w_j(t) b_{j,p}`, `w_j(t) = k(t,t_j) / Σ_i k(t,t_i)`; matrix
+      form `β = K b`. Gaussian kernel for regression coefficients
+      (`k(t,t_j;ρ) = exp(−(t−t_j)²/2ρ²)`, bandwidth `ρ` sets smoothness);
+      triangular-like kernel for trend/seasonality.
+  - *Bayesian hierarchy.* Laplace prior on adjacent trend/seasonality knots
+    (change points, à la Prophet). Two-layer **folded-normal** hierarchy on
+    regression knots — `μ_reg ~ N⁺(μ_pool, σ²_pool)`, `b_reg ~ N⁺(μ_reg, σ²_reg)`
+    — giving **positivity** for free and **shrinkage toward the channel's grand
+    mean over sparse/zero-spend periods**. Experiment lift-test results ingestible
+    as channel priors. Posteriors via **Stochastic Variational Inference (SVI)**.
+  - *Show the fix mapping explicitly:* params decoupled from `T` (`J` knots, kernel
+    interpolates) → solves caveat 1; static hierarchical regression over knots +
+    SVI → solves the MCMC cost; folded-normal priors → sign constraints Kalman
+    couldn't do; free Bayesian likelihood → robust/custom noise + ingested priors.
+
+- [ ] **Land the one-liner contrast.** DLM asks *"how does the coefficient drift
+      step to step?"* (sequential, recursive, `T`-dimensional); BTVC asks *"what
+      smooth curve through a few latent knots best explains the data?"* (smoothing,
+      basis-function, `J`-dimensional). The smoothness a DLM gets from the
+      random-walk transition, BTVC gets from kernel bandwidth `ρ`; the
+      regularization a DLM gets from state-noise variance, BTVC gets from
+      hierarchical pooling. Flag this as the **Advanced/Extensions track** (ties to
+      the P1 "mark the Advanced track" item) — core arc shouldn't depend on it.
+
 ## P1 — Consistency / correctness fixes (mechanical, do now)
 
 - [ ] **README is a structural version behind.** It describes a **7-part** layout
