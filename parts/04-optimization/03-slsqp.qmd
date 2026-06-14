@@ -156,3 +156,81 @@ Shrinking the neighborhood so that $C\|e_0\| < 1$ forces the errors to contract 
 **Digit-doubling.** Quadratic convergence has a vivid reading: the number of correct digits roughly *doubles* at each step. If $\|e_k\| \approx 10^{-3}$ then $\|e_{k+1}\| \lesssim 10^{-6}$, then $10^{-12}$ — three correct digits become six become twelve in two iterations. This is precisely why SQP and SLSQP attain high accuracy in only a handful of steps once they are near the solution; Worked Example 3 exhibits the squaring concretely on a scalar root, where the error column visibly halves its exponent's distance to machine precision at every line.
 
 **The cost, and quasi-Newton.** The rate is not free. Each Newton step needs the Jacobian $F'(z_k)$, and for the KKT system that means **second derivatives** — the Hessian of $f$ and of every constraint, assembled into the Lagrangian Hessian inside the KKT matrix. When those second derivatives are unavailable or too expensive, a **quasi-Newton** method approximates the Jacobian from first-derivative information accumulated across iterations, trading the quadratic rate for **superlinear** convergence — slower than quadratic, but still decisively faster than the linear rate of plain gradient methods. That construction is the BFGS update of Rung 5 [@nocedal2006]. Newton's quadratic convergence is assumed nowhere earlier in this book; this rung supplies the proof, and it is exactly the engine that the SQP keystone of the next rung rides on.
+
+### Rung 4 — The keystone: SQP is Newton on the KKT system
+
+This is the rung the chapter — and much of Part IV — has been climbing toward. Chapter 11 promised that SLSQP is "a Newton iteration on the KKT equations" that, at each step, "forms a quadratic model of the Lagrangian and a linearization of the constraints, solves that quadratic program for a search direction, and repeats." Chapter 12 echoed it from the other side: the smooth, possibly non-concave world is the domain of an SLSQP that "attacks the nonlinear KKT system directly and iteratively." Those were promissory notes. This rung pays them in full, and it does so by proving a single, surprising identity: the Newton step on the KKT system of Rung 2 *is* the solution of a quadratic-programming subproblem. The "quadratic model of the Lagrangian under a linearization of the constraints" is not a heuristic resemblance to Newton's method — it is Newton's method, written in another basis.
+
+#### The KKT matrix and the Newton step
+
+Rung 3 flagged that the Jacobian $F'(z_k)$ of the root-finding map is the **KKT matrix**; we now assemble it explicitly. Differentiating the map $F(x, \lambda) = \begin{bmatrix} \nabla f(x) + \nabla c(x)^\top \lambda \\ c(x) \end{bmatrix}$ from Rung 2 block by block gives
+
+$$
+F'(x, \lambda) = \begin{bmatrix} \nabla^2_{xx}\mathcal{L}(x, \lambda) & \nabla c(x)^\top \\ \nabla c(x) & 0 \end{bmatrix}.
+$$
+
+The top-left block follows from $\partial_x[\nabla f + \nabla c^\top \lambda] = \nabla^2 f + \sum_i \lambda_i \nabla^2 c_i = \nabla^2_{xx}\mathcal{L}$ — the Hessian of the *Lagrangian*, not of $f$ alone, because differentiating the multiplier-weighted constraint gradients pulls in the constraint curvatures $\nabla^2 c_i$. The top-right block is $\partial_\lambda[\nabla f + \nabla c^\top \lambda] = \nabla c^\top$. The bottom row differentiates the feasibility block $c(x)$, giving the Jacobian $\nabla c$ in the bottom-left and nothing in $\lambda$, hence the zero block. This symmetric, saddle-structured matrix is the object every Newton step must factor.
+
+The Newton step $(p, \delta\lambda)$ at the current iterate $(x_k, \lambda_k)$ solves $F'(x_k, \lambda_k)\begin{bmatrix} p \\ \delta\lambda \end{bmatrix} = -F(x_k, \lambda_k)$, which written out is
+
+$$
+\begin{bmatrix} \nabla^2_{xx}\mathcal{L}_k & \nabla c_k^\top \\ \nabla c_k & 0 \end{bmatrix}\begin{bmatrix} p \\ \delta\lambda \end{bmatrix} = -\begin{bmatrix} \nabla f_k + \nabla c_k^\top \lambda_k \\ c_k \end{bmatrix},
+$$
+
+with the subscript $k$ marking evaluation at $(x_k, \lambda_k)$. The step $p$ updates the primal variable, $x_{k+1} = x_k + p$, and $\delta\lambda$ updates the multiplier, $\lambda_{k+1} = \lambda_k + \delta\lambda$.
+
+One change of variable cleans this up decisively. Solve for the **new** multiplier $\lambda_{k+1} = \lambda_k + \delta\lambda$ rather than the increment. The top row currently reads $\nabla^2_{xx}\mathcal{L}_k\, p + \nabla c_k^\top \delta\lambda = -\nabla f_k - \nabla c_k^\top \lambda_k$; substituting $\delta\lambda = \lambda_{k+1} - \lambda_k$ moves $\nabla c_k^\top \lambda_k$ across to cancel the identical term on the right, leaving $\nabla^2_{xx}\mathcal{L}_k\, p + \nabla c_k^\top \lambda_{k+1} = -\nabla f_k$. The bottom row is unchanged. In the new multiplier the Newton block system is therefore
+
+$$
+\begin{bmatrix} \nabla^2_{xx}\mathcal{L}_k & \nabla c_k^\top \\ \nabla c_k & 0 \end{bmatrix}\begin{bmatrix} p \\ \lambda_{k+1} \end{bmatrix} = -\begin{bmatrix} \nabla f_k \\ c_k \end{bmatrix}.
+$$
+
+The right-hand side has shed the $\lambda_k$-dependent term entirely: it is now just the objective gradient and the constraint residual. This is the form we will recognize.
+
+#### The theorem and proof
+
+> **Theorem (SQP = Newton on KKT).** The Newton step $(p, \lambda_{k+1})$ for the KKT system, as displayed above, is identical to the primal–dual solution of the **quadratic-programming (QP) subproblem**
+> $$
+> \min_p\ \nabla f_k^\top p + \tfrac12 p^\top \nabla^2_{xx}\mathcal{L}_k\, p \quad\text{subject to}\quad \nabla c_k\, p + c_k = 0.
+> $$
+> Each Newton iteration on the KKT conditions thus minimizes a quadratic model of the Lagrangian subject to a linearization of the constraints.
+
+**Proof.** The strategy is to write down the KKT conditions of the QP subproblem *itself* and observe that they are the Newton block system verbatim. The QP is a constrained optimization problem in the step variable $p$, so it has its own first-order conditions — and by Rung 1 those conditions are exact and sufficient here, because the QP has a quadratic objective and *linear* constraints, so its feasible set is an affine subspace on which LICQ is the full-rank condition on $\nabla c_k$.
+
+Introduce a multiplier $\mu$ for the QP's equality constraint $\nabla c_k\, p + c_k = 0$. The QP's Lagrangian, in its own variables $(p, \mu)$, is
+
+$$
+\ell(p, \mu) = \nabla f_k^\top p + \tfrac12 p^\top \nabla^2_{xx}\mathcal{L}_k\, p + \mu^\top(\nabla c_k\, p + c_k).
+$$
+
+Stationarity of the QP in $p$ — differentiating $\ell$ with respect to $p$ and setting it to zero — gives
+
+$$
+\nabla_p \ell = \nabla f_k + \nabla^2_{xx}\mathcal{L}_k\, p + \nabla c_k^\top \mu = 0, \qquad\text{i.e.}\qquad \nabla^2_{xx}\mathcal{L}_k\, p + \nabla c_k^\top \mu = -\nabla f_k.
+$$
+
+Primal feasibility of the QP is the constraint itself,
+
+$$
+\nabla c_k\, p + c_k = 0, \qquad\text{i.e.}\qquad \nabla c_k\, p = -c_k.
+$$
+
+Stack these two conditions as a single block system:
+
+$$
+\begin{aligned}
+\begin{bmatrix} \nabla^2_{xx}\mathcal{L}_k & \nabla c_k^\top \\ \nabla c_k & 0 \end{bmatrix}\begin{bmatrix} p \\ \mu \end{bmatrix} = -\begin{bmatrix} \nabla f_k \\ c_k \end{bmatrix}.
+\end{aligned}
+$$
+
+This is *exactly* the Newton block system derived above, with the QP multiplier $\mu$ occupying the slot of the updated multiplier $\lambda_{k+1}$. The two linear systems have the same matrix and the same right-hand side, so they have the same solution: the QP's primal–dual optimizer $(p, \mu)$ coincides with the Newton step $(p, \lambda_{k+1})$. Identifying $\mu = \lambda_{k+1}$, the Newton step on the KKT system *is* the solution of the QP subproblem. $\blacksquare$
+
+#### After the proof
+
+**What it means.** SQP is now fully named. **Sequential Quadratic Programming** is the algorithm that, at each iterate $(x_k, \lambda_k)$, builds the QP subproblem above — a **quadratic model of the Lagrangian**, the term $\tfrac12 p^\top \nabla^2_{xx}\mathcal{L}_k\, p$ together with the linear part $\nabla f_k^\top p$, minimized under a **linearization of the constraints**, $\nabla c_k\, p + c_k = 0$ — solves that QP for the step $p$ and the new multipliers, updates $x_{k+1} = x_k + p$ and $\lambda_{k+1} = \mu$, and repeats. The name is now literal: a *sequence* of *quadratic programs*. And because the theorem identifies each such QP solve with a Newton step on the KKT system, SQP inherits, untouched, the **quadratic convergence** proved in Rung 3 — near the solution the error squares at every iteration, and the digit-doubling of Rung 3 is the digit-doubling of SQP.
+
+**Why the Lagrangian, not just $f$.** The single most important subtlety in the construction is that the quadratic model uses the Hessian of the **Lagrangian** $\nabla^2_{xx}\mathcal{L}_k = \nabla^2 f_k + \sum_i (\lambda_k)_i \nabla^2 c_i(x_k)$, not the Hessian of the objective $f$ alone. The constraints' own curvature enters through the term $\sum_i (\lambda_k)_i \nabla^2 c_i$, weighted by the current multipliers. This is not optional polish. A method that modeled only $\nabla^2 f$ would be building the wrong quadratic: it would ignore how the constraint surfaces *bend* away from their tangent linearization, and it would no longer be Newton's method on the true KKT map $F$ — the $\nabla^2 c_i$ terms are precisely what differentiating $\nabla c^\top \lambda$ produced when we assembled the KKT matrix. Modeling the Lagrangian is what makes the QP a genuine second-order model of the constrained problem rather than of the objective in isolation. The exception is illuminating: when every constraint is **linear**, $\nabla^2 c_i = 0$ and $\nabla^2_{xx}\mathcal{L} = \nabla^2 f$, so the distinction collapses — which is exactly the affine world of Chapter 12, where the constraint linearization $\nabla c_k\, p + c_k = 0$ is not an approximation at all but the constraint reproduced exactly.
+
+**Inequalities.** The theorem above is stated for equality constraints, which carry the essential geometry. With inequality constraints the QP subproblem gains **linearized inequalities** $\nabla c_i(x_k)^\top p + c_i(x_k) \le 0$ for $i \in \mathcal{I}$ alongside the linearized equalities. Solving that inequality-constrained QP requires deciding which linearized inequalities are active — the **active-set** computation, which is the machinery the SLSQP rung develops in detail [@nocedal2006]. But the heart of SQP is the equality result proved here: once the active set is fixed, the inequality QP reduces to an equality QP of exactly the form above, and the active-set logic is the orchestration *around* that core, not a replacement for it.
+
+**The redemption.** State it plainly, because the whole part has been waiting for it. This is the result Chapter 11 named when it called SLSQP "a Newton iteration on the KKT equations" that "forms a quadratic model of the Lagrangian and a linearization of the constraints," and the result Chapter 12 pointed to when it sent the smooth, non-concave world on to a solver that "attacks the nonlinear KKT system directly and iteratively." Those phrases are no longer descriptions or promises. They are this theorem. SQP is Newton on the KKT system, the Newton step is a quadratic program, and the quadratic program is a model of the Lagrangian under a linearization of the constraints — one identity, proved. The keystone is set, and every rung above it now has something to rest on.
