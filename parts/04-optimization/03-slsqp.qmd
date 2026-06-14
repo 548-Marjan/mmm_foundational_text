@@ -602,3 +602,54 @@ plt.show()
 ```
 
 The printed output pins the chapter's numbers exactly. The **concave** solve (a) converges in $7$ SLSQP iterations to $b^\star = (7.2004, 1.7996)$ — Chapter 11's $(7.2, 1.8)$ to four digits — with total response $6.7082$ and, crucially, *equal* marginal returns $a_i / (2\sqrt{b_i^\star}) = (0.3727, 0.3727)$: that common value is the budget multiplier $\lambda = 0.3727$, the shadow price the solver hands back for free. This is Rung 8(a)'s vindication run live — the same allocation and the same $\lambda$ Chapter 11 derived by hand and Chapter 12 reached only in the refinement limit, here produced by SLSQP on the *smooth* problem directly, with no piecewise-linear approximation. The **multi-start** sweep (b) makes the non-convex trap concrete: of the $12$ starts spread across the budget split, the two nearest the boundary ($b_1 = 0.05$ and $b_1 = 5.95$) slide to the corners and certify the inferior total $0.8$, while the other ten converge to the interior split $b_1 = 3.0$ with the superior total $1.0$. The distinct optima found are exactly $\{0.8, 1.0\}$ — a single descent run started near a corner would report $0.8$ and stop, and only sweeping a spread of starts uncovers the $1.0$ interior optimum. Finally the **Newton** table (c) exhibits the quadratic convergence that powers it all: the error column reads $4.14\times10^{-1},\ 8.58\times10^{-2},\ 2.45\times10^{-3},\ 2.12\times10^{-6},\ 1.59\times10^{-12}$ — the exponent roughly doubles each step, three correct digits becoming six becoming twelve, reaching $1.59\times10^{-12}$ by iteration $4$. That digit-doubling is why the concave solve in (a) needed only those $7$ iterations. The two figures make the contrast visible: the log-scale error plunge against a linear-rate reference line, and the S-curve total-response landscape with its interior maximum at $b_1 = 3$ and corner optima at $b_1 = 0, 6$, every multi-start landing point marked on it.
+
+## Exercises
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** SLSQP is described as having "global convergence," yet the chapter insists it finds only a *local* optimum unless the problem is convex. Resolve the apparent contradiction: what exactly does "global convergence" describe, and why is it not a promise that the solver finds the global optimum? What is the practical remedy for a non-convex budget problem, and why is it a strategy rather than a certificate?
+
+**C2.** The SQP subproblem builds a quadratic model using the Hessian of the *Lagrangian*, $\nabla^2_{xx}\mathcal{L} = \nabla^2 f + \sum_i \lambda_i \nabla^2 c_i$, not the Hessian of the objective $f$ alone. Explain why the constraint curvature terms $\sum_i \lambda_i \nabla^2 c_i$ must be included for the step to be a genuine Newton step on the KKT system, and identify the one situation in which they vanish — connecting to Chapter 12.
+
+**C3.** From a poor starting point, the full SQP step can increase both the objective and the constraint violation. Explain how the $\ell_1$ merit function $\phi(x;\mu) = f(x) + \mu \sum_i |c_i(x)|_+$ and a backtracking line search rescue the method, and why a positive-definite $B_k$ (from damped BFGS) is what guarantees the SQP direction is a descent direction for $\phi$.
+
+### B — By Hand
+
+**B1.** Take one SQP/Newton-KKT step on $\min x_1^2 + 2x_2^2$ subject to $x_1 + x_2 = 3$, starting from $x_0 = (0,0)$, $\lambda_0 = 0$. Write the Lagrangian Hessian and the KKT block system, solve the $3 \times 3$ system for the step $p$ and the multiplier $\lambda_1$, and report the new iterate. Does it reach the exact optimum in one step? Why or why not?
+
+**B2.** Solve the concave budget problem $\max\ 3\sqrt{b_1} + \sqrt{b_2}$ subject to $b_1 + b_2 = 10$, $b \ge 0$, by the equal-marginal (KKT stationarity) condition. Find the optimal allocation $b^\star$, the common budget multiplier $\lambda$, and the total response, and compare it to the naive equal split $b = (5,5)$.
+
+**B3.** Run two Newton iterations of $g(x) = x^2 - 3 = 0$ from $x_0 = 2$, using $x_{k+1} = \tfrac12(x_k + 3/x_k)$. Tabulate $x_k$ and the error $|x_k - \sqrt{3}|$ for $k = 0, 1, 2$, and confirm that the error is roughly squared from one step to the next.
+
+### P — Prove It
+
+**P1.** Prove the equality-constrained first-order (Lagrange) condition: if $x^\star$ is a local minimizer of $f$ subject to $c_i(x) = 0$ ($i \in \mathcal{E}$) and LICQ holds at $x^\star$, then $\nabla f(x^\star) = -\sum_i \lambda_i^\star \nabla c_i(x^\star)$ for some multipliers $\lambda^\star$. (Use the tangent-direction / feasible-curve argument: any $d$ with $\nabla c_i(x^\star)^\top d = 0$ gives $\nabla f(x^\star)^\top d = 0$.)
+
+**P2.** Prove the SQP keystone: the Newton step for the KKT system $\begin{bmatrix} \nabla^2_{xx}\mathcal{L}_k & \nabla c_k^\top \\ \nabla c_k & 0 \end{bmatrix}\begin{bmatrix} p \\ \lambda_{k+1} \end{bmatrix} = -\begin{bmatrix} \nabla f_k \\ c_k \end{bmatrix}$ is identical to the primal–dual solution of the QP subproblem $\min_p \nabla f_k^\top p + \tfrac12 p^\top \nabla^2_{xx}\mathcal{L}_k\, p$ s.t. $\nabla c_k\, p + c_k = 0$. (Write the KKT conditions of the QP and match them to the block system.)
+
+**P3.** Prove Newton's local quadratic convergence: for $F \in C^2$ with $F(z^\star) = 0$ and $F'(z^\star)$ nonsingular, the iterates $z_{k+1} = z_k - F'(z_k)^{-1}F(z_k)$ satisfy $\|z_{k+1} - z^\star\| \le C\|z_k - z^\star\|^2$ near $z^\star$. (Taylor-expand $F$ about $z_k$, bound the remainder, and use boundedness of $\|F'(z_k)^{-1}\|$.)
+
+### A — Applied / Code
+
+**A1.** Solve a constrained budget problem with `scipy.optimize.minimize(method="SLSQP")` (a concave response under a budget equality and box bounds), then verify numerically that the returned solution satisfies the KKT conditions: compute the gradient of the Lagrangian at the solution (using the equal-marginal multiplier) and confirm its norm is near zero, and check that the active constraints hold.
+
+**A2.** Build an S-shaped two-channel budget problem (Hill response, exponent $n = 2$) and run `SLSQP` from at least ten starting points spread across the feasible set. Report the distinct local optima found and the best, and identify which starts land on inferior optima — demonstrating why multi-start is necessary off the convex world.
+
+**A3.** Implement Newton's method from scratch for a scalar root (e.g. $g(x) = x^2 - a$), record the error at each iteration, and plot it on a log scale. Overlay a linear-convergence reference (a geometric sequence) and confirm visually that Newton's quadratic rate plunges far faster — the digit-doubling of the convergence theorem.
+
+## Summary
+
+This chapter closes Part IV by building the solver the whole part pointed to. The budget problem on a smooth, possibly non-concave response is solved by treating the KKT conditions of Chapter 11 as a system of equations and running Newton's method on them — which, by the chapter's keystone, is exactly Sequential Quadratic Programming, the repeated solution of a quadratic model of the Lagrangian under linearized constraints. SLSQP is the production form of that idea, and on a concave response it recovers Chapter 11's equal-marginal optimum exactly, the same allocation and the same $\lambda$ reached from three directions across Part IV.
+
+**Key concepts.**
+
+- The **smooth constrained program** $\min f(x)$ s.t. $c_i(x) = 0,\ c_i(x) \le 0$, and its **KKT first-order necessary conditions** (stationarity, primal/dual feasibility, complementary slackness) under the LICQ constraint qualification — the necessary conditions for a possibly non-convex problem, where Chapter 11 gave the sufficient ones for convex.
+- The **root-finding view**: a KKT point is a root of a square nonlinear system $F(x,\lambda) = 0$, which makes Newton's method applicable.
+- **Newton's method** and its **local quadratic convergence** — the error squares each step (digit-doubling), the engine of the method, proved here.
+- The **keystone**: each Newton step on the KKT system is the solution of a **QP subproblem** — a quadratic model of the *Lagrangian* (not just $f$) under a linearization of the constraints. This is Sequential Quadratic Programming.
+- The **quasi-Newton (BFGS)** approximation of the Lagrangian Hessian, kept positive definite by Powell damping so every QP is convex; superlinear convergence.
+- The **SLSQP internals**: the least-squares recast of each QP (the "LS"), the active-set strategy for inequalities (complementary slackness computed), and the merit-function line search that globalizes the method.
+- **Local vs global**: SLSQP converges from any start *to a KKT point*, which is the global optimum only if the problem is convex; for S-shaped (non-convex) response, **multi-start** is the practical strategy.
+- The **budget capstone**: on a concave response SLSQP returns Chapter 11's $(7.2,1.8)$, $\lambda = 0.3727$ exactly, with no piecewise-linear approximation; on an S-shaped response it needs multi-start. A fitted MMM supplies the curves, and Part V runs this solver on them.
+
+**Key identities (inline).** Lagrangian $\mathcal{L} = f + \sum_i \lambda_i c_i$; KKT stationarity $\nabla f + \sum_i \lambda_i \nabla c_i = 0$ with $\lambda_{\mathcal{I}} \ge 0$ and $\lambda_i c_i = 0$; root-finding map $F(x,\lambda) = 0$ stacking stationarity and feasibility; Newton step $z_{k+1} = z_k - F'(z_k)^{-1} F(z_k)$; quadratic convergence $\|e_{k+1}\| \le C\|e_k\|^2$; the QP subproblem $\min_p \nabla f^\top p + \tfrac12 p^\top \nabla^2_{xx}\mathcal{L}\, p$ s.t. $\nabla c\, p + c = 0$; the BFGS secant equation $B_{k+1} s_k = y_k$; the equal-marginal optimum $r_i'(b_i^\star) = \lambda$, with SLSQP returning the budget multiplier $= \lambda$. Part IV built optimization from convex foundations through linear programming to the production constrained solver; Part V turns it loose on a fitted model.
