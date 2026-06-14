@@ -2260,4 +2260,111 @@ print("fill-steepest-first would chase the mid-curve steep segments and miss"
 ```
 The slopes rise then fall, so the steepest segments are interior; the true optimum is the symmetric split with the higher total, which a steepest-first fill does not find. Once concavity is lost the LP and the true problem part ways — the boundary of Rung 9, and the start of Chapter 13.
 
+## Chapter 13 — Constrained Nonlinear Optimization & SLSQP
+
+### C — Conceptual / Reading Comprehension
+
+**C1.** The word *global* in "global convergence" describes the **starting point**, not the answer: SLSQP converges from *any* initial point to a point satisfying the KKT conditions — a stationary point and *local* optimum. It is not a promise of the global optimum, because by Chapter 11's keystone a local KKT point equals the global optimum only when the problem is convex; off the convex world a non-convex problem has several KKT points of differing value, and the solver slides into whichever basin it started in. The practical remedy is **multi-start**: run from many spread-out initial allocations and keep the best KKT point found. It is a strategy, not a certificate, because it can only report the best optimum it *happened* to find — nothing in it proves a better one does not exist in an unsampled basin.
+
+**C2.** The KKT map whose root we chase is $F(x,\lambda) = (\nabla f + \nabla c^\top \lambda,\ c)$. Its Jacobian — the matrix every Newton step factors — has top-left block $\partial_x(\nabla f + \nabla c^\top \lambda) = \nabla^2 f + \sum_i \lambda_i \nabla^2 c_i = \nabla^2_{xx}\mathcal{L}$. The constraint-curvature terms $\sum_i \lambda_i \nabla^2 c_i$ appear precisely because differentiating the multiplier-weighted constraint gradients pulls in the constraints' second derivatives. A quadratic model built from $\nabla^2 f$ alone would therefore be the Jacobian of the *wrong* map — it would ignore how the constraint surfaces bend away from their linearization — and the resulting step would not be Newton's method on the true KKT system, forfeiting the quadratic convergence. The terms vanish exactly when every constraint is **linear**, $\nabla^2 c_i = 0$, so $\nabla^2_{xx}\mathcal{L} = \nabla^2 f$; that is Chapter 12's affine world, where the constraint linearization is exact rather than approximate.
+
+**C3.** The $\ell_1$ merit function $\phi(x;\mu) = f(x) + \mu \sum_i |c_i(x)|_+$ folds objective and total constraint violation into one scalar that is low only where $f$ is small *and* the constraints are nearly met, so a decrease in $\phi$ is an honest measure of progress that cannot be fooled by an objective that drops by fleeing feasibility. The backtracking line search takes $x_{k+1} = x_k + \alpha p$, starting at $\alpha = 1$ and halving until $\phi$ decreases sufficiently (Armijo), shortening the step when the full SQP step overreaches. A positive-definite $B_k$ is what makes $p$ a descent direction for $\phi$: the QP's predicted reduction in the linearized objective along $p$ is a genuine decrease because $B_k \succ 0$, and the QP drives the linearized violation to zero, so for $\mu$ larger than the multiplier magnitudes the violation-reduction dominates any objective increase and $D_p\phi < 0$.
+
+### B — By Hand
+
+**B1.** The Lagrangian is $\mathcal{L} = x_1^2 + 2x_2^2 + \lambda(x_1 + x_2 - 3)$, with $\nabla f = (2x_1, 4x_2)$, $\nabla c = (1,1)$, and Hessian $\nabla^2_{xx}\mathcal{L} = \begin{bmatrix} 2 & 0 \\ 0 & 4 \end{bmatrix}$ (the constraint is linear, adding no curvature). At $x_0 = (0,0)$, $\lambda_0 = 0$: $\nabla f_0 = (0,0)$, $c_0 = -3$. The block system is
+$$
+\begin{bmatrix} 2 & 0 & 1 \\ 0 & 4 & 1 \\ 1 & 1 & 0 \end{bmatrix}\begin{bmatrix} p_1 \\ p_2 \\ \lambda_1 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \\ 3 \end{bmatrix}.
+$$
+Rows 1–2 give $p_1 = -\lambda_1/2$, $p_2 = -\lambda_1/4$; row 3, $p_1 + p_2 = 3$, gives $-\tfrac34\lambda_1 = 3$, so $\lambda_1 = -4$, $p_1 = 2$, $p_2 = 1$. The new iterate is $x_1 = (2, 1)$ with $\lambda_1 = -4$. It **is** the exact optimum (check: stationarity $2x_1 + \lambda = 0$, $4x_2 + \lambda = 0$ give $x_1 = 2$, $x_2 = 1$ at $\lambda = -4$; objective $4 + 2 = 6$). One step suffices because the objective is quadratic and the constraint linear, so the QP subproblem is identical to the original problem.
+
+**B2.** Equal-marginal condition: $r_i'(b_i) = \tfrac{a_i}{2\sqrt{b_i}} = \lambda$ with $a = (3,1)$. Then $\tfrac{a_1^2}{b_1} = \tfrac{a_2^2}{b_2}$, so $\tfrac{b_1}{b_2} = \tfrac{9}{1} = 9$. With $b_1 + b_2 = 10$: $10 b_2 = 10$, $b_2 = 1$, $b_1 = 9$, so $b^\star = (9, 1)$. The multiplier is $\lambda = \tfrac{3}{2\sqrt{9}} = \tfrac{3}{6} = 0.5$ (check channel 2: $\tfrac{1}{2\sqrt 1} = 0.5$). Total response $3\sqrt 9 + \sqrt 1 = 9 + 1 = 10$. The naive equal split $b = (5,5)$ scores $3\sqrt5 + \sqrt5 = 4\sqrt5 \approx 8.944$, so the optimal allocation gains about $1.056$ by sending nine times the budget to the stronger channel.
+
+**B3.** With $x_{k+1} = \tfrac12(x_k + 3/x_k)$ from $x_0 = 2$ and $\sqrt3 = 1.7320508$:
+
+| $k$ | $x_k$ | error $|x_k - \sqrt3|$ |
+|---|---|---|
+| 0 | $2.0000000$ | $2.68\times10^{-1}$ |
+| 1 | $1.7500000$ | $1.79\times10^{-2}$ |
+| 2 | $1.7321429$ | $9.21\times10^{-5}$ |
+
+Each error is roughly the square of the previous times a constant: $(1.79\times10^{-2})^2 \approx 3.2\times10^{-4}$, and times $\approx 0.29$ gives $\approx 9.2\times10^{-5}$ — the quadratic rate.
+
+### P — Prove It
+
+**P1.** Let $x^\star$ be a local minimizer of $f$ subject to $c_i(x) = 0$ ($i \in \mathcal{E}$), with LICQ holding. Take any tangent direction $d$ with $\nabla c_i(x^\star)^\top d = 0$ for all $i \in \mathcal{E}$. By LICQ the active Jacobian has full row rank, so the implicit function theorem provides a smooth feasible curve $x(t)$ with $x(0) = x^\star$, $x'(0) = d$, and $c_i(x(t)) = 0$ for all $t$ near $0$. Since $x^\star$ is a local minimizer, $t = 0$ minimizes $\phi(t) = f(x(t))$, so $\phi'(0) = \nabla f(x^\star)^\top d = 0$. This holds for every tangent direction $d$, so $\nabla f(x^\star)$ is orthogonal to the null space of the active Jacobian, hence lies in its row space — the span of $\{\nabla c_i(x^\star)\}$. Thus $\nabla f(x^\star) = -\sum_i \lambda_i^\star \nabla c_i(x^\star)$ for some $\lambda^\star$, which is stationarity. $\blacksquare$
+
+**P2.** The QP subproblem $\min_p \nabla f_k^\top p + \tfrac12 p^\top \nabla^2_{xx}\mathcal{L}_k\, p$ s.t. $\nabla c_k\, p + c_k = 0$ has Lagrangian $\ell(p,\mu) = \nabla f_k^\top p + \tfrac12 p^\top \nabla^2_{xx}\mathcal{L}_k\, p + \mu^\top(\nabla c_k\, p + c_k)$. Its first-order conditions are stationarity in $p$, $\nabla_p \ell = \nabla f_k + \nabla^2_{xx}\mathcal{L}_k\, p + \nabla c_k^\top \mu = 0$, i.e. $\nabla^2_{xx}\mathcal{L}_k\, p + \nabla c_k^\top \mu = -\nabla f_k$, and primal feasibility $\nabla c_k\, p + c_k = 0$, i.e. $\nabla c_k\, p = -c_k$. Stacking these:
+$$
+\begin{bmatrix} \nabla^2_{xx}\mathcal{L}_k & \nabla c_k^\top \\ \nabla c_k & 0 \end{bmatrix}\begin{bmatrix} p \\ \mu \end{bmatrix} = -\begin{bmatrix} \nabla f_k \\ c_k \end{bmatrix},
+$$
+which is exactly the Newton block system, with $\mu = \lambda_{k+1}$. The two linear systems are identical, so their solutions coincide: the QP solution is the Newton step. $\blacksquare$
+
+**P3.** Let $e_k = z_k - z^\star$. From the Newton update, $e_{k+1} = e_k - F'(z_k)^{-1} F(z_k) = F'(z_k)^{-1}[F'(z_k)e_k - F(z_k)]$. Taylor-expand $F$ about $z_k$ and evaluate at $z^\star$, using $F(z^\star) = 0$: $0 = F(z_k) - F'(z_k)e_k + R_k$ with $\|R_k\| \le \tfrac12 L\|e_k\|^2$ ($L$ a Lipschitz bound on $F'$ near $z^\star$). Hence $F'(z_k)e_k - F(z_k) = R_k$, so $e_{k+1} = F'(z_k)^{-1} R_k$ and $\|e_{k+1}\| \le \|F'(z_k)^{-1}\|\,\tfrac12 L\|e_k\|^2$. Since $F'$ is continuous and $F'(z^\star)$ nonsingular, $\|F'(z_k)^{-1}\| \le 2\|F'(z^\star)^{-1}\|$ near $z^\star$, giving $\|e_{k+1}\| \le C\|e_k\|^2$ with $C = L\|F'(z^\star)^{-1}\|$. $\blacksquare$
+
+### A — Applied / Code
+
+**A1.** Solve a concave budget problem and verify the returned solution satisfies KKT.
+```{python}
+import numpy as np
+from scipy.optimize import minimize
+
+a = np.array([2.0, 1.0]); B = 9.0
+res = minimize(lambda b: -(a @ np.sqrt(np.maximum(b, 1e-12))),
+               x0=[4.5, 4.5], method="SLSQP", bounds=[(0, B)]*2,
+               constraints={"type": "eq", "fun": lambda b: b.sum() - B})
+b = res.x
+lam = np.mean(a / (2*np.sqrt(b)))           # budget multiplier (equal marginal)
+# KKT stationarity of min -f + nu*(sum b - B):  -a_i/(2 sqrt b_i) + nu = 0
+grad_L = -a/(2*np.sqrt(b)) + lam
+print("b* =", np.round(b, 4), " lambda =", round(lam, 4))
+print("Lagrangian-gradient norm =", f"{np.linalg.norm(grad_L):.2e}", " (KKT stationarity)")
+print("budget residual |sum b - B| =", f"{abs(b.sum()-B):.2e}")
+```
+The solver returns $b^\star = (7.2, 1.8)$ with $\lambda = 0.3727$; the Lagrangian gradient is zero to solver tolerance and the budget constraint is met — the KKT conditions hold.
+
+**A2.** Multi-start on an S-shaped problem reveals multiple local optima.
+```{python}
+import numpy as np
+from scipy.optimize import minimize
+
+def hill(x, K=3.0, n=2.0): return x**n / (K**n + x**n)
+B = 6.0
+neg = lambda b1: -(hill(b1[0]) + hill(B - b1[0]))
+
+results = []
+for s in np.linspace(0.05, 5.95, 12):
+    r = minimize(neg, x0=[s], method="SLSQP", bounds=[(0, B)])
+    results.append((round(s, 2), round(r.x[0], 2), round(-r.fun, 3)))
+
+totals = sorted(set(t for _, _, t in results))
+best = max(totals)
+inferior = [s for s, b1, t in results if t < best]
+print("distinct optima found:", totals, " best:", best)
+print("starts landing on an inferior optimum:", inferior)
+```
+The starts split between the interior optimum (total $1.0$, at $b_1 = 3$) and the corners (total $0.8$); the starts nearest the boundary land on the inferior corners. A single run from a corner-ish start would certify $0.8$ and stop — only multi-start uncovers the $1.0$ interior optimum, which is why it is necessary off the convex world.
+
+**A3.** Newton's quadratic rate against a linear reference.
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+a = 2.0; root = np.sqrt(a)
+x, errs = 1.0, []
+for _ in range(6):
+    errs.append(abs(x - root))
+    x = 0.5 * (x + a/x)                       # Newton for x^2 - a = 0
+errs = np.array(errs)
+linear = errs[0] * 0.5**np.arange(len(errs))  # geometric (linear-rate) reference
+
+plt.figure(figsize=(6, 4))
+plt.semilogy(errs, "o-", label="Newton (quadratic)")
+plt.semilogy(linear, "s--", label="linear rate (ratio 1/2)")
+plt.xlabel("iteration"); plt.ylabel("error"); plt.legend(); plt.tight_layout()
+plt.show()
+print("Newton errors:", [f"{e:.1e}" for e in errs])
+```
+The Newton error plunges to machine precision in four steps while the linear reference is still nibbling away one bit per iteration — the digit-doubling of the convergence theorem, the speed inside every SLSQP step.
+
 :::
