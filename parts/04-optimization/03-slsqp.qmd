@@ -13,3 +13,71 @@ So this chapter pays off two promises made earlier in the part. Chapter 11 calle
 We must be honest about what that buys. SLSQP converges to a *local* KKT point; it is global only when the problem is convex, which is precisely Chapter 11's keystone. Multi-start is a practical strategy for the non-convex case, not a certificate of global optimality.
 
 The roadmap follows the construction. We state the **smooth NLP and its KKT conditions**; take the **root-finding view** of them; develop **Newton's method** and its quadratic convergence; prove the **SQP keystone** that each Newton step is a QP subproblem; replace the exact Hessian with a **quasi-Newton (BFGS)** update; open up the **SLSQP internals** — the least-squares recast, the active-set machinery, the merit-function line search; confront the **non-convex reality** of S-shaped curves; and finally run the **real budget optimization**. This is the bridge into Part V: a fitted MMM supplies the response curves, and the budget-optimization chapter there runs exactly this solver on them.
+
+## Theory & Proofs
+
+The theory climbs a ladder, each rung resting on the one below. We begin with the **smooth nonlinear program and its KKT conditions** — the equations every method here is built to satisfy — then take the **root-finding view** that reads those conditions as a system of nonlinear equations. From there we develop **Newton's method** and its quadratic convergence, prove the **SQP keystone** that each Newton step is itself a quadratic-programming subproblem, and replace the exact Hessian with the **quasi-Newton (BFGS)** update that makes the iteration practical. The upper rungs open the **SLSQP internals** — the least-squares recast, the active-set machinery, the merit-function line search — before confronting the **non-convex reality** of S-shaped response and closing on the **real budget optimization**. This part of the chapter builds the first rung: the program itself, and the first-order conditions that pin down its optima.
+
+### Rung 1 — The smooth program and its KKT conditions
+
+Every method in this chapter is, at bottom, a machine for solving one system of equations — the KKT conditions of the program we are optimizing. Before we can iterate toward them we must state them precisely and earn the right to do so, for a *general* smooth program that need not be convex. Chapter 11 proved these conditions **sufficient** for a convex program: any KKT point there is the global optimum. Here we travel the other direction and establish them as the **necessary** conditions that every local minimizer of a smooth program must satisfy — the equations a solver is entitled to chase precisely because the optimum is guaranteed to lie among their solutions. We state the conditions in full and prove their first-order core.
+
+**The program.** The general smooth nonlinear program is
+
+$$
+\min_x\ f(x) \quad \text{subject to} \quad c_i(x) = 0\ (i \in \mathcal{E}), \qquad c_i(x) \le 0\ (i \in \mathcal{I}),
+$$
+
+with the objective $f$ and every constraint $c_i$ **twice continuously differentiable**. The index sets $\mathcal{E}$ and $\mathcal{I}$ collect the equality and inequality constraints respectively. The device that couples objective to constraints is the **Lagrangian**, which attaches a scalar multiplier $\lambda_i$ to each constraint and folds the program into a single function:
+
+$$
+\mathcal{L}(x, \lambda) = f(x) + \sum_i \lambda_i c_i(x).
+$$
+
+**Active set and LICQ.** At a feasible point $x^\star$ the inequality constraints split into those touching the boundary and those with room to spare. The **active set** collects every equality together with the inequalities that hold with equality,
+
+$$
+\mathcal{A}(x^\star) = \mathcal{E} \cup \{\, i \in \mathcal{I} : c_i(x^\star) = 0 \,\}.
+$$
+
+Only active constraints can exert force at $x^\star$; an inactive inequality has strict slack and is locally irrelevant. For the multipliers to be well-defined the active gradients must not be degenerate, and the standard guarantee is a **constraint qualification**. The **linear independence constraint qualification (LICQ)** holds at $x^\star$ when the active constraint gradients $\{\nabla c_i(x^\star) : i \in \mathcal{A}(x^\star)\}$ are **linearly independent**. LICQ is what makes the tangent geometry of the feasible set faithful to its linearization — the hypothesis the proof below leans on directly.
+
+> **Theorem (first-order necessary conditions / KKT).** Suppose $x^\star$ is a local minimizer of the program at which LICQ holds. Then there exist multipliers $\lambda^\star$ such that
+> $$
+> \nabla_x \mathcal{L}(x^\star, \lambda^\star) = \nabla f(x^\star) + \sum_i \lambda_i^\star \nabla c_i(x^\star) = 0 \quad\text{(stationarity)},
+> $$
+> together with **primal feasibility** ($c_i(x^\star) = 0$ for $i \in \mathcal{E}$ and $c_i(x^\star) \le 0$ for $i \in \mathcal{I}$), **dual feasibility** ($\lambda_i^\star \ge 0$ for $i \in \mathcal{I}$), and **complementary slackness** ($\lambda_i^\star c_i(x^\star) = 0$ for all $i$).
+
+**Proof (of the equality-constrained core).** We prove the equality-only case — $\min f(x)$ subject to $c_i(x) = 0$ for $i \in \mathcal{E}$ — which carries the essential geometry; the inequality extension is stated immediately after and proved in full by @nocedal2006.
+
+Let $x^\star$ be a local minimizer at which LICQ holds, and call a direction $d$ a **tangent direction** if it is annihilated by every active constraint gradient,
+
+$$
+\nabla c_i(x^\star)^\top d = 0 \quad \text{for all } i \in \mathcal{E}.
+$$
+
+By LICQ the active Jacobian has full row rank, so the implicit function theorem furnishes a smooth feasible curve $x(t)$ threading the constraint surface with
+
+$$
+x(0) = x^\star, \qquad x'(0) = d, \qquad c_i(x(t)) = 0 \ \text{ for all } i \in \mathcal{E} \text{ and all } t \text{ near } 0.
+$$
+
+The curve stays feasible by construction, so its objective value $\phi(t) = f(x(t))$ is a one-dimensional slice of $f$ along the feasible set. Because $x^\star$ is a local minimizer, $t = 0$ minimizes $\phi$, and a differentiable function at an interior minimum has vanishing derivative:
+
+$$
+\phi'(0) = \nabla f(x^\star)^\top x'(0) = \nabla f(x^\star)^\top d = 0.
+$$
+
+This holds for *every* tangent direction $d$. So $\nabla f(x^\star)$ is orthogonal to the entire null space of the active Jacobian — equivalently, it lies in the orthogonal complement of that null space, which is the **row space** spanned by the active gradients $\{\nabla c_i(x^\star)\}_{i \in \mathcal{E}}$. Membership in that span means there exist scalars $\lambda_i^\star$ with
+
+$$
+\nabla f(x^\star) = -\sum_{i \in \mathcal{E}} \lambda_i^\star \nabla c_i(x^\star),
+$$
+
+which rearranges to the stationarity condition $\nabla_x \mathcal{L}(x^\star, \lambda^\star) = 0$. $\blacksquare$
+
+**Inequality extension (stated).** For inequality constraints the same argument restricted to the active set yields stationarity, and a first-variation argument over the cone of *feasible* directions forces the active multipliers to be **nonnegative** ($\lambda_i^\star \ge 0$): a binding constraint may only be approached from the feasible side, so its multiplier can push back in just one direction. Inactive constraints carry zero multiplier, which is exactly complementary slackness ($\lambda_i^\star c_i(x^\star) = 0$). The full proof is in @nocedal2006. The sign condition is what distinguishes a binding constraint that *pushes back* on the optimum from one that is merely slack and exerts no force at all.
+
+**Second-order sufficient condition (stated).** The KKT conditions are first-order: they locate stationary points but cannot by themselves separate a minimizer from a saddle. The curvature test that does is the **second-order sufficient condition**. If, in addition to KKT, the reduced Hessian of the Lagrangian is positive definite on the critical cone — $d^\top \nabla^2_{xx} \mathcal{L}(x^\star, \lambda^\star)\, d > 0$ for every nonzero $d$ tangent to the active constraints — then $x^\star$ is a **strict local minimizer**. This is the constrained analogue of the positive-definite-Hessian test from Chapter 11, restricted to the directions the active constraints leave free.
+
+**Tie to Chapter 11.** There the KKT conditions were proved *sufficient* for convex programs: any KKT point is automatically a *global* optimum, because convexity makes stationarity certify optimality across the whole feasible set. Here they are the *necessary* conditions for a smooth, possibly non-convex program — the equations every solver in this chapter is built to satisfy, derived without any convexity assumption. For a convex problem the two readings coincide and KKT pins down the global optimum. For a non-convex one, KKT pins down only *local* optima, and a program may have many; that gap is exactly what the multi-start strategy later in the chapter is built to confront.
