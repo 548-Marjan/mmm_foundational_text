@@ -670,4 +670,14 @@ Optimization splits into two worlds, and convexity is the border. On one side a 
 - The **capstone**: at the optimal budget allocation over concave responses, every funded channel shares a common marginal return — equal marginal returns, or water-filling.
 - The **honest limit**: real Hill curves with exponent $n > 1$ are S-shaped, so the budget problem is non-convex, the global guarantee is lost, and practitioners turn to multi-start search — the motivation for Chapter 13.
 
-**Key identities (inline).** Chord inequality $f(\lambda x + (1-\lambda)y) \le \lambda f(x) + (1-\lambda)f(y)$; first-order condition $f(y) \ge f(x) + \nabla f(x)^\top(y - x)$; second-order condition $\nabla^2 f \succeq 0$; Jensen $f(\mathbb{E}[X]) \le \mathbb{E}[f(X)]$; KKT stationarity $\nabla f(x^\star) + \sum_i \lambda_i^\star \nabla g_i(x^\star) + \sum_j \nu_j^\star \nabla h_j(x^\star) = 0$ with complementary slackness $\lambda_i^\star g_i(x^\star) = 0$; equal marginal returns $r_i'(b_i^\star) = \lambda$; Hill inflection $x^\star = K\left(\frac{n-1}{n+1}\right)^{1/n}$. A problem certified convex by these tools hands Chapters 12 and 13 a global guarantee; one that is not tells them, just as precisely, to search more than one basin.
+**Key identities (inline)**
+
+- **Chord inequality (convexity).** $f(\lambda x + (1-\lambda)y) \le \lambda f(x) + (1-\lambda)f(y)$.
+- **First-order condition.** $f(y) \ge f(x) + \nabla f(x)^\top(y - x)$.
+- **Second-order condition.** $\nabla^2 f \succeq 0$.
+- **Jensen's inequality.** $f(\mathbb{E}[X]) \le \mathbb{E}[f(X)]$.
+- **KKT stationarity and complementary slackness.** $\nabla f(x^\star) + \sum_i \lambda_i^\star \nabla g_i(x^\star) + \sum_j \nu_j^\star \nabla h_j(x^\star) = 0$ with $\lambda_i^\star g_i(x^\star) = 0$.
+- **Equal marginal returns.** $r_i'(b_i^\star) = \lambda$.
+- **Hill inflection.** $x^\star = K\left(\frac{n-1}{n+1}\right)^{1/n}$.
+
+A problem certified convex by these tools hands Chapters 12 and 13 a global guarantee; one that is not tells them, just as precisely, to search more than one basin.
