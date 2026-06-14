@@ -715,4 +715,14 @@ When the objective and every constraint are linear, optimization reaches its mos
 - **Shadow prices**: the optimal dual variable $y_i^\star = \partial p^\star/\partial b_i$ is the marginal value of relaxing constraint $i$; a slack constraint prices at zero, a binding one may price positive.
 - **Budget allocation as an LP**: a piecewise-linear concave response makes the budget problem an LP whose "fill steepest first" optimum equalizes the marginal slopes; the budget dual price is Chapter 11's $\lambda$. Refining the mesh converges to the smooth optimum. The trick needs concavity — an S-shaped curve breaks it, which is Chapter 13's territory.
 
-**Key identities (inline).** Standard form $\min c^\top x$ s.t. $Ax = b,\ x \ge 0$; primal–dual pair $\min\{c^\top x : Ax \ge b,\ x \ge 0\}$ ↔ $\max\{b^\top y : A^\top y \le c,\ y \ge 0\}$; reduced costs $\bar c_N = c_N - A_N^\top y$ with $y = (A_B^{-1})^\top c_B$; weak duality $b^\top y \le c^\top x$; strong duality $b^\top y^\star = c^\top x^\star$; complementary slackness $y_i(a_i^\top x - b_i) = 0$ and $x_j(c_j - (A^\top y)_j) = 0$; shadow price $\partial p^\star/\partial b_i = y_i^\star$; and the budget LP's dual price equal to Chapter 11's equal-marginal return $\lambda$. Linear programming owns the linear and concave-separable world exactly; the smooth, non-concave world is the subject of Chapter 13.
+**Key identities (inline)**
+
+- **Standard form.** $\min c^\top x$ s.t. $Ax = b,\ x \ge 0$.
+- **Primal–dual pair.** $\min\{c^\top x : Ax \ge b,\ x \ge 0\}$ ↔ $\max\{b^\top y : A^\top y \le c,\ y \ge 0\}$.
+- **Reduced costs.** $\bar c_N = c_N - A_N^\top y$ with $y = (A_B^{-1})^\top c_B$.
+- **Weak duality.** $b^\top y \le c^\top x$.
+- **Strong duality.** $b^\top y^\star = c^\top x^\star$.
+- **Complementary slackness.** $y_i(a_i^\top x - b_i) = 0$ and $x_j(c_j - (A^\top y)_j) = 0$.
+- **Shadow price.** $\partial p^\star/\partial b_i = y_i^\star$; the budget LP's dual price equals Chapter 11's equal-marginal return $\lambda$.
+
+Linear programming owns the linear and concave-separable world exactly; the smooth, non-concave world is the subject of Chapter 13.
