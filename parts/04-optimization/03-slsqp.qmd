@@ -652,4 +652,15 @@ This chapter closes Part IV by building the solver the whole part pointed to. Th
 - **Local vs global**: SLSQP converges from any start *to a KKT point*, which is the global optimum only if the problem is convex; for S-shaped (non-convex) response, **multi-start** is the practical strategy.
 - The **budget capstone**: on a concave response SLSQP returns Chapter 11's $(7.2,1.8)$, $\lambda = 0.3727$ exactly, with no piecewise-linear approximation; on an S-shaped response it needs multi-start. A fitted MMM supplies the curves, and Part V runs this solver on them.
 
-**Key identities (inline).** Lagrangian $\mathcal{L} = f + \sum_i \lambda_i c_i$; KKT stationarity $\nabla f + \sum_i \lambda_i \nabla c_i = 0$ with $\lambda_{\mathcal{I}} \ge 0$ and $\lambda_i c_i = 0$; root-finding map $F(x,\lambda) = 0$ stacking stationarity and feasibility; Newton step $z_{k+1} = z_k - F'(z_k)^{-1} F(z_k)$; quadratic convergence $\|e_{k+1}\| \le C\|e_k\|^2$; the QP subproblem $\min_p \nabla f^\top p + \tfrac12 p^\top \nabla^2_{xx}\mathcal{L}\, p$ s.t. $\nabla c\, p + c = 0$; the BFGS secant equation $B_{k+1} s_k = y_k$; the equal-marginal optimum $r_i'(b_i^\star) = \lambda$, with SLSQP returning the budget multiplier $= \lambda$. Part IV built optimization from convex foundations through linear programming to the production constrained solver; Part V turns it loose on a fitted model.
+**Key identities (inline)**
+
+- **Lagrangian.** $\mathcal{L} = f + \sum_i \lambda_i c_i$.
+- **KKT stationarity.** $\nabla f + \sum_i \lambda_i \nabla c_i = 0$ with $\lambda_{\mathcal{I}} \ge 0$ and $\lambda_i c_i = 0$.
+- **Root-finding map.** $F(x,\lambda) = 0$, stacking stationarity and feasibility.
+- **Newton step.** $z_{k+1} = z_k - F'(z_k)^{-1} F(z_k)$.
+- **Quadratic convergence.** $\|e_{k+1}\| \le C\|e_k\|^2$.
+- **QP subproblem.** $\min_p \nabla f^\top p + \tfrac12 p^\top \nabla^2_{xx}\mathcal{L}\, p$ s.t. $\nabla c\, p + c = 0$.
+- **BFGS secant equation.** $B_{k+1} s_k = y_k$.
+- **Equal-marginal optimum.** $r_i'(b_i^\star) = \lambda$, with SLSQP returning the budget multiplier $= \lambda$.
+
+Part IV built optimization from convex foundations through linear programming to the production constrained solver; Part V turns it loose on a fitted model.
