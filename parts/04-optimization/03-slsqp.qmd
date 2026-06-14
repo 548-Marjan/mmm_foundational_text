@@ -81,3 +81,78 @@ which rearranges to the stationarity condition $\nabla_x \mathcal{L}(x^\star, \l
 **Second-order sufficient condition (stated).** The KKT conditions are first-order: they locate stationary points but cannot by themselves separate a minimizer from a saddle. The curvature test that does is the **second-order sufficient condition**. If, in addition to KKT, the reduced Hessian of the Lagrangian is positive definite on the critical cone — $d^\top \nabla^2_{xx} \mathcal{L}(x^\star, \lambda^\star)\, d > 0$ for every nonzero $d$ tangent to the active constraints — then $x^\star$ is a **strict local minimizer**. This is the constrained analogue of the positive-definite-Hessian test from Chapter 11, restricted to the directions the active constraints leave free.
 
 **Tie to Chapter 11.** There the KKT conditions were proved *sufficient* for convex programs: any KKT point is automatically a *global* optimum, because convexity makes stationarity certify optimality across the whole feasible set. Here they are the *necessary* conditions for a smooth, possibly non-convex program — the equations every solver in this chapter is built to satisfy, derived without any convexity assumption. For a convex problem the two readings coincide and KKT pins down the global optimum. For a non-convex one, KKT pins down only *local* optima, and a program may have many; that gap is exactly what the multi-start strategy later in the chapter is built to confront.
+
+### Rung 2 — The root-finding view
+
+Rung 1 left us with a list of conditions a minimizer must satisfy: stationarity of the Lagrangian, plus feasibility. The decisive move of this chapter is to stop reading that list as a *checklist* and start reading it as a *system of equations*. Stationarity and feasibility, taken together, are simultaneous equations in the unknowns — and once we see them that way, the entire apparatus of nonlinear-equation solving, Newton's method first among it, becomes available. That reframing is what this rung performs.
+
+**A KKT point is a root of a nonlinear system.** Take the equality-constrained program and stack its two defining conditions into a single vector-valued map of the unknowns $(x, \lambda)$:
+
+$$
+F(x, \lambda) = \begin{bmatrix} \nabla f(x) + \nabla c(x)^\top \lambda \\ c(x) \end{bmatrix} = 0,
+$$
+
+where $c(x)$ is the vector of equality constraints and $\nabla c(x)$ is their Jacobian, the matrix whose rows are the constraint gradients $\nabla c_i(x)^\top$. The top block is exactly stationarity, $\nabla_x \mathcal{L} = 0$; the bottom block is primal feasibility, $c(x) = 0$. A point $(x^\star, \lambda^\star)$ satisfies the KKT conditions if and only if it is a **root** of $F$.
+
+**Solving the program is finding a root of $F$.** This is the equivalence the rung is built on. The primal variables $x$ and the multipliers $\lambda$ are solved for *together*, as one coupled system: the multipliers are not an afterthought computed once $x$ is known, but unknowns standing on equal footing with the decision variables, with their own block of equations (feasibility) and their own contribution to stationarity. The system $F$ has as many equations as unknowns — $n$ stationarity equations and $m$ feasibility equations for $n$ variables and $m$ multipliers — so it is **square**, exactly the setting a root-finder requires.
+
+**Folding in inequalities.** The construction above is written for equalities, but inequalities are absorbed with the active-set idea of Rung 1. At a solution, the active inequalities hold with equality and the inactive ones carry zero multiplier and can be dropped; treating the active inequalities as equalities inside $F$ recovers a square system of precisely the form above. *Which* inequalities belong to the active set is itself a question — the active-set machinery that answers it is developed in the SLSQP rung. For the development of Newton's method and SQP that follows, we take the active set as given, so $F$ is square and smooth.
+
+**The pivot of the chapter.** This single reframing — from "minimize $f$" to "solve $F(x, \lambda) = 0$" — is the hinge on which everything turns. Every method from here forward is a consequence of applying a nonlinear-equation solver to $F$: Newton's method on $F$ is the next rung, the SQP keystone shows each Newton step is a quadratic program, and SLSQP is the production solver for that iteration. We have stopped optimizing and started root-finding; the rest of the chapter cashes out that move.
+
+### Rung 3 — Newton's method and quadratic convergence
+
+We now have a square nonlinear system $F(z) = 0$ to solve, with $z = (x, \lambda)$. The canonical solver for such a system is **Newton's method**, and its defining virtue is **quadratic convergence**: once the iterate is close to a root, the error squares at every step. This is the property that makes SQP and SLSQP reach high accuracy in only a handful of iterations near the optimum — and it is a result the book has invoked but never proved. This rung supplies the proof.
+
+**Newton's method for $F(z) = 0$.** The idea is to replace $F$ by its linear model at the current iterate and solve that exactly. Linearizing about $z_k$ gives $F(z_k + \Delta) \approx F(z_k) + F'(z_k)\Delta$; setting the model to zero and solving for the step yields
+
+$$
+F'(z_k)\, \Delta_k = -F(z_k), \qquad z_{k+1} = z_k + \Delta_k = z_k - F'(z_k)^{-1} F(z_k),
+$$
+
+where $F'(z_k)$ is the Jacobian of $F$ at $z_k$. For the KKT system this Jacobian is the **KKT matrix** — the block matrix of Lagrangian-Hessian and constraint-Jacobian pieces that we assemble explicitly in the next rung; flag it here as the object every Newton step must factor.
+
+> **Theorem (local quadratic convergence).** Let $F$ be $C^2$ with a root $z^\star$, $F(z^\star) = 0$, at which the Jacobian $F'(z^\star)$ is nonsingular. Then there is a neighborhood of $z^\star$ such that, started anywhere in it, Newton's iterates converge to $z^\star$ and satisfy
+> $$
+> \|z_{k+1} - z^\star\| \le C\, \|z_k - z^\star\|^2
+> $$
+> for a constant $C$ — the error squares at each step.
+
+**Proof.** Let $e_k = z_k - z^\star$ denote the error at step $k$.
+
+From the Newton update, subtract $z^\star$ and insert $F'(z_k)^{-1} F'(z_k)$ on the leading term:
+
+$$
+\begin{aligned}
+z_{k+1} - z^\star &= e_k - F'(z_k)^{-1} F(z_k) \\
+&= F'(z_k)^{-1}\big[F'(z_k)\, e_k - F(z_k)\big].
+\end{aligned}
+$$
+
+Now Taylor-expand $F$ around $z_k$ and evaluate at $z^\star$, using $F(z^\star) = 0$:
+
+$$
+\begin{aligned}
+0 = F(z^\star) &= F(z_k) + F'(z_k)(z^\star - z_k) + R_k \\
+&= F(z_k) - F'(z_k)\, e_k + R_k,
+\end{aligned}
+$$
+
+where the remainder is controlled by the $C^2$ assumption: $\|R_k\| \le \tfrac12 L \|e_k\|^2$, with $L$ a Lipschitz constant for $F'$ near $z^\star$. Rearranging the second display gives $F'(z_k)\, e_k - F(z_k) = R_k$, exactly the bracket in the first display, so
+
+$$
+e_{k+1} = F'(z_k)^{-1} R_k, \qquad
+\|e_{k+1}\| \le \|F'(z_k)^{-1}\|\, \|R_k\| \le \tfrac12 L\, \|F'(z_k)^{-1}\|\, \|e_k\|^2.
+$$
+
+Finally, because $F'$ is continuous and $F'(z^\star)$ is nonsingular, $\|F'(z_k)^{-1}\| \le 2\|F'(z^\star)^{-1}\|$ for every $z_k$ close enough to $z^\star$. Substituting,
+
+$$
+\|e_{k+1}\| \le C\, \|e_k\|^2, \qquad C = L\,\|F'(z^\star)^{-1}\|.
+$$
+
+Shrinking the neighborhood so that $C\|e_0\| < 1$ forces the errors to contract — each step squares a quantity already below $1$ — so $z_k \to z^\star$, and the squaring bound holds throughout. $\blacksquare$
+
+**Digit-doubling.** Quadratic convergence has a vivid reading: the number of correct digits roughly *doubles* at each step. If $\|e_k\| \approx 10^{-3}$ then $\|e_{k+1}\| \lesssim 10^{-6}$, then $10^{-12}$ — three correct digits become six become twelve in two iterations. This is precisely why SQP and SLSQP attain high accuracy in only a handful of steps once they are near the solution; Worked Example 3 exhibits the squaring concretely on a scalar root, where the error column visibly halves its exponent's distance to machine precision at every line.
+
+**The cost, and quasi-Newton.** The rate is not free. Each Newton step needs the Jacobian $F'(z_k)$, and for the KKT system that means **second derivatives** — the Hessian of $f$ and of every constraint, assembled into the Lagrangian Hessian inside the KKT matrix. When those second derivatives are unavailable or too expensive, a **quasi-Newton** method approximates the Jacobian from first-derivative information accumulated across iterations, trading the quadratic rate for **superlinear** convergence — slower than quadratic, but still decisively faster than the linear rate of plain gradient methods. That construction is the BFGS update of Rung 5 [@nocedal2006]. Newton's quadratic convergence is assumed nowhere earlier in this book; this rung supplies the proof, and it is exactly the engine that the SQP keystone of the next rung rides on.
