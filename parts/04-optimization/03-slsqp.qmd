@@ -386,3 +386,99 @@ $$
 **(b) The S-shaped case — why we needed SLSQP.** Replace the concave response with a **Hill** curve of exponent $n > 1$ — a **convex toe** rising into a concave shoulder. The sum of such curves over the budget simplex is **non-concave**, so the budget problem is **non-convex**, and Rung 7 applies in full: a single SLSQP run finds a local optimum that depends on its start, and **multi-start is required** to trust the result. The arithmetic makes the trap concrete. Two channels with Hill exponent $n = 2$ and half-saturation $K = 3$, budget $B = 6$. The **interior split** $b = (3, 3)$ earns total response $1.0$, while the **corner allocations** $b = (6, 0)$ and $b = (0, 6)$ earn only $0.8$. All three are **KKT points** — each satisfies stationarity and the constraints — yet they are not equal in value, and an SLSQP run **started near a corner converges to that inferior corner** and certifies it, never seeing the better interior split. **Multi-start**, sweeping a spread of initial allocations, finds the superior interior optimum that the corner start misses. This is precisely the case Chapter 12's "fill steepest first" heuristic got **wrong** — the convex toe means the steepest-first greedy ordering can pour the whole budget into one channel and miss the balanced split — and the case a single descent run **cannot be trusted on**. It is the case this chapter was built for. (The **Code Tie-in** runs the multi-start and exhibits both outcomes — the corner trap and the interior recovery — on exactly this Hill instance.)
 
 **Bridge to Part V.** This closes the Theory section, and with it the optimization mathematics of Part IV — but the response curves $r_i$ have so far been *given*. They will not be. A **fitted** MMM posterior, the work of Parts II–III, is what **supplies** the response curves: the saturation parameters are estimated, so each $r_i$ comes with **uncertainty**, and the curves are themselves **random** — one draw of $r_i$ per posterior draw. Chapter 17's budget-optimization chapter runs **this very solver** against those fitted curves, typically **once per posterior draw**, to allocate spend under that uncertainty and propagate it into the optimal allocation. Part IV built the machinery from the ground up — **convex foundations** (Ch 11), **linear programming** (Ch 12), the **production constrained solver** (Ch 13); Part V turns it loose on a real, fitted model. The theory ends here.
+
+## Worked Examples
+
+The three calculations with the most arithmetic — taking one SQP step by hand, solving the concave budget optimum exactly, and watching Newton's error square line by line — are each small enough to carry out with pen and paper. Working them once turns the abstractions of the Theory section into numbers you can check: the KKT block system of Rung 4 becomes a $3\times3$ solve, the budget capstone of Rung 8 becomes a two-line stationarity calculation, and the quadratic convergence of Rung 3 becomes a column of errors whose exponent doubles. The first example shows *why* SQP solves a quadratic-with-linear-constraint problem in a single step; the second shows the answer all of Part IV converges on; the third shows the speed that makes the whole method practical.
+
+### Example 1 — One SQP step on an equality-constrained problem
+
+Take the smallest non-trivial constrained problem,
+
+$$
+\min\ x_1^2 + x_2^2 \quad\text{subject to}\quad x_1 + x_2 = 2,
+$$
+
+and run a single SQP step on it by hand. The objective is $f = x_1^2 + x_2^2$ with gradient $\nabla f = (2x_1, 2x_2)$; the one equality is $c(x) = x_1 + x_2 - 2$ with gradient $\nabla c = (1, 1)$. The Lagrangian $\mathcal{L} = x_1^2 + x_2^2 + \lambda(x_1 + x_2 - 2)$ has Hessian
+
+$$
+\nabla^2_{xx}\mathcal{L} = \begin{bmatrix} 2 & 0 \\ 0 & 2 \end{bmatrix} = 2I,
+$$
+
+with the constraint contributing **no curvature** — it is linear, so $\nabla^2 c = 0$ and the Lagrangian Hessian is just $\nabla^2 f$ (exactly the collapse Rung 4 flagged for linear constraints).
+
+**Assemble the block system.** Start at $x_0 = (0, 0)$ with $\lambda_0 = 0$. Then $\nabla f_0 = (0, 0)$, the constraint residual is $c_0 = 0 + 0 - 2 = -2$, and $\nabla c_0 = (1, 1)$. The Newton/SQP block system of Rung 4, $\begin{bmatrix} \nabla^2_{xx}\mathcal{L} & \nabla c^\top \\ \nabla c & 0 \end{bmatrix}\begin{bmatrix} p \\ \lambda_1 \end{bmatrix} = -\begin{bmatrix} \nabla f_0 \\ c_0 \end{bmatrix}$, is
+
+$$
+\begin{bmatrix} 2 & 0 & 1 \\ 0 & 2 & 1 \\ 1 & 1 & 0 \end{bmatrix}\begin{bmatrix} p_1 \\ p_2 \\ \lambda_1 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \\ 2 \end{bmatrix},
+$$
+
+where the right-hand side is $-[\nabla f_0;\, c_0] = -[0, 0, -2] = [0, 0, 2]$.
+
+**Solve.** Rows 1 and 2 read $2p_1 + \lambda_1 = 0$ and $2p_2 + \lambda_1 = 0$, so $p_1 = p_2 = -\lambda_1/2$. Substituting into row 3, $p_1 + p_2 = 2$, gives $-\lambda_1 = 2$, hence
+
+$$
+\lambda_1 = -2, \qquad p_1 = p_2 = 1, \qquad p = (1, 1).
+$$
+
+The step lands at $x_1 = x_0 + p = (1, 1)$ with multiplier $\lambda_1 = -2$.
+
+**Interpretation.** A single step reaches the **exact optimum** $(1, 1)$, where $f = 2$. The reason is the keystone of Rung 4 read in reverse: the objective is quadratic and the constraint linear, so the QP subproblem SQP builds is **identical** to the original problem — its quadratic model of the objective is exact, not an approximation, and its linearized constraint $\nabla c_0\, p + c_0 = 0$ reproduces the true constraint $x_1 + x_2 = 2$ verbatim. One Newton/SQP step solves that QP outright, so it solves the original problem outright. With a *nonlinear* constraint the linearization would only be a local approximation and several steps would be needed, refreshing the linearization each time — that iteration is exactly what the Code Tie-in exhibits. We can confirm the answer independently: by symmetry the true optimum has $x_1 = x_2 = 1$, and the stationarity condition $2x_i + \lambda = 0$ holds with $\lambda = -2$, matching the multiplier the step returned.
+
+### Example 2 — The concave budget optimum
+
+This is the capstone instance of Rung 8, solved exactly by the KKT stationarity conditions. Maximize the total square-root response
+
+$$
+\max_{b \ge 0}\ \sum_i a_i \sqrt{b_i} \quad\text{subject to}\quad b_1 + b_2 = 9,
+$$
+
+with coefficients $a = (2, 1)$. Each channel's response $r_i(b_i) = a_i\sqrt{b_i}$ is smooth and concave, so the problem is convex and the KKT point is the global optimum.
+
+**Equal-marginal condition.** Stationarity is Chapter 11's equal-marginal rule: at the optimum the marginal return $r_i'(b_i) = \dfrac{a_i}{2\sqrt{b_i}}$ equals the common budget multiplier $\lambda$ for every funded channel. Setting the two marginals equal,
+
+$$
+\frac{a_1}{2\sqrt{b_1}} = \frac{a_2}{2\sqrt{b_2}} \quad\Longrightarrow\quad \frac{a_1^2}{b_1} = \frac{a_2^2}{b_2} \quad\Longrightarrow\quad \frac{b_1}{b_2} = \frac{a_1^2}{a_2^2} = \frac{4}{1} = 4.
+$$
+
+**Solve with the budget.** With $b_1 = 4 b_2$ and $b_1 + b_2 = 9$,
+
+$$
+4 b_2 + b_2 = 9 \quad\Longrightarrow\quad 5 b_2 = 9 \quad\Longrightarrow\quad b_2 = 1.8, \qquad b_1 = 7.2,
+$$
+
+so the optimal allocation is $b^\star = (7.2,\ 1.8)$.
+
+**The common multiplier.** Evaluate the shared marginal return at the optimum,
+
+$$
+\lambda = \frac{a_1}{2\sqrt{b_1}} = \frac{2}{2\sqrt{7.2}} = \frac{1}{\sqrt{7.2}} \approx 0.3727.
+$$
+
+**Total response.** Summing the two channels,
+
+$$
+2\sqrt{7.2} + \sqrt{1.8} = 2(2.6833) + 1.3416 = 6.7082.
+$$
+
+**Interpretation.** This is the problem solved **three ways**, and all three agree. Chapter 11 derived $(7.2, 1.8)$ with $\lambda = 0.3727$ from the equal-marginal condition by hand; Chapter 12 reached the same allocation as a refined-LP dual price, in the limit as its piecewise-linear segmentation grew fine; and SLSQP returns precisely this allocation **and** this multiplier on the budget constraint, solving the smooth problem directly with no piecewise-linear approximation at all. The Lagrange multiplier SLSQP hands back *is* $\lambda$, the shadow price of the budget. Three methods — analytic, linear-programming, and iterative-Newton — converging on one answer is the payoff of the entire Part IV arc.
+
+### Example 3 — Newton's method squares the error
+
+The quadratic convergence proved in Rung 3 is easiest to *see* on a scalar root. Solve $g(x) = x^2 - 2 = 0$ for $\sqrt{2}$ by Newton's method. The iteration $x_{k+1} = x_k - \dfrac{g(x_k)}{g'(x_k)}$ becomes
+
+$$
+x_{k+1} = x_k - \frac{x_k^2 - 2}{2 x_k} = \frac12\Big(x_k + \frac{2}{x_k}\Big),
+$$
+
+the classical Babylonian square-root iteration. Starting from $x_0 = 1$, tabulate each iterate and its error against $\sqrt{2} = 1.41421356\ldots$:
+
+| $k$ | $x_k$ | error $|x_k - \sqrt2|$ |
+|---|---|---|
+| 0 | $1.000000000000$ | $4.14\times10^{-1}$ |
+| 1 | $1.500000000000$ | $8.58\times10^{-2}$ |
+| 2 | $1.416666666667$ | $2.45\times10^{-3}$ |
+| 3 | $1.414215686275$ | $2.12\times10^{-6}$ |
+| 4 | $1.414213562375$ | $1.59\times10^{-12}$ |
+
+**Interpretation.** Each error is roughly the **square** of the previous one, times a constant $\approx \frac{1}{2\sqrt2} \approx 0.354$. Reading down the error column, $8.6\times10^{-2} \to 2.5\times10^{-3} \to 2.1\times10^{-6} \to 1.6\times10^{-12}$: the exponent roughly **doubles** at each step, which is the digit-doubling of Rung 3's theorem made concrete. Three correct digits become six become twelve in just two iterations. This is exactly why SLSQP — which Rung 4 proved to be Newton's method on the KKT system — needs only a **handful** of iterations to reach high accuracy once it is near the optimum: the same squaring that drives this scalar error to $10^{-12}$ in four steps drives the constrained iteration to its KKT point, and it is precisely the $7$ iterations the Code Tie-in's concave solve will take.
