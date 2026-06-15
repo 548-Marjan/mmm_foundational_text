@@ -16,6 +16,7 @@ book:
     left: "Built with Quarto."
   chapters:
     - index.qmd
+    - parts/00-introduction/00-introduction.qmd
     - part: "Part I — Mathematical Foundations"
       chapters:
         - parts/01-foundations/01-linear-algebra.qmd
