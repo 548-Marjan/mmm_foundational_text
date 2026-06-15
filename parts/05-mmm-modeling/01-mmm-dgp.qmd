@@ -430,8 +430,55 @@ channels plus noise — is exactly the input Chapter 15 inherits.
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** Normalized adstock preserves the level of a constant input, while unnormalized adstock inflates it by the factor $1/(1-\lambda)$. Explain why, and state what each convention implies for the interpretation of the channel coefficient $\beta_i$.
+
+**C2.** The chapter argues that adstock-then-saturate and saturate-then-adstock are genuinely different models. In one or two sentences, explain why the distinction would *vanish* if the saturation map $g$ were linear, and identify the precise property of $g$ that creates the gap.
+
+**C3.** A colleague argues that two years of weekly data give roughly $104$ observations, "surely enough to estimate three response parameters per channel." Using the identification wound, explain why the number of observations is not the binding constraint — and what is.
+
 ### B -- By Hand
+
+**B1.** For decay $\lambda = 0.7$, compute the geometric-adstock half-life $\ln(1/2)/\ln\lambda$ and mean lag $\lambda/(1-\lambda)$. Round to three decimals.
+
+**B2.** Find the Hill inflection point $x^\star = K\big(\tfrac{n-1}{n+1}\big)^{1/n}$ for $K = 5$, $n = 3$. Round to three decimals.
+
+**B3.** Take spend $(x_0, x_1) = (2, 0)$, decay $\lambda = 0.5$, and Hill parameters $K = 2$, $n = 2$. Compute the period-1 output under adstock-then-saturate and under saturate-then-adstock, and confirm the two differ.
 
 ### P -- Prove It
 
+**P1.** Prove that $g(K; K, n) = \tfrac{1}{2}$ for every $n > 0$ — the half-saturation interpretation of $K$ holds regardless of shape.
+
+**P2.** Starting from the geometric-series identity $\sum_{k=0}^{\infty}\lambda^k = 1/(1-\lambda)$ for $|\lambda| < 1$, prove the mean-lag identity $\sum_{k=0}^{\infty} k\,w_k = \lambda/(1-\lambda)$ for the normalized weights $w_k = (1-\lambda)\lambda^k$.
+
+**P3.** Prove that for $0 < n \le 1$ the Hill curve $g(x; K, n)$ is concave on $(0, \infty)$ — i.e. it has no inflection point and exhibits diminishing returns from the first dollar. (Use the curvature expression from Proof P2.)
+
 ### A -- Applied / Code
+
+**A1.** Extend the chapter's simulation to a third channel with its own $(\lambda, K, n, \beta)$, and plot the three channel contributions over the $104$ weeks on a common axis. Comment on which channel's contribution is smoothest and why.
+
+**A2.** Empirically locate the Hill inflection for $K = 3$, $n = 2$: evaluate $g$ on a fine grid, finite-difference it twice, and find where the numerical second derivative changes sign. Confirm it matches $x^\star = \sqrt{3}$.
+
+**A3.** Demonstrate the identification ridge. Fix $x_0 = 3$ and $n = 2$. Over a grid of $K$ values, solve $\beta = 0.5 / g(3; K, 2)$ and verify every resulting $(\beta, K)$ pair reproduces a channel contribution of exactly $0.5$ at $x_0$. Plot the ridge in the $(K, \beta)$ plane.
+
+## Summary
+
+This chapter wrote down the data-generating process behind a marketing mix model — the structural story of how weekly spend becomes weekly sales — and proved the properties of its two nonlinear transforms. It is the chapter where Part IV's response curve stops being assumed and starts being derived, and it ends on the identification wound that Part VI exists to heal.
+
+**Key concepts**
+
+- **The structural MMM equation** decomposes sales into a baseline (intercept, trend, seasonality, controls), a sum of channel contributions, and noise; each channel's contribution is its spend passed through adstock then saturation, scaled by an effect $\beta_i$.
+- **Adstock** is the carryover transform: geometric adstock is a one-parameter geometric filter, and its normalized form is a weighted moving average that preserves the level of a constant input. The delayed-peak variant lets carryover build before it fades.
+- **Saturation** is the diminishing-returns transform: the Hill curve is bounded and strictly increasing, concave throughout for shape $n \le 1$ but S-shaped with a convex toe for $n > 1$ — the case that cost Part IV its global guarantee.
+- **Transform ordering is a modeling choice**, not a convention: because saturation is nonlinear, adstock-then-saturate and saturate-then-adstock are different models.
+- **The identification wound:** observational spend — confined to a narrow operating range, collinear across channels, confounded with the baseline — cannot recover the response curve. A single operating point pins one point on the curve, never its shape. Breaking the degeneracy needs the exogenous variation supplied in Part VI.
+- **The simulated series is Chapter 15's data:** the code generates a synthetic sales series from known parameters, the controlled environment in which fitting is first studied.
+
+**Key identities**
+
+- **Adstock recursion.** $a_\lambda(x)_t = x_t + \lambda\, a_\lambda(x)_{t-1} = \sum_{k=0}^{\infty}\lambda^k x_{t-k}$, with normalized weights $w_k = (1-\lambda)\lambda^k$.
+- **Carryover summaries.** Steady state $x/(1-\lambda)$; half-life $\ln(1/2)/\ln\lambda$; mean lag $\lambda/(1-\lambda)$.
+- **Hill curve.** $g(x; K, n) = \dfrac{x^n}{K^n + x^n}$, with $g(K) = \tfrac{1}{2}$.
+- **Curvature sign.** $\operatorname{sign} g''(x) = \operatorname{sign}\big[(n-1)K^n - (n+1)x^n\big]$, giving the inflection $x^\star = K\big(\tfrac{n-1}{n+1}\big)^{1/n}$ for $n > 1$.
+- **Non-identification ridge.** At a single operating point $x_0$, the data constrain only the scalar $\beta_i\, g(x_0; K, n)$.
+
+With the data-generating process defined and its pathologies understood, Chapter 15 turns to the inverse problem: fitting this model to the series it produced.
