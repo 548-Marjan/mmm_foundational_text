@@ -16,7 +16,7 @@ $$
 \mathbf{1}^\top b = B,
 $$
 
-where $r_i$ is channel $i$'s response curve and the constraint fixes total spend. If each $r_i$ is **concave** — the diminishing-returns saturation curve introduced in Chapter 5, where every extra dollar buys a little less than the last — the problem is convex, and its solution has a clean, unique, and frankly beautiful structure: at the optimum, the **marginal returns are equalized** across all channels. No dollar can be moved to do more good elsewhere. But if the curves are **S-shaped** — a convex "toe" at low spend, where early dollars build momentum before diminishing returns finally set in — the problem turns non-convex. Multiple local optima appear, and a single descent can settle on a genuinely bad allocation. That is precisely why Chapter 13 reaches for multi-start SLSQP instead of trusting one run from one starting point.
+where $r_i$ is channel $i$'s response curve and the constraint fixes total spend. If each $r_i$ is **concave** — the diminishing-returns saturation curve introduced in Chapter 14, where every extra dollar buys a little less than the last — the problem is convex, and its solution has a clean, unique, and frankly beautiful structure: at the optimum, the **marginal returns are equalized** across all channels. No dollar can be moved to do more good elsewhere. But if the curves are **S-shaped** — a convex "toe" at low spend, where early dollars build momentum before diminishing returns finally set in — the problem turns non-convex. Multiple local optima appear, and a single descent can settle on a genuinely bad allocation. That is precisely why Chapter 13 reaches for multi-start SLSQP instead of trusting one run from one starting point.
 
 The roadmap follows the logic upward. We begin with **convex sets**, then **convex functions**, then the **first- and second-order conditions** that certify when a function is convex without checking every pair of points. From these we prove the keystone — **a local minimum of a convex problem is global** — and then extend it to constrained problems through **Lagrange multipliers and the KKT conditions**. That machinery delivers the MMM capstone, the equal-marginal-returns rule, and then we close with an honest reckoning: real response curves are S-shaped, and we name exactly what that costs us.
 
@@ -66,7 +66,7 @@ $$
 
 and $f$ is convex if and only if $\text{epi}\,f$ is a convex set [@boyd2004]. The equivalence is geometric: the chord-above-the-graph inequality says exactly that the segment joining two points of the epigraph stays inside the epigraph, which is the definition of a convex set. This is the bridge that lets every theorem about convex sets be read as a theorem about convex functions, and conversely.
 
-**Concavity and the reduction to one theory.** A function $f$ is **concave** if $-f$ is convex; equivalently, the chord lies on or below the graph. A diminishing-returns response curve is concave: each additional dollar of spend buys a little less than the last, so the graph bends downward. The canonical example is the **Hill saturation curve** introduced in Chapter 5,
+**Concavity and the reduction to one theory.** A function $f$ is **concave** if $-f$ is convex; equivalently, the chord lies on or below the graph. A diminishing-returns response curve is concave: each additional dollar of spend buys a little less than the last, so the graph bends downward. The canonical example is the **Hill saturation curve** introduced in Chapter 14,
 
 $$
 f(x; K, n) = \frac{x^n}{K^n + x^n},
