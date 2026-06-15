@@ -101,6 +101,80 @@ At $\lambda = 0.5$: $\bar{k} = 0.5 / 0.5 = 1$ week.
 
 **Summary at $\lambda = 0.5$.** The three summary statistics coincide: the half-life is $1$ week, the mean lag is $1$ week, and the steady-state amplification is $2x$. This trio provides a rapid calibration check — to model roughly one week of carryover, initialize $\lambda = 0.5$ and adjust as the data indicate. $\blacksquare$
 
+### Rung 3 — Saturation and shape
+
+The saturation transform maps effective exposure to a dimensionless response bounded strictly between zero and one. The Hill curve — long used in dose–response modeling — accomplishes this with two parameters:
+
+$$
+g(x;\, K,\, n) = \frac{x^{n}}{K^{n} + x^{n}}, \qquad x \ge 0,\; K > 0,\; n > 0.
+$$
+
+The parameter $K$ is the **half-saturation point**: direct substitution gives $g(K) = K^n / (K^n + K^n) = \tfrac{1}{2}$, so spend equal to $K$ earns exactly half the maximum possible response. The parameter $n$ controls **steepness and shape**: for $n \le 1$ the curve rises steeply at the origin and flattens immediately, while for $n > 1$ it begins nearly flat — a convex toe — before bending into its familiar diminishing-returns arc. This is the very curve Chapters 11–13 optimized over; it is defined here at last from the model's first principles.
+
+### Proof P2 — Hill shape theorem
+
+> **Proposition P2.** For $x > 0$, $K > 0$, $n > 0$, the Hill function $g(x;\,K,n) = x^n/(K^n + x^n)$ is strictly increasing and bounded in $(0,1)$, with $g(0^+) = 0$, $g(\infty) = 1$, and $g(K) = \tfrac{1}{2}$. For $n \le 1$, $g$ is concave on $(0,\infty)$. For $n > 1$, $g$ has a single inflection at $x^\star = K\big(\tfrac{n-1}{n+1}\big)^{1/n}$, is convex on $(0, x^\star)$, and concave on $(x^\star, \infty)$.
+
+**Proof.**
+
+**Monotone and bounded.** Differentiating with the quotient rule and collecting:
+
+$$
+g'(x) = \frac{n x^{n-1}(K^n + x^n) - x^n \cdot n x^{n-1}}{(K^n + x^n)^2} = \frac{n K^n x^{n-1}}{(K^n + x^n)^2}.
+$$
+
+Every factor in the numerator is positive for $x > 0$, so $g'(x) > 0$: $g$ is strictly increasing. As $x \to 0^+$ the numerator $x^n \to 0$ while the denominator approaches $K^n$, giving $g(0^+) = 0$; as $x \to \infty$, $x^n$ dominates $K^n + x^n$, giving $g(\infty) = 1$. At $x = K$ the numerator and denominator are equal, so $g(K) = K^n/(2K^n) = \tfrac{1}{2}$.
+
+**Curvature.** Differentiating $g'(x) = nK^n x^{n-1}(K^n + x^n)^{-2}$ by the product rule and simplifying yields:
+
+$$
+g''(x) = \frac{nK^n x^{n-2}}{(K^n + x^n)^3}\Big[(n-1)K^n - (n+1)x^n\Big].
+$$
+
+The prefactor $\dfrac{nK^n x^{n-2}}{(K^n+x^n)^3}$ is strictly positive for $x > 0$, so $\operatorname{sign} g'' = \operatorname{sign}\big[(n-1)K^n - (n+1)x^n\big]$.
+
+**Case $n \le 1$.** When $n < 1$ the term $(n-1)K^n$ is negative and $-(n+1)x^n$ is also negative, so their sum is negative for all $x > 0$. When $n = 1$ the bracket reduces to $0 - 2x^n < 0$. In both sub-cases $g'' < 0$ everywhere: $g$ is concave on $(0,\infty)$, delivering diminishing returns from the first dollar.
+
+**Case $n > 1$.** Here $(n-1) > 0$, so the bracket $(n-1)K^n - (n+1)x^n$ is positive at small $x$ and decreasing. Setting it to zero:
+
+$$
+(n-1)K^n = (n+1)x^n \implies x^\star = K\!\left(\frac{n-1}{n+1}\right)^{\!1/n}.
+$$
+
+For $x < x^\star$ the bracket is positive ($g'' > 0$: convex); for $x > x^\star$ it is negative ($g'' < 0$: concave). Since the bracket is strictly decreasing in $x^n$, this zero is unique.
+
+**Numeric anchor ($K = 3$, $n = 2$).** The inflection is at $x^\star = 3\cdot(1/3)^{1/2} = \sqrt{3} \approx 1.732$. Evaluating: $g(\sqrt{3}) = 3/(9 + 3) = 0.25$; $g(3) = 9/18 = 0.5$; $g'(3) = 2\cdot9\cdot3/(18)^2 = 54/324 = \tfrac{1}{6}$; $g'(\sqrt{3}) = 2\cdot9\cdot\sqrt{3}/(12)^2 = 18\sqrt{3}/144 = \tfrac{\sqrt{3}}{8}$.
+
+This is the concavity Part IV *assumed* when it invoked equal-marginal allocation; for $n > 1$ the convex toe — the region below $x^\star$ where marginal returns are still *rising* — is precisely why Chapters 11–13 had to guard against non-convexity. $\blacksquare$
+
+### Rung 4 — Assembling the DGP
+
+The per-channel data-generating pipeline runs in a fixed sequence: raw spend $x_{i,t}$ passes through the adstock filter to produce effective exposure, which passes through the saturation curve to produce a dimensionless response, which is scaled by $\beta_i$ and summed across channels $i = 1, \ldots, C$; baseline, controls, and noise are then added as in Rung 1. The canonical formulation of @jin2017 applies **adstock first, then saturation** — the composition $g \circ a_\lambda$ — and this ordering is a genuine modeling choice, not a convention: Proof P3 shows that reversing it produces a numerically different model.
+
+### Proof P3 — Non-commutativity of adstock and saturation
+
+> **Proposition P3.** In general, $(g \circ a_\lambda)(x) \neq (a_\lambda \circ g)(x)$: adstock-then-saturate and saturate-then-adstock produce different time series.
+
+**Proof.** We construct an explicit numeric counterexample. Let the spend sequence be $x_0 = 3$, $x_1 = 0$, with decay $\lambda = 0.5$, half-saturation $K = 3$, and shape $n = 2$.
+
+**Path 1 — adstock then saturate.** Apply the adstock filter first. At $t = 0$: $a_0 = x_0 = 3$. At $t = 1$: $a_1 = x_1 + \lambda\, a_0 = 0 + 0.5 \cdot 3 = 1.5$. The effective-exposure sequence is $(3,\; 1.5)$. Applying saturation term by term:
+
+$$
+g(3) = \frac{3^2}{3^2 + 3^2} = \frac{9}{18} = 0.5, \qquad g(1.5) = \frac{1.5^2}{3^2 + 1.5^2} = \frac{2.25}{11.25} = 0.2.
+$$
+
+The saturated sequence under Path 1 is $(0.5,\; 0.2)$.
+
+**Path 2 — saturate then adstock.** Apply saturation to the raw spend first:
+
+$$
+g(3) = 0.5, \qquad g(0) = \frac{0^2}{3^2 + 0^2} = 0.
+$$
+
+The pre-saturated sequence is $(0.5,\; 0)$. Applying the adstock filter: at $t = 0$ the output is $0.5$; at $t = 1$ the output is $0 + 0.5 \cdot 0.5 = 0.25$. The adstocked sequence under Path 2 is $(0.5,\; 0.25)$.
+
+**Comparison.** At the impulse period $t = 0$ both paths agree: $0.5 = 0.5$. At the carryover period $t = 1$ they differ: $0.2 \neq 0.25$. The disagreement lives entirely in the carryover period — Path 1 carries forward the compressed (saturated) effective exposure, while Path 2 carries forward raw spend and then compresses. Because the saturation function is nonlinear, carrying over a compressed signal is not equivalent to compressing a carried-over signal. The ordering of transforms is therefore a modeling decision with empirical consequences. $\blacksquare$
+
 ## Worked Examples
 
 _Worked numerical example(s)._
