@@ -175,6 +175,58 @@ The pre-saturated sequence is $(0.5,\; 0)$. Applying the adstock filter: at $t =
 
 **Comparison.** At the impulse period $t = 0$ both paths agree: $0.5 = 0.5$. At the carryover period $t = 1$ they differ: $0.2 \neq 0.25$. The disagreement lives entirely in the carryover period — Path 1 carries forward the compressed (saturated) effective exposure, while Path 2 carries forward raw spend and then compresses. Because the saturation function is nonlinear, carrying over a compressed signal is not equivalent to compressing a carried-over signal. The ordering of transforms is therefore a modeling decision with empirical consequences. $\blacksquare$
 
+### Rung 5 — The identification wound
+
+With the DGP assembled, a natural question surfaces: given an observed time series of weekly spend and weekly sales $(x_{i,t}, y_t)$, can the parameters $(\beta_i, K, n, \lambda)$ governing channel $i$'s response be recovered from the data? The answer, under realistic observational conditions, is no — not without additional information beyond what any ordinary campaign budget provides. Three structural features of advertising data conspire to make the inverse problem ill-posed.
+
+The first is **operating-range confinement**. Firms do not randomize their budgets. A brand that has run a given channel at roughly the same level for two years has produced data that cluster near a single operating point on the saturation curve. The observed $(x_{i,t}, y_t)$ pairs constrain what the response function looks like near that point; they say almost nothing about its shape at other spend levels. The consequence is that many different curves — steep ones, flat ones, curves peaking early, curves with a delayed inflection — can all fit the same narrow band of observed data equally well.
+
+The second is **cross-channel collinearity**. Marketing budgets are governed by planning cycles, seasonal flights, and product launches, not set independently by channel. Television, digital, and radio spend tend to rise and fall together. When several channels are highly correlated, the model cannot attribute a given week's sales lift to any one channel versus the others. The summed contribution $\sum_{i=1}^{C} \beta_i g(a_\lambda(x_{i,t}))$ may be well determined, but the individual $\beta_i$ are not: infinitely many allocations of credit across channels can produce the same fitted values.
+
+The third is **baseline confounding**. Firms spend more on advertising during high-demand periods — a holiday quarter, a product launch, a competitor's exit — precisely because the expected return is higher. The baseline term $\alpha + \tau_t + \sigma_t$ captures the same demand variation that is also driving spend upward. A model that cannot distinguish the organic demand surge from the advertising effect will attribute too much of the observed sales lift to media. In the structural equation of Rung 1 this ambiguity is explicit: the baseline and the media contributions share variance by construction, and without exogenous leverage on spend neither can be pinned down separately.
+
+These three pathologies interact and reinforce each other in practice. But even in the cleanest possible case — a single channel, no collinearity, baseline fully controlled — operating-range confinement alone is sufficient to make the saturation parameters non-identifiable. Proof P4 establishes this in the sharpest possible form.
+
+### Proof P4 — Non-identifiability at a single operating point
+
+> **Proposition P4.** Suppose channel $i$'s spend is observed only at a single operating point $x_0$, so the data constrain the model only through the scalar $\beta_i\, g(x_0;\, K, n)$. Then the parameters $(\beta_i, K, n)$ are not identified: distinct parameter vectors exist that are observationally indistinguishable on the support $\{x_0\}$.
+
+**Proof.** Fix $x_0 = 3$ and $n = 2$ throughout. For any parameter vector $(\beta_i, K, n)$, the observable channel contribution at $x_0$ is
+
+$$
+c = \beta_i\, g(3;\, K,\, 2) = \beta_i \cdot \frac{9}{K^2 + 9}.
+$$
+
+We exhibit two distinct parameter vectors that both give $c = 0.5$.
+
+**Parameter set A.** Take $(\beta_i, K, n) = (1,\, 3,\, 2)$. Then
+
+$$
+g(3;\, 3,\, 2) = \frac{3^2}{3^2 + 3^2} = \frac{9}{18} = 0.5,
+$$
+
+and the channel contribution is $1 \cdot 0.5 = 0.5$.
+
+**Parameter set B.** Take $(\beta_i, K, n) = (2,\, 3\sqrt{3},\, 2)$. Note $3\sqrt{3} \approx 5.196$. Then
+
+$$
+g\!\left(3;\, 3\sqrt{3},\, 2\right) = \frac{3^2}{\left(3\sqrt{3}\right)^2 + 3^2} = \frac{9}{27 + 9} = \frac{9}{36} = 0.25,
+$$
+
+and the channel contribution is $2 \cdot 0.25 = 0.5$.
+
+**The ridge.** Both parameter vectors produce identical expected sales at $x_0 = 3$:
+
+$$
+1 \cdot g(3;\, 3,\, 2) \;=\; 0.5 \;=\; 2 \cdot g\!\left(3;\, 3\sqrt{3},\, 2\right).
+$$
+
+Because the observable is the single number $c = \beta_i\, g(x_0;\, K, n)$, the likelihood as a function of $(\beta_i, K, n)$ is flat along the ridge $\{ (\beta_i, K) : \beta_i \cdot 9 / (K^2 + 9) = 0.5 \}$ for fixed $n = 2$. No accumulation of data gathered at $x_0 = 3$ — not more weeks, not smaller measurement error — can distinguish Set A from Set B, because all such observations are identical draws from the same likelihood.
+
+Identifying the *shape* parameters $(K, n)$ — not merely the height of the curve at a single point — requires spend that varies across a non-trivial range of the saturation curve. When the regressor is confined to a support of lower dimension than the parameter count, the likelihood is flat along a manifold, and estimation recovers only the composite $\beta_i\, g(x_0;\, K, n)$, never the factors separately. $\blacksquare$
+
+Breaking this degeneracy requires exogenous variation in spend — randomized or quasi-experimental shifts in the operating point that observational budgets cannot supply — and that is exactly the leverage Part VI (Chapters 18–21) provides.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
