@@ -16,7 +16,90 @@ The route through the chapter is as follows. We develop the mathematical form of
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The theory develops in three steps. Rung 1 states the structural equation, naming every term in the data-generating process. Rung 2 defines adstock — the temporal carryover transform — in its geometric and normalized forms, with a qualitative account of the delayed-peak variant of @jin2017. Proof P1 then establishes the key identities for geometric adstock: the normalized weights sum to one, a constant input reaches a known steady state, the impulse response decays geometrically, and the half-life and mean lag both reduce to simple closed forms.
+
+### Rung 1 — The structural equation
+
+The MMM generative model expresses weekly sales $y_t$ as the sum of four additive pieces:
+
+$$
+y_t = \underbrace{\alpha + \tau_t + \sigma_t}_{\text{baseline}} \;+\; \sum_{i=1}^{C} \beta_i\, g\!\big(a_\lambda(x_{i,t})\big) \;+\; \gamma^\top z_t \;+\; \varepsilon_t,
+\qquad \varepsilon_t \sim \mathcal{N}(0,\sigma_\varepsilon^2).
+$$
+
+The **baseline** groups three terms: $\alpha$ is a fixed intercept representing average organic revenue, $\tau_t$ is a slow trend capturing long-run brand growth or decline (commonly a spline or linear drift), and $\sigma_t$ is a periodic seasonality component — a yearly cycle is the most common. These terms set the revenue floor the brand earns in the absence of paid advertising. The **media contribution** sums over all $C$ channels: $x_{i,t}$ is channel $i$'s spend in week $t$, the transform $a_\lambda$ converts that spend into an effective exposure by distributing the memory of past outlays across time, $g$ then compresses the resulting exposure through a diminishing-returns saturation curve, and $\beta_i > 0$ scales the compressed response into revenue units. The composed map $g \circ a_\lambda$ is the channel response curve that Part IV optimized; its parameters — the adstock decay and the saturation shape — are what estimation must recover. The vector $z_t$ collects **exogenous controls** such as price indices or holiday indicators, with coefficient vector $\gamma$; and $\varepsilon_t \sim \mathcal{N}(0,\sigma_\varepsilon^2)$ absorbs unexplained variation.
+
+The non-media terms are kept deliberately simple here. Their functional form matters far less than the fact that they **share variance with spend**: organic sales tend to rise during periods of heavy advertising investment, seasonal peaks often coincide with campaign flights, and price promotions run alongside elevated media pressure. That collinearity is the confounding structure examined later in the chapter; for now, including these terms even in simplified form ensures the DGP captures the variance-sharing that makes identification difficult.
+
+### Rung 2 — Adstock and carryover
+
+Advertising exposure is not instantaneous. A viewer who sees a television spot on Monday may not buy until Friday; word-of-mouth from a campaign spreads across weeks; repeated exposures build recall that persists after spending stops. Adstock formalizes this memory by replacing the raw weekly outlay $x_{i,t}$ with an **effective exposure** that blends current spend with the decaying remnants of the past.
+
+**Geometric adstock.** The simplest and most widely used specification is the geometric filter with decay parameter $\lambda \in [0,1)$, defined equivalently by a recursion and by its infinite-sum expansion:
+
+$$
+a_\lambda(x)_t \;=\; x_t + \lambda\, a_\lambda(x)_{t-1} \;=\; \sum_{k=0}^{\infty} \lambda^k x_{t-k}, \qquad \lambda \in [0,1).
+$$
+
+Unrolling the recursion one step at a time reproduces the infinite weighted sum; the weights $\lambda^k$ decay geometrically with lag $k$. When $\lambda = 0$ the adstock reduces to raw spend; as $\lambda \to 1$ the memory lengthens and the filter becomes increasingly persistent.
+
+**Normalized form.** Define the weights $w_k = (1-\lambda)\lambda^k$ for $k = 0, 1, 2, \ldots$. These sum to unity — Proof P1 establishes this from the geometric series — so the normalized adstock $\tilde{a}_\lambda(x)_t = \sum_{k=0}^{\infty} w_k\, x_{t-k}$ is a proper weighted moving average. Normalized adstock preserves the level of a constant input: $x_t \equiv x$ implies $\tilde{a}_\lambda(x)_t = x$ for all $t$. This makes the coefficient $\beta_i$ directly interpretable as marginal revenue per unit of spend, not per unit of accumulated effective exposure.
+
+**Delayed-peak adstock.** The geometric filter places maximum weight at lag $k = 0$ and decays monotonically thereafter — carryover is largest the week of the spend and strictly diminishes from there. The delayed-peak variant of @jin2017 relaxes this by allowing the impulse-response weights to rise from zero, reach a peak a few lags out, and then decay, capturing campaigns that build awareness over repeated exposures before they fade. This shape requires two parameters rather than one and its analysis follows a different path; Proof P1 covers only the geometric case.
+
+### Proof P1 — Geometric adstock identities
+
+> **Proposition P1.** Let $\lambda \in [0, 1)$, define $a_\lambda(x)_t = \sum_{k=0}^{\infty} \lambda^k x_{t-k}$, and let $w_k = (1-\lambda)\lambda^k$. Then: (i) $\sum_{k=0}^{\infty} w_k = 1$; (ii) constant input $x_t \equiv x$ gives unnormalized adstock $x/(1-\lambda)$ and normalized adstock $x$; (iii) the impulse $x_0 = 1$, $x_t = 0$ for $t \neq 0$, gives $a_\lambda(x)_t = \lambda^t$ with total mass $1/(1-\lambda)$; (iv) the half-life is $t_{1/2} = \log_\lambda \tfrac{1}{2}$; (v) the mean lag is $\bar{k} = \lambda/(1-\lambda)$.
+
+**Proof.**
+
+**(i) Normalization.** The weights form a geometric series with first term $(1-\lambda)$ and ratio $\lambda$. Since $|\lambda| < 1$ the series converges:
+
+$$
+\sum_{k=0}^{\infty} w_k = (1-\lambda) \sum_{k=0}^{\infty} \lambda^k = (1-\lambda) \cdot \frac{1}{1-\lambda} = 1.
+$$
+
+The weights therefore constitute a valid probability distribution on the nonnegative integers. In particular, constant input $x_t \equiv x$ gives normalized adstock $\tilde{a}_\lambda(x)_t = x \sum_{k=0}^{\infty} w_k = x$: the level is preserved exactly.
+
+**(ii) Unnormalized steady state.** For constant $x_t \equiv x$, the unnormalized filter gives
+
+$$
+a_\lambda(x)_t = \sum_{k=0}^{\infty} \lambda^k x = x \sum_{k=0}^{\infty} \lambda^k = \frac{x}{1-\lambda}.
+$$
+
+The factor $1/(1-\lambda) > 1$ is the steady-state amplification: a channel spending $x$ every week accumulates effective exposure $x/(1-\lambda)$. At $\lambda = 0.5$ this is $2x$.
+
+**(iii) Impulse response.** Set $x_0 = 1$ and $x_t = 0$ for $t \neq 0$. Only the $k = t$ term survives in the sum, so $a_\lambda(x)_t = \lambda^t \cdot 1 = \lambda^t$ for $t \geq 0$. The total mass is
+
+$$
+\sum_{t=0}^{\infty} \lambda^t = \frac{1}{1-\lambda},
+$$
+
+matching the steady-state amplification of (ii): both expressions measure the filter's total weight.
+
+**(iv) Half-life.** The impulse response at lag $t$ is $\lambda^t$. The half-life $t_{1/2}$ satisfies $\lambda^{t_{1/2}} = 1/2$; taking logarithms:
+
+$$
+t_{1/2} \ln \lambda = \ln \tfrac{1}{2} \implies t_{1/2} = \frac{\ln(1/2)}{\ln \lambda} = \log_\lambda \tfrac{1}{2}.
+$$
+
+Since $\ln \lambda < 0$ and $\ln(1/2) < 0$, the ratio is positive. At $\lambda = 0.5$: $t_{1/2} = \ln 2 / \ln 2 = 1$ week.
+
+**(v) Mean lag.** The mean lag under the normalized weight distribution is
+
+$$
+\bar{k} = \sum_{k=0}^{\infty} k\, w_k = (1-\lambda) \sum_{k=0}^{\infty} k \lambda^k.
+$$
+
+Differentiating the geometric-series identity $\sum_{k=0}^{\infty} \lambda^k = 1/(1-\lambda)$ term by term with respect to $\lambda$ gives $\sum_{k=1}^{\infty} k \lambda^{k-1} = 1/(1-\lambda)^2$; multiplying by $\lambda$ yields $\sum_{k=0}^{\infty} k \lambda^k = \lambda/(1-\lambda)^2$. Substituting:
+
+$$
+\bar{k} = (1-\lambda) \cdot \frac{\lambda}{(1-\lambda)^2} = \frac{\lambda}{1-\lambda}.
+$$
+
+At $\lambda = 0.5$: $\bar{k} = 0.5 / 0.5 = 1$ week.
+
+**Summary at $\lambda = 0.5$.** The three summary statistics coincide: the half-life is $1$ week, the mean lag is $1$ week, and the steady-state amplification is $2x$. This trio provides a rapid calibration check — to model roughly one week of carryover, initialize $\lambda = 0.5$ and adjust as the data indicate. $\blacksquare$
 
 ## Worked Examples
 
