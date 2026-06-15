@@ -2367,4 +2367,105 @@ print("Newton errors:", [f"{e:.1e}" for e in errs])
 ```
 The Newton error plunges to machine precision in four steps while the linear reference is still nibbling away one bit per iteration — the digit-doubling of the convergence theorem, the speed inside every SLSQP step.
 
+## Chapter 14 — The MMM Data-Generating Process
+
+**C1.** The normalized weights $w_k = (1-\lambda)\lambda^k$ sum to $1$, so a constant input $x$ maps to $x \cdot \sum_k w_k = x$: the level is preserved. The *unnormalized* weights $\lambda^k$ sum to $1/(1-\lambda)$, so the same constant input maps to $x/(1-\lambda)$, inflated by the carryover. The consequence for $\beta_i$ is interpretive: under the normalized convention $\beta_i$ is revenue per unit of *spend* at steady state, a stable quantity; under the unnormalized convention $\beta_i$ is revenue per unit of *accumulated effective exposure*, so its scale is entangled with $\lambda$ (the two parameterizations' coefficients differ by exactly $1/(1-\lambda)$).
+
+**C2.** If $g$ were linear, $g(u) = mu$, then $g(a_\lambda(x)) = m\,a_\lambda(x)$ and $a_\lambda(g(x)) = a_\lambda(mx) = m\,a_\lambda(x)$ — identical, because adstock is a linear operator and a scalar passes through it unchanged. The gap is created entirely by the **nonlinearity** of $g$: a nonlinear pointwise map does not commute with a linear filter, so saturating a carried-over signal differs from carrying over a saturated one.
+
+**C3.** Identification is governed by the *variation* in the regressor, not the number of rows. One hundred and four weeks all spent near the same operating point are $104$ noisy measurements of essentially one point on the response curve; they shrink the sampling error on that point's height but reveal nothing about the curve's shape elsewhere. The binding constraints are the narrow operating range, cross-channel collinearity, and baseline confounding — none of which is relieved by collecting more years of the same spending pattern.
+
+**B1.** Half-life $= \ln(1/2)/\ln(0.7) = (-0.6931)/(-0.3567) \approx 1.943$ weeks. Mean lag $= \lambda/(1-\lambda) = 0.7/0.3 \approx 2.333$ weeks.
+
+**B2.** $x^\star = 5\big(\tfrac{3-1}{3+1}\big)^{1/3} = 5\,(0.5)^{1/3} = 5 \cdot 0.7937 \approx 3.969$.
+
+**B3.** Adstock-then-saturate: adstock of $(2,0)$ at $\lambda=0.5$ is $(2,\,1)$; saturating gives $\big(g(2),g(1)\big) = \big(\tfrac{4}{8},\tfrac{1}{5}\big) = (0.5,\,0.2)$. Saturate-then-adstock: $g$ first gives $(0.5,\,0)$; adstocking gives $(0.5,\;0 + 0.5\cdot0.5) = (0.5,\,0.25)$. Period 1: $0.2 \ne 0.25$ — the orderings differ.
+
+**P1.** $g(K; K, n) = \dfrac{K^n}{K^n + K^n} = \dfrac{K^n}{2K^n} = \dfrac{1}{2}$, valid for every $n > 0$ since $K^n > 0$. The half-saturation reading of $K$ holds for any shape. $\blacksquare$
+
+**P2.** Begin with $\sum_{k=0}^{\infty}\lambda^k = \dfrac{1}{1-\lambda}$ for $|\lambda|<1$. Differentiating both sides with respect to $\lambda$ gives $\sum_{k=1}^{\infty} k\lambda^{k-1} = \dfrac{1}{(1-\lambda)^2}$; multiplying by $\lambda$ yields $\sum_{k=0}^{\infty} k\lambda^k = \dfrac{\lambda}{(1-\lambda)^2}$. Therefore
+$$
+\sum_{k=0}^{\infty} k\,w_k = (1-\lambda)\sum_{k=0}^{\infty} k\lambda^k = (1-\lambda)\cdot\frac{\lambda}{(1-\lambda)^2} = \frac{\lambda}{1-\lambda}. \qquad \blacksquare
+$$
+
+**P3.** From Proof P2, $\operatorname{sign} g''(x) = \operatorname{sign}\big[(n-1)K^n - (n+1)x^n\big]$ for $x>0$. For $0 < n \le 1$ the first term satisfies $(n-1)K^n \le 0$, and the second term $-(n+1)x^n < 0$ for all $x>0$; their sum is therefore strictly negative everywhere. Hence $g'' < 0$ on $(0,\infty)$: $g$ is strictly concave, with no sign change and so no inflection point. $\blacksquare$
+
+**A1.** Add a third channel with its own $(\lambda, K, n, \beta)$ and plot all three contributions:
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+def geometric_adstock(x, lam):
+    out = np.empty_like(x, dtype=float); prev = 0.0
+    for t, xt in enumerate(x):
+        prev = xt + lam * prev; out[t] = prev
+    return out
+
+def hill(x, K, n):
+    x = np.asarray(x, dtype=float)
+    return x**n / (K**n + x**n)
+
+rng = np.random.default_rng(14)
+T = 104; t = np.arange(T)
+params = [(0.5, 3, 2, 4.0), (0.3, 2, 1.5, 3.0), (0.6, 4, 2.5, 2.5)]
+spends = [
+    np.clip(3.0 + 1.5 * np.sin(2 * np.pi * t / 52) + rng.normal(0, 0.5, T), 0, None),
+    np.clip(rng.gamma(2.0, 1.0, T), 0, None),                # bursty, low carryover
+    np.clip(2.0 + rng.normal(0, 0.7, T), 0, None),
+]
+contribs = [b * hill(geometric_adstock(s, lam), K, n)
+            for (lam, K, n, b), s in zip(params, spends)]
+
+plt.figure(figsize=(8, 4))
+for i, c in enumerate(contribs):
+    plt.plot(t, c, label=f"channel {i+1} (λ={params[i][0]})")
+plt.xlabel("week"); plt.ylabel("contribution"); plt.legend(); plt.tight_layout()
+plt.show()
+```
+
+The bursty channel 2 — gamma-distributed spend with the lowest decay $\lambda = 0.3$ — is by far the roughest contribution, while the high-$\lambda$ channels are visibly smoother: carryover averages spend over more weeks, so a larger $\lambda$ low-pass-filters the noise in the raw outlay.
+
+**A2.** Locate the inflection numerically and compare to $\sqrt 3$:
+
+```{python}
+import numpy as np
+
+def hill(x, K, n):
+    x = np.asarray(x, dtype=float)
+    return x**n / (K**n + x**n)
+
+xs = np.linspace(0.01, 8, 4000)
+d2 = np.gradient(np.gradient(hill(xs, 3, 2), xs), xs)
+sign_change = np.where(np.diff(np.sign(d2)) < 0)[0]   # convex -> concave
+x_infl = xs[sign_change[0]]
+print(f"numerical inflection = {x_infl:.4f},  sqrt(3) = {np.sqrt(3):.4f}")
+assert abs(x_infl - np.sqrt(3)) < 0.05
+```
+
+The numerical second derivative changes sign at $x \approx 1.730$, matching $x^\star = \sqrt 3 \approx 1.732$ from Proof P2.
+
+**A3.** Trace the identification ridge: for fixed $x_0 = 3$ and $n = 2$, every $K$ has a $\beta$ that reproduces the same contribution:
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+def hill(x, K, n):
+    x = np.asarray(x, dtype=float)
+    return x**n / (K**n + x**n)
+
+Ks = np.linspace(1, 8, 50)
+betas = 0.5 / hill(3, Ks, 2)              # solve beta * g(3;K,2) = 0.5
+contrib = betas * hill(3, Ks, 2)
+assert np.allclose(contrib, 0.5)          # every pair reproduces 0.5 exactly
+
+plt.figure(figsize=(6, 4))
+plt.plot(Ks, betas)
+plt.xlabel("K"); plt.ylabel(r"$\beta$"); plt.title(r"Identification ridge: $\beta\,g(3;K,2)=0.5$")
+plt.tight_layout(); plt.show()
+```
+
+Every $(\beta, K)$ pair on the curve yields a contribution of exactly $0.5$ at $x_0 = 3$ — the flat likelihood ridge of Proof P4. Data at one operating point cannot pick a point along it; only spend at *other* levels can.
+
 :::
