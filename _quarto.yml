@@ -7,7 +7,7 @@ show-solutions: false
 book:
   title: "The Mathematics and Engineering of Marketing Mix Modeling"
   subtitle: "A self-contained path from calculus, linear algebra, and calculus-based statistics to advanced MMM practice."
-  author: "548 / Marjan"
+  author: "548 Marjan"
   date: today
   search: true
   repo-url: https://github.com/jlhf80/mmm_foundational_text
