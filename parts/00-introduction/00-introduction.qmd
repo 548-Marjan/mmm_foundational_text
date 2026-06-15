@@ -1,0 +1,111 @@
+# Introduction: What Is Marketing Mix Modeling? {.unnumbered}
+
+Every organization that spends money to grow eventually asks the same question:
+*which of these dollars are working?* A company might run television and radio,
+search and social, display, sponsorships, direct mail, price promotions, and a
+dozen other things at once — all while the weather changes, competitors react, a
+holiday lands early, and the economy drifts. Sales go up and down. The question is
+how much of that movement any given lever actually caused, and what would happen if
+the budget were spent differently next quarter.
+
+Marketing Mix Modeling (MMM) is one of the oldest and most durable answers to that
+question. It is a *top-down* approach: rather than tracking individual users, it
+takes aggregate, regularly sampled data — typically weekly sales or revenue
+alongside spend and activity in each channel — and builds a statistical model that
+attributes the outcome to its drivers. From that model come two deliverables that
+the business actually wants: an estimate of the **incremental return** of each
+channel, and a recommendation for how to **allocate the next budget** across them.
+
+## The problem it solves
+
+The hard part of marketing measurement is that almost nothing happens in
+isolation. Spend in one channel is correlated with spend in others; advertising
+this week keeps working next week; doubling a channel's budget rarely doubles its
+effect. A naive read of the data — "sales were high in the weeks we advertised
+heavily" — confuses correlation for cause and ignores everything else that was
+going on. MMM exists to untangle these effects in a principled way, so that a
+marketing leader can answer questions like *what is the return on our search
+budget*, *are we over-invested in television*, and *if I'm handed ten percent more
+to spend, where should it go?*
+
+## Who uses it, and why it's having a moment
+
+MMM has been used for decades by organizations where marketing spend is large
+enough that getting the allocation wrong is expensive: consumer packaged goods,
+retail, telecommunications, quick-service restaurants, financial services, and the
+growing world of direct-to-consumer brands. It is run both in-house and by
+agencies and measurement vendors, and there are now several open-source frameworks
+that have brought it into the mainstream of data-science practice.
+
+After years in the background it has returned to the foreground, for a specific
+reason. The previous decade leaned heavily on *user-level* measurement — tracking
+individuals across sites and devices and attributing conversions to the touchpoints
+they saw. Privacy regulation, browser changes that retired third-party cookies, and
+mobile platform restrictions on cross-app tracking have steadily eroded that
+approach. MMM needs none of it: it works on aggregate data and is, by
+construction, privacy-durable. That property has made it the measurement layer many
+organizations now build around.
+
+## How MMM relates to its alternatives
+
+It helps to place MMM against the two other things people reach for:
+
+- **Multi-touch attribution (MTA)** works from user-level event logs, crediting
+  conversions to the touchpoints along each user's path. It is granular but fragile:
+  it depends on the very tracking that is disappearing, and it tends to credit
+  channels that are *present* near a conversion rather than channels that *caused*
+  it.
+- **Experiments** — geo tests, holdouts, and other controlled interventions —
+  measure incrementality directly and are the closest thing to ground truth, but
+  they are expensive, slow, and can only cover a few questions at a time.
+
+MMM sits in between: always-on, broad in coverage, and privacy-durable, but
+inferred from observational data rather than a controlled experiment. A recurring
+theme of this book is that these are complements, not rivals — the most credible
+MMMs are *calibrated* against experiments, using the few questions an experiment
+can answer to discipline the many that the model must.
+
+## The shape of an MMM
+
+Although the details fill several chapters, the overall pipeline is short enough to
+state up front:
+
+1. **Transform the inputs.** Raw spend is not the right quantity. Advertising
+   lingers — its effect decays over subsequent weeks (*adstock*) — and it
+   saturates — each additional dollar buys a little less than the last
+   (*diminishing returns*). The model first reshapes spend to reflect both.
+2. **Fit a regression.** The transformed channel inputs, together with controls
+   for price, seasonality, holidays, and broader economic conditions, are related
+   to the outcome through a regression model. Because the data is observational and
+   the channels are correlated, the estimates come with real uncertainty — handling
+   that uncertainty honestly is something we will take seriously rather than wave
+   away.
+3. **Read off response curves and returns.** From the fitted model we recover, for
+   each channel, how the outcome responds as spend varies — and from those curves,
+   the incremental return of the last dollar and the next one.
+4. **Optimize the budget.** Finally, the response curves feed a constrained
+   optimization that allocates a fixed budget across channels to maximize the
+   expected outcome, subject to the practical limits each channel has.
+5. **Calibrate against experiments.** Where an experiment exists, its measured
+   effect is used to anchor the corresponding piece of the model, tightening the
+   whole chain.
+
+Every part of this book is, in the end, in service of building that pipeline and
+understanding when each step can be trusted.
+
+## What this book adds
+
+There is no shortage of writing about MMM. The trouble is *where* it lives. A great
+deal of it is vendor documentation that explains how to call a library but not what
+the library is doing; a great deal more is well-meaning but hand-wavy — the kind of
+explanation that gestures at "adstock" and "diminishing returns" and moves on; and
+a steady stream arrives via the marketing-analytics thought-leadership circuit,
+where the modeling is sometimes more confident than the modeler.
+
+None of that is useless, but none of it lets you see *why* the methods work, what
+they assume, and the conditions under which they quietly fail. That is the gap this
+book is written to fill. We build MMM from first principles — the linear algebra,
+probability, inference, sampling, and optimization underneath it — so that by the
+end you can derive the model, build it, calibrate it against experiments, and
+optimize against it, while knowing exactly what each component is doing and where
+its limits are.
