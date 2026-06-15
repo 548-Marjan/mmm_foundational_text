@@ -1,14 +1,18 @@
 # The MMM Data-Generating Process
 
-*Canonical anchors: @jin2017; @pymcmarketing.*
-
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
+*Canonical anchor: @jin2017.*
 
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Part IV took the response curve $r_i(\cdot)$ as a given — a smooth function mapping channel $i$'s spend to the revenue it earns — and built the machinery to optimize over it: convex theory, linear programming, and the production solver SLSQP. The work was real and the results were exact, but one assumption quietly did all the heavy lifting. Nobody asked where the response curve came from. This chapter asks. It writes down the **generative model** of how a brand's weekly advertising spend actually produces weekly sales, deriving the curve that Part IV optimized from first principles. That derivation is the data-generating process, and it is the foundation on which everything in Part V rests.
+
+The model has a precise structural form. Weekly sales $y_t$ decompose into three additive pieces: a **baseline** representing the revenue the brand would have earned even if it had spent nothing on advertising that week — capturing organic demand, seasonality, trend, and all other controls; the **incremental contribution** of each channel's spend, passed through two successive nonlinear transforms; and a **noise term** for everything the model does not explain. That middle piece is where the richness lives. Spend does not translate to sales through a simple scalar multiplier. It passes through two transforms, applied in sequence, that make the relationship nonlinear in both time and amount. Those transforms are the chapter's stars.
+
+The first transform is **adstock**, and it captures a mundane fact about advertising: a television spot seen on Monday keeps working on Tuesday, Wednesday, and into the following week as viewers remember and eventually buy. Adstock converts the raw weekly spend $x_{i,t}$ into an **effective exposure** $a_{i,t}$ by distributing the memory of past spending forward in time — the current effective exposure is a weighted combination of this week's outlay and the decaying remnants of prior weeks. The second transform is **saturation**, and it captures an equally mundane fact: the tenth million dollars spent on a channel buys considerably less incremental sales than the first million did. Saturation maps the effective exposure $a_{i,t}$ to a **diminishing-returns response** $s_{i,t}$ through a nonlinear curve — steep at low exposure and flattening as exposure grows. Trend, seasonality, and control variables are necessary scaffolding, but adstock and saturation are the nonlinear core that gives the model its power and its difficulty.
+
+Once the model has its stars, one sees immediately what Part IV was actually optimizing. The response curve $r_i(\cdot)$ that Chapter 11 took as given is the saturation function evaluated at the adstock-transformed spend — the composed map from raw outlay to incremental sales, its shape determined entirely by the parameters of both transforms. Choosing those parameters is estimation; that is Chapter 15's work. But first, a harder question arrives. Once we can *simulate* the data-generating process — once we can generate realistic synthetic spend-and-sales series from a known parameter vector — we can ask whether the reverse journey is possible. Given only the observed spend and the observed sales, can we *recover* the adstock and saturation parameters that produced them? The answer is no, not from observational spend data alone, and the reason is structural. That **identification wound** is where this chapter ends, and it is the wound that Part VI heals.
+
+The route through the chapter is as follows. We develop the mathematical form of adstock and saturation, establish their composed action as the channel response function, add the baseline and noise to complete the DGP, and then simulate a fully synthetic week-by-week sales series from a known parameter vector. That synthetic series is the dataset Chapter 15 will fit — a controlled environment where the ground truth is known and the estimation challenge can be examined clearly, before the harder work of fitting to real campaign data.
 
 ## Theory & Proofs
 
