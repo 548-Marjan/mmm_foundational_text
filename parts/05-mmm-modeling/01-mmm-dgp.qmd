@@ -331,7 +331,100 @@ The fix is not more data at $x_0 = 3$ — it is data at *other* spend levels. Po
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The equations become a generator. We implement the two transforms, assert every
+identity proved above against the arithmetic, then run the full data-generating
+process forward to produce a synthetic two-year weekly sales series. That series is
+the dataset Chapter 15 will fit — a controlled environment whose ground-truth
+parameters we know exactly. A fixed seed makes the run reproducible.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(14)
+
+# --- transforms ---
+def geometric_adstock(x, lam):
+    out = np.empty_like(x, dtype=float)
+    prev = 0.0
+    for t, xt in enumerate(x):
+        prev = xt + lam * prev
+        out[t] = prev
+    return out
+
+def hill(x, K, n):
+    x = np.asarray(x, dtype=float)
+    return x**n / (K**n + x**n)
+
+def hill_prime(x, K, n):
+    x = np.asarray(x, dtype=float)
+    return n * K**n * x**(n - 1) / (K**n + x**n)**2
+
+# --- P1 / WE1: adstock identities at lambda = 0.5 ---
+imp = geometric_adstock(np.array([100, 0, 0, 0]), 0.5)
+assert np.allclose(imp, [100, 50, 25, 12.5])
+assert np.isclose(np.log(0.5) / np.log(0.5), 1.0)          # half-life
+assert np.isclose(0.5 / (1 - 0.5), 1.0)                    # mean lag
+assert np.isclose(100 / (1 - 0.5), 200.0)                  # steady state
+
+# --- P2 / WE2: Hill at K=3, n=2 ---
+xstar = 3 * (1 / 3)**0.5
+assert np.isclose(xstar, np.sqrt(3))
+assert np.isclose(hill(3, 3, 2), 0.5)
+assert np.isclose(hill(xstar, 3, 2), 0.25)
+assert np.isclose(hill_prime(3, 3, 2), 1 / 6)
+assert np.isclose(hill_prime(xstar, 3, 2), np.sqrt(3) / 8)
+
+# --- P3: non-commutativity, spend (3, 0), lambda = 0.5 ---
+spend2 = np.array([3.0, 0.0])
+A = hill(geometric_adstock(spend2, 0.5), 3, 2)             # adstock then saturate
+B = geometric_adstock(hill(spend2, 3, 2), 0.5)            # saturate then adstock
+assert np.isclose(A[1], 0.2) and np.isclose(B[1], 0.25)
+
+# --- P4: non-identifiability at x0 = 3 ---
+assert np.isclose(1 * hill(3, 3, 2), 0.5)
+assert np.isclose(2 * hill(3, 3 * np.sqrt(3), 2), 0.5)
+
+# --- full DGP: 2 years of weekly sales ---
+T = 104
+t = np.arange(T)
+baseline = 10.0 + 0.02 * t + 2.0 * np.sin(2 * np.pi * t / 52)     # intercept + trend + yearly seasonality
+x1 = np.clip(3.0 + 1.5 * np.sin(2 * np.pi * t / 52) + rng.normal(0, 0.5, T), 0, None)  # seasonal channel
+x2 = np.clip(rng.gamma(2.0, 1.0, T), 0, None)                     # bursty channel
+beta = (4.0, 3.0)
+contrib1 = beta[0] * hill(geometric_adstock(x1, 0.5), 3, 2)
+contrib2 = beta[1] * hill(geometric_adstock(x2, 0.3), 2, 1.5)
+noise = rng.normal(0, 0.3, T)
+sales = baseline + contrib1 + contrib2 + noise
+assert sales.shape == (T,)
+assert np.all(np.diff(hill(np.linspace(0.01, 20, 200), 3, 2)) > 0)   # saturation is monotone
+
+# --- figures ---
+fig, ax = plt.subplots(1, 3, figsize=(15, 4))
+
+ax[0].stem(range(6), geometric_adstock(np.array([100, 0, 0, 0, 0, 0]), 0.5))
+ax[0].set_title("Geometric adstock impulse (λ=0.5)")
+ax[0].set_xlabel("weeks since spend"); ax[0].set_ylabel("carryover")
+
+xs = np.linspace(0, 12, 200)
+ax[1].plot(xs, hill(xs, 3, 2), label="K=3, n=2 (S-shaped)")
+ax[1].plot(xs, hill(xs, 2, 1.5), label="K=2, n=1.5")
+ax[1].axvline(np.sqrt(3), ls="--", color="grey")
+ax[1].set_title("Hill saturation"); ax[1].set_xlabel("adstocked spend"); ax[1].legend()
+
+ax[2].plot(t, sales, label="sales")
+ax[2].plot(t, baseline, ls="--", label="baseline")
+ax[2].set_title("Simulated DGP (104 weeks)"); ax[2].set_xlabel("week"); ax[2].legend()
+
+plt.tight_layout()
+plt.show()
+```
+
+The asserts reproduce every pinned number from the proofs and worked examples: the
+adstock decay and its three summary statistics, the Hill anchors and marginals, the
+$0.2 \ne 0.25$ ordering gap, and the two observationally-identical parameter sets of
+the wound. The simulated `sales` series — baseline plus two adstocked-and-saturated
+channels plus noise — is exactly the input Chapter 15 inherits.
 
 ## Exercises
 
