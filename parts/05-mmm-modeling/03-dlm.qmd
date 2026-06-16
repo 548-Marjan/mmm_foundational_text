@@ -131,6 +131,77 @@ The **Kalman gain** $A_t$ weights the innovation $y_t - f_t$ by the relative inf
 
 With $(V_t, W_t)$ known these are exact closed-form updates — conjugacy doing all the work, no sampling — the point Proof P3 will revisit.
 
+### Rung 4 — The RTS smoother
+
+The Kalman filter produces, at each period $t$, the filtering distribution $\mathcal{N}(m_t, C_t)$ — the posterior over $\theta_t$ conditioned on observations up through that period, $y_{1:t}$. It does so by a strictly forward pass: at time $t$ the filter has not yet seen $y_{t+1}, \ldots, y_T$. The **Rauch–Tung–Striebel (RTS) smoother** revisits each state after the forward pass is complete, conditioning on the full data set $y_{1:T}$ to produce the smoothing distribution $p(\theta_t \mid y_{1:T}) = \mathcal{N}(m_t^s, C_t^s)$.
+
+Because future observations are informative about the current state through the chain of evolution equations, incorporating them always tightens the posterior: $C_t^s \preceq C_t$ (positive semi-definite ordering) at every $t$. The smoother cannot be worse than the filter, and it is strictly better for any interior time point where at least one future observation has been withheld by the filter.
+
+The RTS backward recursion is initialized at the final filtered distribution, $m_T^s = m_T$ and $C_T^s = C_T$, and then runs backward from $t = T-1$ to $t = 0$. For the random-walk evolution $G = I$:
+
+$$
+B_t = C_t R_{t+1}^{-1}, \qquad m_t^s = m_t + B_t\,(m_{t+1}^s - a_{t+1}), \qquad C_t^s = C_t + B_t\,(C_{t+1}^s - R_{t+1})\,B_t^\top.
+$$
+
+Here $B_t$ is the **smoother gain** — the fraction of the one-step-ahead uncertainty $R_{t+1}$ that the filtered uncertainty $C_t$ can explain. The correction $m_{t+1}^s - a_{t+1}$ is the difference between the smoothed mean one step ahead and the Kalman one-step-ahead forecast; it propagates information from the future back into the current state. The term $C_{t+1}^s - R_{t+1}$ is non-positive definite (the smoothed variance is no larger than the predicted variance), so the correction to $C_t^s$ is non-positive, confirming that smoothing cannot inflate uncertainty. The full derivation of the backward recursion — showing it arises from exactly the same conditional-Gaussian formula used in Proof P1, applied to the joint of $\theta_t$ and $\theta_{t+1}$ given $y_{1:t}$ — is left as a P-tier exercise.
+
+### Rung 5 — Bayesian DLM and FFBS
+
+The Kalman filter and RTS smoother of Rungs 3 and 4 treat the noise variances $V_t$ and $W_t$ as known. In practice they must be estimated, and the fully Bayesian treatment places prior distributions on $(\theta_0, V, W)$ — the initial state, the observation noise variance, and the state-drift covariance — and targets the joint posterior over both the state sequence and the variance parameters:
+
+$$
+p(\theta_{0:T}, V, W \mid y_{1:T}).
+$$
+
+This joint posterior has no closed form. The Markov structure of the state sequence — the fact that $\theta_t$ depends on the past only through $\theta_{t-1}$, and on future data only through $\theta_{t+1}$ — suggests a Gibbs sampler (Ch. 6, Ch. 9) that alternates between two conditionally conjugate blocks:
+
+1. **Draw the full state path given the variances.** With $V$ and $W$ fixed, the state sequence $\theta_{0:T}$ is a Gaussian hidden Markov model, and its joint posterior is the output of **forward-filtering backward-sampling (FFBS)**.
+2. **Draw the variances given the full state path.** With $\theta_{0:T}$ fixed, the observation residuals $y_t - F_t^\top \theta_t$ and the evolution increments $\theta_t - G_t \theta_{t-1}$ are observed, and conjugate inverse-gamma priors on $V$ and $W$ yield closed-form inverse-gamma updates.
+
+FFBS is "the Kalman filter you already know, run forward, then sampled backward." It proceeds in two passes.
+
+**Forward pass.** Run the Kalman filter from $t = 1$ to $t = T$, storing all intermediate quantities: the one-step-ahead means and covariances $(a_t, R_t)$ and the filtered means and covariances $(m_t, C_t)$. The forward pass is identical to Rung 3; no additional computation is required.
+
+**Backward sampling pass.** Draw $\theta_T \sim \mathcal{N}(m_T, C_T)$, the final filtered posterior. Then, for $t = T-1, T-2, \ldots, 0$, draw each state from its backward conditional distribution
+
+$$
+\theta_t \mid \theta_{t+1}, y_{1:t} \sim \mathcal{N}\!\left(m_t + B_t(\theta_{t+1} - a_{t+1}),\; C_t - B_t R_{t+1} B_t^\top\right),
+$$
+
+where $B_t = C_t G_{t+1}^\top R_{t+1}^{-1}$, using the stored filter quantities. Because each draw conditions on the already-sampled $\theta_{t+1}$, the path is generated in reverse and each draw is a single sample from a Gaussian — $O(p^3)$ per step for the Cholesky of the $p \times p$ conditional covariance. The full state path $\theta_{0:T}$ is an exact sample from the joint smoothing posterior; Proof P2 establishes why.
+
+Inside the Gibbs loop, FFBS and the conjugate variance updates alternate. Each full cycle produces one draw from the joint posterior $p(\theta_{0:T}, V, W \mid y_{1:T})$, and the Gibbs convergence guarantees of Ch. 9 apply.
+
+### Proof P2 — FFBS correctness (keystone)
+
+**Proposition P2.** *FFBS draws an exact sample from the joint smoothing posterior $p(\theta_{0:T} \mid y_{1:T})$.*
+
+*Proof.*
+
+**Factorization via the Markov property.** The state sequence $\theta_{0:T}$ satisfies the Markov property: $\theta_t$ depends on the past only through $\theta_{t-1}$, and on the observations only through the observations available at time $t$ and the future states. Precisely, given $\theta_{t+1}$, the state $\theta_t$ is conditionally independent of the future data $y_{t+1:T}$, because those observations influence $\theta_t$ only through the chain $\theta_t \to \theta_{t+1} \to \cdots$, which is blocked by conditioning on $\theta_{t+1}$. Applying this to the joint smoothing posterior by the chain rule of probability:
+
+$$
+p(\theta_{0:T} \mid y_{1:T}) = p(\theta_T \mid y_{1:T}) \prod_{t=0}^{T-1} p(\theta_t \mid \theta_{t+1},\, y_{1:t}).
+$$
+
+**Each factor is Gaussian.** The terminal factor $p(\theta_T \mid y_{1:T}) = \mathcal{N}(m_T, C_T)$ is the final filtered posterior, produced by the Kalman forward pass (Proof P1). Each backward factor $p(\theta_t \mid \theta_{t+1}, y_{1:t})$ is a Gaussian conditioning problem: starting from the filtered distribution $\theta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$ and the evolution link $\theta_{t+1} = G_{t+1} \theta_t + w_{t+1}$, the pair $(\theta_t, \theta_{t+1})$ given $y_{1:t}$ is jointly Gaussian with
+
+$$
+\begin{aligned}
+\mathbb{E}[\theta_{t+1} \mid y_{1:t}] &= G_{t+1} m_t = a_{t+1}, \\
+\mathrm{Var}(\theta_{t+1} \mid y_{1:t}) &= G_{t+1} C_t G_{t+1}^\top + W_{t+1} = R_{t+1}, \\
+\mathrm{Cov}(\theta_t, \theta_{t+1} \mid y_{1:t}) &= C_t G_{t+1}^\top.
+\end{aligned}
+$$
+
+Applying the conditional-Gaussian formula (Chapters 3 and 5) — the same formula used in Proof P1 — gives
+
+$$
+\theta_t \mid \theta_{t+1}, y_{1:t} \sim \mathcal{N}\!\left(m_t + B_t(\theta_{t+1} - a_{t+1}),\; C_t - B_t R_{t+1} B_t^\top\right), \quad B_t = C_t G_{t+1}^\top R_{t+1}^{-1}.
+$$
+
+**Conclusion.** The joint smoothing posterior factors into a product of Gaussians, each computable from the stored Kalman filter quantities. Drawing $\theta_T \sim \mathcal{N}(m_T, C_T)$ and then each $\theta_t$ backward from its Gaussian conditional, using the already-drawn $\theta_{t+1}$, samples exactly from the factored joint, which equals $p(\theta_{0:T} \mid y_{1:T})$. $\blacksquare$
+
 ## Worked Examples
 
 _Worked numerical example(s)._
