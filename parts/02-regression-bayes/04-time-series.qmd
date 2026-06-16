@@ -1,0 +1,31 @@
+# Time Series, Trend & Seasonality
+
+*Canonical anchors: @jin2017; @hyndman2021.*
+
+## Motivation
+
+Every regression model built so far rested on one quiet assumption: the errors are independent draws from the same distribution — the familiar i.i.d. condition $\varepsilon_t \overset{\text{iid}}{\sim} \mathcal{N}(0, \sigma^2)$. The probability-statistics chapter introduced this condition as a deliberate simplification and flagged the IOUs it was running up: the assumption would have to be relaxed "when we model autocorrelated or seasonal errors." That moment is now. Part II has given us the regression machinery (least squares, Bayesian updating, hierarchical pooling); this chapter attaches the time dimension — the feature that distinguishes marketing data from a bag of exchangeable observations and, consequently, the feature that makes MMM technically interesting.
+
+The case for taking time seriously is not abstract. Weekly brand sales do not arrive as an independent sequence: a strong promotional week tends to be followed by another strong week, partly because the ad exposure itself decays slowly in consumers' memories, partly because a market gaining momentum tends to stay in motion. Simultaneously, a firm calendar rhythm overlays the series — holiday surges, back-to-school spikes, summer troughs — that repeats with nearly metronomic regularity. These two phenomena, **autocorrelation** and **seasonality**, are structure embedded in the data-generating process. Treating them as noise does not make them disappear; it pushes them into the residuals, where they inflate standard errors, corrupt model-comparison statistics, and — most consequentially for media measurement — confound the estimated contribution of each channel with the rhythms it happened to run alongside.
+
+Three interlocking tools dismantle this structure into tractable pieces. The **autocorrelation function** (ACF) measures how strongly a series correlates with its own past at lag $k$: if $\rho_k = \operatorname{Corr}(y_t, y_{t-k})$ is large for $k = 1$, 2, …, the series has memory. The concept of a **stationary** series formalizes what it means for a time series to have a well-defined statistical character that does not drift: the mean, variance, and autocorrelation structure are invariant to shifts in time. Stationarity is both the precondition for estimating the ACF reliably and the diagnostic that tells us whether a trend needs to be removed before any further analysis. Finally, **decomposition** separates a series into trend, seasonal, and remainder components — and the seasonal component, when parameterized as a **Fourier basis**, can be captured with a handful of sine-and-cosine regressors that slot directly into a regression design matrix, turning seasonality from a modeling obstacle into a set of additional predictors.
+
+Two words used in this chapter collide with terminology already established elsewhere in the text, and both collisions are worth naming explicitly. "Autocorrelation" has already appeared in the MCMC chapter as a property of an MCMC chain's sample sequence: successive draws from a sampler are not independent, and high chain autocorrelation is a nuisance to be reduced by thinning or better proposals. That is a computational annoyance. The autocorrelation of a time series is a property of the phenomenon being modeled — information about how the real-world process behaves — and it is signal to be incorporated, not noise to be minimized. Likewise, "stationary" appeared in the Markov-chains chapter as the name for a chain's invariant distribution, the distribution $\pi$ satisfying $\pi P = \pi$. A stationary time series and a stationary distribution of a Markov chain are entirely different objects that happen to share an adjective; this chapter's "stationary" is the weaker, time-series sense, and the two should not be confused.
+
+This chapter is groundwork, not destination. The seasonal Fourier terms derived here feed directly into the baseline construction of the data-generating-process chapter, which builds them into the structural form of the full MMM likelihood. And the simplest model of autocorrelated errors — where each residual is a fraction $\phi$ of the previous one — produces a geometric decay in the ACF: $\rho_k = \phi^k$. Readers who have encountered the adstock transformation will notice that algebra is identical; the carryover of advertising effects obeys the same first-order recurrence as the simplest time-series model. That connection is not a coincidence, and it will be made precise in Part V when state-space models unify both threads into a single probabilistic framework.
+
+## Theory & Proofs
+
+## Worked Examples
+
+## Code Tie-in
+
+## Exercises
+
+### C -- Conceptual / Reading Comprehension
+
+### B -- By Hand
+
+### P -- Prove It
+
+### A -- Applied / Code
