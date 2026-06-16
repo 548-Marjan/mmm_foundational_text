@@ -73,6 +73,64 @@ This is the **time-varying-coefficient MMM** the chapter fits. The coefficient $
 
 The ratio $W/V$ — state drift relative to observation noise — governs how quickly the model allows coefficients to move: a large ratio permits fast adaptation at the cost of noisier period-by-period estimates; a small ratio anchors the model close to a constant-$\beta$ solution, and setting it is the practitioner's primary tuning decision.
 
+### Rung 3 — The Kalman filter
+
+The state-space form of Rung 2 defines the model but does not yet provide inference. Given observations $y_1, y_2, \ldots, y_T$ and known noise covariances $V_t$ and $W_t$, the goal is to recover the filtering distribution $p(\theta_t \mid y_{1:t})$ — the posterior over the latent state at period $t$, conditioned on all data through that period. The Kalman filter accomplishes this by a two-step forward recursion that converts the posterior at period $t-1$ into the posterior at period $t$.
+
+**Predict step.** Start from the filtered posterior at the previous period, $\theta_{t-1} \mid y_{1:t-1} \sim \mathcal{N}(m_{t-1}, C_{t-1})$. Push the state through the evolution equation $\theta_t = G_t \theta_{t-1} + w_t$. Because this is an affine transformation of a Gaussian with independent Gaussian noise $w_t \sim \mathcal{N}(0, W_t)$ added, the one-step-ahead **prior** over $\theta_t$ given $y_{1:t-1}$ is Gaussian with
+
+$$
+a_t = G_t m_{t-1}, \qquad R_t = G_t C_{t-1} G_t^\top + W_t.
+$$
+
+**Update step.** When $y_t$ arrives, condition on it. The observation equation $y_t = F_t^\top \theta_t + v_t$ is affine in $\theta_t$ with independent Gaussian noise, so the pair $(\theta_t, y_t)$ is jointly Gaussian given $y_{1:t-1}$. Applying the conditional-Gaussian formula (Chapters 3 and 5) yields the filtered posterior $\theta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$, where
+
+$$
+m_t = a_t + A_t (y_t - f_t), \qquad C_t = R_t - A_t Q_t A_t^\top, \qquad A_t = R_t F_t Q_t^{-1},
+$$
+
+$f_t = F_t^\top a_t$ is the one-step-ahead **forecast mean**, $Q_t = F_t^\top R_t F_t + V_t$ is the **forecast variance**, and the **Kalman gain** $A_t$ weights the **innovation** $y_t - f_t$ by the relative informativeness of the observation. With known $(V_t, W_t)$, these two steps together return the exact Gaussian filtering posterior $p(\theta_t \mid y_{1:t})$ at every period in closed form — no sampling, no approximation. Proof P1 formalizes this claim.
+
+### Proof P1 — Kalman filter as exact Gaussian conditioning (keystone)
+
+**Proposition P1.** *For the DLM with known $V_t, W_t$, if $\theta_{t-1} \mid y_{1:t-1} \sim \mathcal{N}(m_{t-1}, C_{t-1})$ then $\theta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$ with the recursions below; hence the filtering distribution is Gaussian at every $t$.*
+
+*Proof.* By induction on $t$.
+
+**Inductive hypothesis.** $\theta_{t-1} \mid y_{1:t-1} \sim \mathcal{N}(m_{t-1}, C_{t-1})$.
+
+**Predict.** The evolution equation $\theta_t = G_t \theta_{t-1} + w_t$ is an affine-Gaussian map: $G_t$ applied to a Gaussian random vector with independent Gaussian noise $w_t \sim \mathcal{N}(0, W_t)$ added. By the standard affine-transformation and addition rules for Gaussians, the one-step-ahead prior is
+
+$$
+\theta_t \mid y_{1:t-1} \sim \mathcal{N}(a_t,\, R_t), \qquad a_t = G_t m_{t-1}, \quad R_t = G_t C_{t-1} G_t^\top + W_t.
+$$
+
+**Joint of state and next observation.** Since $y_t = F_t^\top \theta_t + v_t$ is affine-Gaussian in $\theta_t$ and $v_t \sim \mathcal{N}(0, V_t)$ is independent of $\theta_t \mid y_{1:t-1}$, the pair $(\theta_t, y_t)$ given $y_{1:t-1}$ is jointly Gaussian. Compute each block of the joint covariance:
+
+$$
+\begin{aligned}
+\mathbb{E}[y_t \mid y_{1:t-1}] &= F_t^\top a_t \;\equiv\; f_t, \\
+\mathrm{Var}(y_t \mid y_{1:t-1}) &= F_t^\top R_t F_t + V_t \;\equiv\; Q_t, \\
+\mathrm{Cov}(\theta_t, y_t \mid y_{1:t-1}) &= \mathrm{Cov}(\theta_t,\, F_t^\top \theta_t + v_t \mid y_{1:t-1}) = R_t F_t,
+\end{aligned}
+$$
+
+where the last line uses independence of $v_t$ from $\theta_t$ and $\mathrm{Cov}(\theta_t, F_t^\top \theta_t \mid y_{1:t-1}) = \mathbb{E}[(\theta_t - a_t)(\theta_t - a_t)^\top \mid y_{1:t-1}]\, F_t = R_t F_t$. Assembling the blocks:
+
+$$
+\begin{bmatrix} \theta_t \\ y_t \end{bmatrix} \Bigm| y_{1:t-1} \sim \mathcal{N}\!\left( \begin{bmatrix} a_t \\ f_t \end{bmatrix},\ \begin{bmatrix} R_t & R_t F_t \\ F_t^\top R_t & Q_t \end{bmatrix} \right).
+$$
+
+**Update by Gaussian conditioning.** Apply the conditional-Gaussian formula (Chapters 3 and 5): for a joint Gaussian with blocks $\Sigma_{uu}$, $\Sigma_{uz}$, $\Sigma_{zz}$, the conditional distribution of $u$ given $z$ has mean $\mu_u + \Sigma_{uz} \Sigma_{zz}^{-1}(z - \mu_z)$ and covariance $\Sigma_{uu} - \Sigma_{uz} \Sigma_{zz}^{-1} \Sigma_{zu}$. Identifying $u = \theta_t$, $z = y_t$, $\Sigma_{uz} = R_t F_t$, $\Sigma_{zz} = Q_t$:
+
+$$
+m_t = a_t + A_t (y_t - f_t), \qquad C_t = R_t - A_t Q_t A_t^\top, \qquad A_t = R_t F_t Q_t^{-1}.
+$$
+
+The **Kalman gain** $A_t$ weights the innovation $y_t - f_t$ by the relative informativeness of the observation. This shows $\theta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$, closing the induction. $\blacksquare$
+
+With $(V_t, W_t)$ known these are exact closed-form updates — conjugacy doing all the work, no sampling — the point Proof P3 will revisit.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
