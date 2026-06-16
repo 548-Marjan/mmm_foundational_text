@@ -478,8 +478,55 @@ Fourier order as the knob that trades parsimony against seasonal detail.
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** In one sentence each, distinguish (a) the autocorrelation of a *time series* from the autocorrelation of an *MCMC chain's output*, and (b) a *covariance-stationary series* from a *Markov chain's stationary distribution*. Why is the shared vocabulary a trap?
+
+**C2.** A series' sample ACF decays slowly and almost linearly toward zero over many lags, with no oscillation. Is this more consistent with strong AR(1) persistence, a deterministic trend, or yearly seasonality? Explain what each of the three would look like on the ACF.
+
+**C3.** Why are $K$ Fourier harmonics ($2K$ parameters) usually preferable to $s-1$ seasonal dummy variables for a yearly weekly cycle? Give one statistical and one practical reason.
+
 ### B -- By Hand
+
+**B1.** For an AR(1) with $\phi = 0.5$, compute $\rho_1, \rho_2, \rho_3$ and the stationary variance factor $1/(1-\phi^2)$.
+
+**B2.** On the period-4 grid $t = 0,1,2,3$, verify the Fourier orthogonality identity $\sum_{t=0}^{3}\cos^2(2\pi t/4) = s/2 = 2$.
+
+**B3.** On the same period-4 grid, show $\sum_{t=0}^{3}\cos(2\pi t/4)\sin(2\pi t/4) = 0$, confirming the cosine and sine at the first harmonic are orthogonal.
 
 ### P -- Prove It
 
+**P1.** Prove that for any covariance-stationary series, $|\rho_k| \le 1$ for all $k$, using the Cauchy–Schwarz inequality.
+
+**P2.** Starting from the MA($\infty$) representation $y_t = \sum_{j=0}^{\infty}\phi^j\varepsilon_{t-j}$ of a stable AR(1), prove that $\gamma_k = \phi^k\gamma_0$, and hence $\rho_k = \phi^k$.
+
+**P3.** Using the root-of-unity sum $\sum_{t=0}^{s-1} e^{2\pi i m t/s} = s\,[m \equiv 0 \bmod s]$, prove that $\sum_{t=0}^{s-1}\cos(2\pi j t/s)\sin(2\pi k t/s) = 0$ for all integers $j, k$ with $1 \le j, k < s/2$.
+
 ### A -- Applied / Code
+
+**A1.** Simulate AR(1) series at $\phi \in \{0.3, 0.7, 0.95\}$ (same length and noise scale), compute each sample ACF, and overlay them against the theoretical $\phi^k$. Comment on how persistence shows up in the decay rate.
+
+**A2.** Fit Fourier seasonality at $K = 1, 2, 3$ harmonics (plus trend) to a simulated trend-plus-seasonal-plus-noise series and plot residual variance against $K$. Identify the $K$ at which adding harmonics stops helping.
+
+**A3.** Demonstrate orthogonality empirically: fit the $K=1$ Fourier coefficients, then refit with $K=2$, and show the first-harmonic coefficients are unchanged (up to numerical tolerance) — the practical consequence of P3.
+
+## Summary
+
+This chapter attached the time dimension to the regression machinery of Part II, paying off the i.i.d.-error IOU left in the probability chapter. It built three tools — the autocorrelation function, covariance-stationarity, and trend/seasonal decomposition with a Fourier basis — and was careful to disentangle two words that collide with earlier uses.
+
+**Key concepts**
+
+- **Autocorrelation** $\rho_k$ measures a series' memory; it shares its formula with an MCMC chain's autocorrelation but plays the opposite role — signal to model here, sampler nuisance to minimize there.
+- **Covariance-stationarity** (constant mean and variance, lag-only autocovariance) is the precondition for estimating the ACF; it is a different object from a Markov chain's stationary distribution $\pi$.
+- **AR(1)** is the minimal model of autocorrelated errors; its geometric ACF $\rho_k=\phi^k$ is the same algebra as adstock carryover $\lambda^k$.
+- **Decomposition** splits a series into trend, seasonal, and remainder; inspecting the remainder's ACF reveals the residual dependence (often AR(1)).
+- **Fourier seasonality** captures a period-$s$ cycle with $K$ harmonics ($2K$ parameters); the harmonic regressors are orthogonal, so each coefficient is estimated independently.
+
+**Key identities**
+
+- **Autocorrelation.** $\rho_k = \gamma_k/\gamma_0$, with $\rho_0 = 1$, $\gamma_k = \gamma_{-k}$, and $|\rho_k| \le 1$.
+- **Covariance-stationarity.** $\mathbb E[y_t]=\mu$, $\mathrm{Var}(y_t)=\gamma_0$, and $\gamma_k$ depends only on the lag $k$.
+- **AR(1).** $y_t=\phi y_{t-1}+\varepsilon_t$ with $|\phi|<1$ gives $\gamma_0=\sigma^2/(1-\phi^2)$ and $\rho_k=\phi^k$.
+- **Decomposition.** $y_t = T_t + S_t + R_t$ with $\sum_{j=0}^{s-1} S_{t+j}=0$.
+- **Fourier seasonal.** $S_t = \sum_{j=1}^{K}\big[a_j\cos(2\pi j t/s)+b_j\sin(2\pi j t/s)\big]$.
+- **Orthogonality.** On $t=0,\dots,s-1$: $\sum_t\cos^2 = \sum_t\sin^2 = s/2$, with all cross-sums zero.
+
+This groundwork feeds the seasonality baseline of the MMM data-generating-process chapter and, in Part V, the dynamic state-space models that let coefficients move over time.
