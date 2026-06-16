@@ -426,8 +426,56 @@ of magnitude. Good fit, unrecoverable shape: the wound, in code.
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** Why does a good in-sample fit not imply that the response curve has been recovered correctly? Frame your answer in terms of the difference between fit and recovery.
+
+**C2.** What does a singular Fisher information matrix mean geometrically — both for the likelihood surface and for the set of parameter values consistent with the data?
+
+**C3.** A half-normal prior on $\beta_i$ encodes the belief that advertising does not reduce sales. Explain how the *same* prior simultaneously serves as regularization on an under-identified direction. Why are these two roles not in conflict?
+
 ### B -- By Hand
+
+**B1.** For $K=2$, $n=2$, $\beta=3$, compute the $(\beta,K)$ gradient $\nabla\mu(x)=(g(x;K,n),\ \beta g_K(x;K,n))$ at $x=2$ and at $x=4$ (use $g_K=-nK^{n-1}x^n/(K^n+x^n)^2$). Show the two gradients are not parallel, so the two operating points together identify $(\beta,K)$.
+
+**B2.** Show that if every observation has the same spend $x_t \equiv x_0$, the $2\times2$ Fisher information for $(\beta,K)$ has determinant zero, regardless of how many weeks are observed.
+
+**B3.** Suppose the log-likelihood is flat along a direction $d$. Write down, in one line, what the posterior along $d$ equals, and name the chapter result that justifies it.
 
 ### P -- Prove It
 
+**P1.** Starting from the Gaussian log-likelihood $\ell(\theta)=-\tfrac{1}{2\sigma^2}\sum_t (y_t-\mu_t(\theta))^2 + \text{const}$, derive the Fisher information $I(\theta)=\tfrac{1}{\sigma^2}\sum_t \nabla_\theta\mu_t\,\nabla_\theta\mu_t^\top$, stating clearly where the expectation removes the second-derivative term.
+
+**P2.** Prove that if $I(\theta_0)$ is singular then there is a direction along which the likelihood is flat to first order. (Use the quadratic form $d^\top I(\theta_0)\,d$.)
+
+**P3.** Prove that if the log-likelihood is constant along a direction $d$ at $\theta_0$, the conditional posterior density of the displacement $s$ along $d$ equals the prior restricted to that line and renormalized.
+
 ### A -- Applied / Code
+
+**A1.** Modify the chapter's fit to use an *intermediate* spend spread (between the wide and confined cases) and plot the smallest $(\beta,K)$ Hessian eigenvalue as the spread increases. Confirm it grows monotonically — identifiability improving with operating-point diversity.
+
+**A2.** Implement a prior predictive check: draw parameters from the chapter's priors, simulate sales series through the mean function, and plot a sample. Comment on whether the prior-implied series are plausible in scale and shape.
+
+**A3.** For the confined-spend scenario, vary the scale of the $K$ prior (e.g. half-normal scales $3, 5, 8$) and show that the confined-spend posterior for $K$ tracks the prior — an empirical demonstration of the prior-dominates-the-ridge result.
+
+## Summary
+
+This chapter inverted Chapter 14's data-generating process: given spend and sales, it recovered the response-curve parameters by Bayesian inference, proved when that recovery is possible, and showed priors carrying the load when it is not. It is the integration the book has been building toward — likelihood from the DGP, priors and MAP from Chapter 5, samplers from Chapters 8–9, diagnostics from Chapter 10 — and it ends, like Chapter 14, on the identification wound that Part VI heals.
+
+**Key concepts**
+
+- **The inverse problem** asks not whether the model fits but whether it *recovers* the parameters that generated the data — a distinction only synthetic data, where the truth is known, can enforce.
+- **The MMM likelihood is non-conjugate:** because the mean is nonlinear in $(K, n, \lambda)$, no closed-form posterior exists, so inference proceeds by MAP/Laplace or MCMC.
+- **Weakly-informative priors** encode domain knowledge (carryover in $[0,1)$, non-negative effects) and double as regularization on under-identified directions.
+- **Local identifiability** holds exactly when the Fisher information is nonsingular — a question about the *spread of operating points*, not the number of weeks. One operating point gives a rank-one information matrix; enough distinct points make it full-rank.
+- **On an unidentified ridge the posterior equals the prior:** where the likelihood is flat, the prior alone determines the posterior, so a well-chosen prior keeps the inference proper at the wound.
+- **The fitting workflow** — prior predictive → fit → convergence diagnostics → posterior predictive → parameter recovery — turns these results into practice.
+- **Residual non-identification** survives perfect sampling and unlimited confined-spend data; only exogenous spend variation (Part VI) breaks it.
+
+**Key identities**
+
+- **Likelihood.** $y_t \mid \theta \sim \mathcal{N}(\mu_t(\theta), \sigma^2)$ with $\mu_t(\theta) = \text{baseline}_t + \sum_i \beta_i\, g(a_\lambda(x_{i,t}); K_i, n_i)$.
+- **Fisher information.** $I(\theta) = \tfrac{1}{\sigma^2}\sum_t \nabla_\theta\mu_t\,\nabla_\theta\mu_t^\top$; local identifiability $\Leftrightarrow I(\theta)$ nonsingular.
+- **Ridge gradient.** $\nabla\mu = (g,\ \beta g_K)$ with $g_K = -nK^{n-1}x^n/(K^n+x^n)^2$.
+- **Singularity criterion.** $d^\top I(\theta_0)\,d = \tfrac{1}{\sigma^2}\sum_t (\nabla_\theta\mu_t^\top d)^2 = 0 \iff \nabla_\theta\mu_t^\top d = 0\ \forall t$.
+- **Prior dominates the ridge.** If $\ell$ is flat along $d$, then $p(\theta_0 + s\,d \mid y) \propto p(\theta_0 + s\,d)$.
+
+Chapter 16 takes the next step: letting the response coefficients drift over time, turning the static fit of this chapter into a dynamic, state-space model.
