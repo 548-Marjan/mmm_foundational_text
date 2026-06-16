@@ -25,7 +25,53 @@ The machinery developed here reaches forward into the book's final arc. Chapter 
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The theory develops in two rungs. Rung 1 motivates the generalization: the constant-coefficient model of Chapter 16 is a falsifiable null, and promoting the fixed coefficient vector to a time-indexed latent state is the precise way to relax it. Rung 2 formalizes that commitment as the state-space pair, names every component, and exhibits the two anchor DLMs the chapter uses throughout.
+
+### Rung 1 — Static to dynamic
+
+Chapter 16 demonstrated that Bayesian inference can recover the adstock decay, saturation curve, and channel coefficients from a well-designed campaign. It did so by treating every channel coefficient $\beta_i$ as a fixed scalar, constant across the entire observation window. That assumption is not merely a convenience; it is a falsifiable empirical claim. A channel that drove $2\times$ ROI in January is assumed to drive $2\times$ ROI in December, after a full year of audience exposure, creative repetition, and inventory pressure. The claim can be wrong — and in practice, it often is. Media efficiency decays as audiences habituate to a creative (wear-out). Targeting algorithms shift reach pools as platform inventory fluctuates. Brand equity builds and erodes on timescales that cut across campaign periods. When true channel effectiveness drifts, a constant-$\beta$ model pools across the drift and estimates an average that may describe no actual period in the data: recent periods look underfit, early periods look overfit, and budget recommendations are anchored to a number the business has already departed from.
+
+This chapter relaxes the constant-$\beta$ assumption one layer deeper than Chapter 7's AR(1) extension. Chapter 7 relaxed the assumption that **residuals** are i.i.d. — it allowed the unexplained variation in sales to carry its own temporal structure — while regression coefficients remained fixed. This chapter relaxes the assumption that **regression coefficients** themselves are fixed. The modeling commitment is precise: promote the fixed coefficient vector $\theta$ to a time-indexed latent state $\theta_t$. Each period, $\theta_t$ takes a value that may differ from its predecessor; the observed sales $y_t$ is a noisy measurement of the structural equation evaluated at that period's state. Because $\theta_t$ is never observed directly, the model must simultaneously infer how it evolves and what value it must have taken to be consistent with the observed $y_t$. That dual inference — tracking a hidden state while explaining a noisy measurement — is the state-space problem.
+
+### Rung 2 — The state-space form
+
+The DLM encodes the Rung 1 commitment in two equations. Let $y_t \in \mathbb{R}$ denote observed sales at period $t$, $\theta_t \in \mathbb{R}^p$ the latent state, $F_t \in \mathbb{R}^p$ the observation vector, and $G_t \in \mathbb{R}^{p \times p}$ the evolution matrix. The model is
+
+$$
+\begin{aligned}
+y_t &= F_t^\top \theta_t + v_t, \qquad v_t \sim \mathcal{N}(0,\, V_t), \\
+\theta_t &= G_t \theta_{t-1} + w_t, \qquad w_t \sim \mathcal{N}(0,\, W_t),
+\end{aligned}
+$$
+
+with the two noise sequences independent of each other and across time. The components have precise roles.
+
+- $\theta_t$: the **latent state** — the time-varying coefficient vector (channel effectiveness, baseline level, trend) that summarizes the system's condition at period $t$.
+- $F_t$: the **observation (design) vector** — the regressors at time $t$, including adstocked channel spend and any baseline components; observed and controlled by the analyst.
+- $G_t$: the **evolution (state-transition) matrix** — it propagates $\theta_{t-1}$ forward one period, encoding the assumed dynamic structure of the coefficient process.
+- $V_t$: the **observation-noise variance** — the variance of the deviation between the structural mean $F_t^\top \theta_t$ and the realized sales $y_t$.
+- $W_t$: the **state-evolution (drift) covariance** — the variance of the perturbation that moves the coefficient vector from one period to the next; its magnitude sets how fast the model allows coefficients to change.
+
+**Anchor model 1 — Local level.** Set $F = G = 1$ (scalar model, $p = 1$). The pair reduces to
+
+$$
+\begin{aligned}
+y_t &= \theta_t + v_t, \\
+\theta_t &= \theta_{t-1} + w_t,
+\end{aligned}
+$$
+
+a random walk observed in noise. This is the simplest DLM: no regressors, one evolving level. It is the lens through which the chapter derives the steady-state Kalman gain, because the single ratio $W/V$ completely determines how fast the filter adapts — making the effect of state drift versus observation noise visible in isolation before any regression structure is added.
+
+**Anchor model 2 — Regression DLM.** Set $F_t = x_t$ (the adstocked spend of one channel at period $t$) and $G = I$. The state equation reduces to $\beta_t = \beta_{t-1} + w_t$ — a random walk on the channel coefficient — and the observation equation becomes
+
+$$
+y_t = x_t \beta_t + v_t.
+$$
+
+This is the **time-varying-coefficient MMM** the chapter fits. The coefficient $\beta_t$ absorbs everything the constant-$\beta$ model averaged over: wear-out, audience shift, and efficiency recovery after a creative rotation. Dividing the recovered $\beta_t$ by the channel's cost-per-unit gives a time-varying cost-per-revenue that the planner can track and respond to within the campaign window. Multiple channels extend the model by stacking adstocked spend into the vector $F_t = x_t$ and coefficients into $\theta_t$, with $G = I_p$ keeping each channel's random walk independent.
+
+The ratio $W/V$ — state drift relative to observation noise — governs how quickly the model allows coefficients to move: a large ratio permits fast adaptation at the cost of noisier period-by-period estimates; a small ratio anchors the model close to a constant-$\beta$ solution, and setting it is the practitioner's primary tuning decision.
 
 ## Worked Examples
 
