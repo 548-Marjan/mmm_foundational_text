@@ -172,7 +172,7 @@ where $B_t = C_t G_{t+1}^\top R_{t+1}^{-1}$, using the stored filter quantities.
 
 Inside the Gibbs loop, FFBS and the conjugate variance updates alternate. Each full cycle produces one draw from the joint posterior $p(\theta_{0:T}, V, W \mid y_{1:T})$, and the Gibbs convergence guarantees of Ch. 9 apply.
 
-### Proof P2 — FFBS correctness (keystone)
+### Proof P2 — FFBS correctness
 
 **Proposition P2.** *FFBS draws an exact sample from the joint smoothing posterior $p(\theta_{0:T} \mid y_{1:T})$.*
 
