@@ -16,6 +16,71 @@ This chapter is groundwork, not destination. The seasonal Fourier terms derived 
 
 ## Theory & Proofs
 
+### Rung 1 — Autocovariance and autocorrelation
+
+A **time series** is a sequence of random variables indexed by time, written $\{y_t\}_{t=1}^{T}$, where $T$ is the number of observations. Each $y_t$ is a random variable; an observed dataset is one realized path from the underlying stochastic process. The subscript $t$ carries the full temporal ordering of each measurement, and it is this ordering that makes time-series analysis richer, and more demanding, than ordinary cross-sectional regression.
+
+The primary measure of temporal dependence is the **autocovariance** at lag $k$:
+
+$$
+\gamma_k = \mathrm{Cov}(y_t,\, y_{t+k}) = \mathbb{E}\!\left[(y_t - \mu)(y_{t+k} - \mu)\right],
+$$
+
+where $\mu = \mathbb{E}[y_t]$ is the (constant) mean. At lag $k = 0$ the formula reduces to the ordinary variance: $\gamma_0 = \mathrm{Var}(y_t)$. Dividing by $\gamma_0$ standardizes the scale and produces the **autocorrelation** at lag $k$:
+
+$$
+\rho_k = \frac{\gamma_k}{\gamma_0}.
+$$
+
+The function $k \mapsto \rho_k$ is the **autocorrelation function** (ACF). Plotting it over a range of lags is the first diagnostic applied to any new series: a slow decay toward zero signals persistent memory; a sharp cutoff after a few lags indicates a short dependence structure; alternating positive and negative values suggest oscillatory behavior.
+
+**Notation collision — the MCMC chapter.** The symbol $\rho_k$ and the definition $\rho_k = \gamma_k/\gamma_0$ reappear in the MCMC chapter, where the effective sample size of a chain is $n_{\text{eff}} = n/(1 + 2\sum_{k=1}^{\infty}\rho_k)$ and a large $\rho_k$ signals that successive draws are too similar to explore the posterior efficiently. The two uses are mathematically identical — serial correlation between values separated by lag $k$ — but their roles are opposite. In this chapter the series under study is the real-world phenomenon: a large $\rho_1$ in weekly sales data is **signal**, evidence of how the process behaves, and the analyst's job is to model and exploit it. In the MCMC chapter the series is the sampler's output: a large $\rho_1$ in the chain is a **computational nuisance**, evidence of poor mixing, and the goal is to reduce it. Same formula, opposite role.
+
+### Rung 2 — Covariance-stationarity
+
+Many theoretical guarantees — consistent estimation of the ACF, a well-defined long-run variance, convergence of spectral representations — require that the statistical character of a series not drift over time. The standard formalization is **covariance-stationarity** (also called *weak stationarity* or *second-order stationarity*). A series $\{y_t\}$ is covariance-stationary if three conditions hold simultaneously:
+
+1. **Constant mean.** $\mathbb{E}[y_t] = \mu$ for all $t$.
+2. **Constant variance.** $\mathrm{Var}(y_t) = \gamma_0 < \infty$ for all $t$.
+3. **Lag-dependent autocovariance.** $\mathrm{Cov}(y_t,\, y_{t+k}) = \gamma_k$ depends only on the lag $k$, not on the time $t$.
+
+Conditions 1 and 3 together say that shifting the time window by any integer number of periods leaves the mean and all pairwise covariances unchanged — the series looks statistically the same wherever you sample it. A series with a deterministic upward trend violates condition 1; a series whose variance widens over time violates condition 2; a series whose autocorrelation structure differs systematically by season may violate condition 3. In practice, covariance-stationarity is approached by pre-processing: removing a trend by differencing or subtraction, and removing a deterministic seasonal pattern by subtraction or by including seasonal regressors. The structure of stationarity provides the conceptual target that guides those choices.
+
+**Notation collision — the Markov-chains chapter.** The Markov-chains chapter defines a *stationary distribution* as a probability vector $\pi$ satisfying $\pi P = \pi$, where $P$ is the transition matrix: $\pi$ is the distribution a chain returns to after any perturbation, and convergence to $\pi$ underpins the validity of MCMC. The word "stationary" is shared, but the objects are entirely different. A stationary *distribution* is a single probability measure over the state space; a covariance-stationary *series* is a stochastic process whose second-order moments are invariant under translation in time. One can construct a Markov chain whose stationary distribution describes a process that is not covariance-stationary in the time-series sense, and vice versa. The adjective is the same; the noun it modifies is not.
+
+### Proof P1 — Properties of the autocovariance and autocorrelation functions
+
+**Proposition P1.** *Let $\{y_t\}$ be a covariance-stationary series with autocovariance function $\gamma_k$ and autocorrelation function $\rho_k = \gamma_k/\gamma_0$. Then: (i) $\gamma_k = \gamma_{-k}$ for all $k$; (ii) $\rho_0 = 1$; (iii) $|\rho_k| \le 1$ for all $k$; and (iv) for any finite collection of times $t_1,\ldots,t_m$ and weights $a_1,\ldots,a_m \in \mathbb{R}$, the $m \times m$ matrix $\Gamma$ with $(i,j)$-entry $\gamma_{|t_i - t_j|}$ is positive-semidefinite.*
+
+*Proof.* **(i) Even symmetry.** Covariance is symmetric in its two arguments:
+
+$$
+\gamma_k = \mathrm{Cov}(y_t,\, y_{t+k}) = \mathrm{Cov}(y_{t+k},\, y_t).
+$$
+
+Now relabel the time index by setting $s = t + k$, so the right-hand side becomes $\mathrm{Cov}(y_s,\, y_{s-k})$. By covariance-stationarity, this quantity depends only on the lag, which is $-k$, giving $\mathrm{Cov}(y_s,\, y_{s-k}) = \gamma_{-k}$. Therefore $\gamma_k = \gamma_{-k}$: the autocovariance function is even in the lag. Plotting the ACF for negative lags adds no information; by convention, only $k \ge 0$ is displayed.
+
+**(ii) Normalization.** Setting $k = 0$ in the definition: $\rho_0 = \gamma_0/\gamma_0 = 1$. A series has perfect correlation with itself at zero lag.
+
+**(iii) Boundedness.** The Cauchy–Schwarz inequality for covariance states $|\mathrm{Cov}(U,\,V)| \le \sqrt{\mathrm{Var}(U)}\,\sqrt{\mathrm{Var}(V)}$ for any square-integrable random variables $U$ and $V$. Applying this with $U = y_t$ and $V = y_{t+k}$:
+
+$$
+|\gamma_k| = |\mathrm{Cov}(y_t,\, y_{t+k})| \le \sqrt{\mathrm{Var}(y_t)}\,\sqrt{\mathrm{Var}(y_{t+k})} = \sqrt{\gamma_0}\,\sqrt{\gamma_0} = \gamma_0,
+$$
+
+where the final equality uses the constant-variance condition of covariance-stationarity. Dividing both sides by $\gamma_0 > 0$ yields $|\rho_k| \le 1$.
+
+**(iv) Positive-semidefiniteness.** The variance of any real-valued random variable is non-negative. For arbitrary times $t_1,\ldots,t_m$ and real weights $a_1,\ldots,a_m$, form the linear combination $Z = \sum_{i=1}^{m} a_i\, y_{t_i}$. By bilinearity of covariance:
+
+$$
+\begin{aligned}
+\mathrm{Var}(Z) &= \mathrm{Cov}\!\left(\sum_{i=1}^{m} a_i\, y_{t_i},\; \sum_{j=1}^{m} a_j\, y_{t_j}\right) \\
+&= \sum_{i=1}^{m}\sum_{j=1}^{m} a_i\, a_j\, \mathrm{Cov}(y_{t_i},\, y_{t_j}).
+\end{aligned}
+$$
+
+By covariance-stationarity, $\mathrm{Cov}(y_{t_i},\, y_{t_j}) = \gamma_{|t_i - t_j|}$, so $\mathrm{Var}(Z) = \sum_{i,j} a_i\, a_j\, \gamma_{|t_i - t_j|} \ge 0$. Since this holds for every choice of $m$, times, and weights, the matrix $[\gamma_{|t_i - t_j|}]$ is positive-semidefinite. The implication is not merely algebraic: not every symmetric bounded sequence is a valid autocovariance function. Positive-semidefiniteness constrains which functions $k \mapsto \gamma_k$ can arise from any real stochastic process, and it rules out many candidate functions that look superficially reasonable. $\square$
+
 ## Worked Examples
 
 ## Code Tie-in
