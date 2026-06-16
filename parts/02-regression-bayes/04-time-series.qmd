@@ -387,6 +387,93 @@ The cosine and sine columns for the same harmonic are orthogonal to each other. 
 
 ## Code Tie-in
 
+We simulate a weekly series with all three ingredients — a linear trend, a yearly Fourier
+seasonal ($s=52$), and AR(1) noise ($\phi=0.7$) — and read its structure off the
+autocorrelation function. The raw ACF shows the slow decay of a non-stationary trend with a
+seasonal spike near lag $52$; after we decompose the series (least-squares fit of trend plus
+Fourier seasonal), the residual ACF recovers the AR(1) geometric decay $\phi^k$. A fixed seed
+makes the run reproducible.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(7)
+s, T = 52, 312
+t = np.arange(T)
+phi = 0.7
+
+# --- AR(1) theory (WE2) ---
+assert np.allclose([phi**k for k in range(4)], [1, 0.7, 0.49, 0.343])
+assert np.isclose(1 / (1 - phi**2), 1.9608, atol=1e-4)
+
+# --- Fourier design: intercept + linear trend + K harmonics ---
+def fourier_design(t, s, K):
+    cols = [np.ones_like(t, dtype=float), t.astype(float)]
+    for j in range(1, K + 1):
+        cols.append(np.cos(2 * np.pi * j * t / s))
+        cols.append(np.sin(2 * np.pi * j * t / s))
+    return np.column_stack(cols)
+
+# --- P3 / WE3: harmonic columns are orthogonal on one period ---
+tp = np.arange(s)
+H = fourier_design(tp, s, 3)[:, 2:]                 # keep only the harmonic columns
+G = H.T @ H
+assert np.allclose(np.diag(G), s / 2)               # each harmonic norm^2 = s/2 = 26
+assert np.allclose(G - np.diag(np.diag(G)), 0, atol=1e-8)   # off-diagonals vanish
+
+# --- simulate trend + seasonal + AR(1) noise ---
+trend = 0.01 * t
+season = 2.0 * np.cos(2*np.pi*t/s) + 1.0 * np.sin(2*np.pi*t/s) + 0.6 * np.cos(4*np.pi*t/s)
+ar = np.zeros(T); eps = rng.normal(0, 0.5, T)
+for k in range(1, T):
+    ar[k] = phi * ar[k-1] + eps[k]
+y = trend + season + ar
+
+def acf(x, maxlag):
+    x = x - x.mean(); g0 = np.mean(x * x)
+    return np.array([np.mean(x[:len(x)-k] * x[k:]) / g0 for k in range(maxlag + 1)])
+
+raw = acf(y, 60)                                    # slow decay (trend) + spike at lag 52
+
+# --- decompose: least-squares fit of trend + K=3 Fourier, inspect residual ---
+X = fourier_design(t, s, 3)
+beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+resid = y - X @ beta
+res_acf = acf(resid, 10)
+
+# --- the story, asserted ---
+assert abs(res_acf[1] - phi) < 0.12                 # residual ACF recovers AR(1) phi
+def r2(K):
+    Xk = fourier_design(t, s, K); b, *_ = np.linalg.lstsq(Xk, y, rcond=None)
+    return 1 - np.var(y - Xk @ b) / np.var(y)
+assert r2(2) > r2(1)                                # an added harmonic raises the fit
+print(f"raw ACF lag1={raw[1]:.3f} lag2={raw[2]:.3f} seasonal lag52={raw[52]:.3f}")
+print(f"residual ACF lag1..3 = {np.round(res_acf[1:4], 3)}  (AR1 truth 0.7, 0.49, 0.343)")
+print(f"R^2 by K=1..4: {[round(r2(K), 3) for K in (1, 2, 3, 4)]}")
+
+# --- figures ---
+fig, ax = plt.subplots(1, 3, figsize=(15, 4))
+ax[0].stem(range(61), raw)
+ax[0].axvline(52, ls="--", color="grey"); ax[0].set_title("raw ACF: trend decay + seasonal spike")
+ax[0].set_xlabel("lag")
+ax[1].stem(range(11), res_acf)
+ax[1].plot(range(11), [phi**k for k in range(11)], "r--", label=r"$\phi^k$")
+ax[1].set_title("residual ACF recovers AR(1)"); ax[1].set_xlabel("lag"); ax[1].legend()
+ax[2].plot([1, 2, 3, 4], [r2(K) for K in (1, 2, 3, 4)], "o-")
+ax[2].set_title(r"fit $R^2$ vs Fourier order $K$"); ax[2].set_xlabel("K"); ax[2].set_ylabel(r"$R^2$")
+plt.tight_layout()
+plt.show()
+```
+
+The raw ACF (left) decays slowly — the fingerprint of a trend — with a bump at lag $52$ where
+the yearly cycle re-aligns. After removing trend and seasonal, the residual ACF (centre) snaps
+onto the geometric curve $\phi^k$: the AR(1) memory the simulation put in is exactly what the
+decomposition leaves behind. And the fit $R^2$ (right) climbs as harmonics are added and then
+plateaus once the true seasonal shape — here two harmonics — is captured. This is the whole
+chapter in one figure: autocorrelation as diagnostic, decomposition as the tool, and the
+Fourier order as the knob that trades parsimony against seasonal detail.
+
 ## Exercises
 
 ### C -- Conceptual / Reading Comprehension
