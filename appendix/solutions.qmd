@@ -1005,7 +1005,114 @@ assert diffs.max() < 0.15, f"deviation {diffs.max():.4f} exceeds 0.15"
 
 The Gibbs posterior means match the empirical-Bayes closed form within Monte Carlo and hyperparameter-uncertainty error. The full-Bayes intervals are wider because $\mu$ and $\tau^2$ are themselves uncertain: the posterior of $\theta_g$ is an average over the posterior of $(\mu,\tau^2)$, not a conditional at a point estimate — this is the honest accounting that empirical Bayes discards and full Bayes preserves.
 
-## Chapter 7 — Markov Chains
+## Chapter 7 — Time Series, Trend & Seasonality
+
+**C1.** (a) A *time series'* autocorrelation describes the real-world process — how this week's sales relate to past weeks' — and is signal to be modeled; an *MCMC chain's* autocorrelation describes a sampler's output — how correlated successive draws are — and is a computational nuisance to be minimized. (b) A *covariance-stationary series* is a stochastic process whose mean, variance, and autocovariances are invariant under a time shift; a Markov chain's *stationary distribution* $\pi$ is a single probability measure over states fixed by $\pi P = \pi$. The shared words ("autocorrelation," "stationary") name different objects in different settings; assuming a result about one transfers to the other is the trap.
+
+**C2.** A slow, near-linear decay over many lags with no oscillation is the signature of a **deterministic trend** (the series drifts, so distant points stay correlated). Strong AR(1) persistence also decays, but *geometrically* ($\rho_k=\phi^k$) and faster once $k$ grows; yearly seasonality produces a *periodic* ACF with a spike at the seasonal lag $s$ and dips in between, not a smooth decay. The absence of oscillation rules out seasonality; the near-linear (rather than geometric) decay points to a trend over pure AR(1).
+
+**C3.** *Statistical:* $K$ harmonics use $2K$ parameters versus $s-1$ for dummies (e.g. $6$ vs $51$ for a weekly year), so Fourier seasonality is far more parsimonious and the harmonic regressors are orthogonal, giving independent, low-variance coefficient estimates. *Practical:* the Fourier seasonal is smooth and extrapolates sensibly to unseen weeks, whereas per-week dummies are noisy, overfit short histories, and give no value for a week not yet observed.
+
+**B1.** With $\phi = 0.5$: $\rho_1 = 0.5$, $\rho_2 = 0.5^2 = 0.25$, $\rho_3 = 0.5^3 = 0.125$. Variance factor $1/(1-\phi^2) = 1/(1-0.25) = 1/0.75 = 1.3333$.
+
+**B2.** On $t = 0,1,2,3$ with $s=4$: $\cos(2\pi t/4)$ takes values $\cos 0 = 1$, $\cos(\pi/2)=0$, $\cos\pi=-1$, $\cos(3\pi/2)=0$. Then $\sum_{t=0}^{3}\cos^2 = 1^2 + 0^2 + (-1)^2 + 0^2 = 2 = s/2$.
+
+**B3.** $\sin(2\pi t/4)$ takes values $0, 1, 0, -1$. The product $\cos\cdot\sin$ is $1\cdot0,\ 0\cdot1,\ (-1)\cdot0,\ 0\cdot(-1) = 0,0,0,0$, so $\sum_{t=0}^{3}\cos(2\pi t/4)\sin(2\pi t/4) = 0$: cosine and sine at the first harmonic are orthogonal.
+
+**P1.** By definition $\rho_k = \gamma_k/\gamma_0$ with $\gamma_k = \mathrm{Cov}(y_t, y_{t+k})$. The Cauchy–Schwarz inequality gives $|\mathrm{Cov}(U,V)| \le \sqrt{\mathrm{Var}(U)\,\mathrm{Var}(V)}$. With $U = y_t$, $V = y_{t+k}$ and using constant variance $\mathrm{Var}(y_t) = \mathrm{Var}(y_{t+k}) = \gamma_0$ (covariance-stationarity), $|\gamma_k| \le \sqrt{\gamma_0\cdot\gamma_0} = \gamma_0$. Dividing by $\gamma_0 > 0$ yields $|\rho_k| \le 1$. $\blacksquare$
+
+**P2.** From $y_t = \sum_{j=0}^{\infty}\phi^j\varepsilon_{t-j}$, write $y_{t+k} = \sum_{i=0}^{\infty}\phi^i\varepsilon_{t+k-i}$. Then
+$$
+\gamma_k = \mathbb E[y_t\,y_{t+k}] = \sum_{j,i}\phi^j\phi^i\,\mathbb E[\varepsilon_{t-j}\varepsilon_{t+k-i}].
+$$
+The innovations are independent with $\mathbb E[\varepsilon_a\varepsilon_b] = \sigma^2$ if $a=b$ and $0$ otherwise; $\varepsilon_{t-j}$ and $\varepsilon_{t+k-i}$ coincide exactly when $i = j+k$. Substituting,
+$$
+\gamma_k = \sum_{j=0}^{\infty}\phi^j\phi^{j+k}\sigma^2 = \phi^k\sigma^2\sum_{j=0}^{\infty}\phi^{2j} = \phi^k\,\frac{\sigma^2}{1-\phi^2} = \phi^k\gamma_0,
+$$
+so $\rho_k = \gamma_k/\gamma_0 = \phi^k$. $\blacksquare$
+
+**P3.** Expand with Euler's formulas: $\cos\theta = \tfrac12(e^{i\theta}+e^{-i\theta})$ and $\sin\theta = \tfrac1{2i}(e^{i\theta}-e^{-i\theta})$. With $\theta_j = 2\pi j t/s$,
+$$
+\cos\theta_j\sin\theta_k = \frac{1}{4i}\big(e^{i\theta_j}+e^{-i\theta_j}\big)\big(e^{i\theta_k}-e^{-i\theta_k}\big)
+= \frac{1}{4i}\Big(e^{i\theta_{j+k}} - e^{-i\theta_{j+k}} - e^{i\theta_{j-k}} + e^{-i\theta_{j-k}}\Big),
+$$
+writing $\theta_{j\pm k} = 2\pi(j\pm k)t/s$. Summing over $t = 0,\dots,s-1$ and using $\sum_t e^{2\pi i m t/s} = s\,[m\equiv0\bmod s]$: for $1\le j,k<s/2$ we have $1 \le j+k < s$ (never $\equiv 0$) and $|j-k| < s/2 < s$ (zero only if $j=k$). Each exponential sum is therefore $0$ unless $j=k$; and when $j=k$, the surviving terms $-e^{i\theta_0}+e^{-i\theta_0}$ contribute $\tfrac1{4i}(-s + s) = 0$. Hence $\sum_{t=0}^{s-1}\cos(2\pi j t/s)\sin(2\pi k t/s) = 0$ for all such $j,k$. $\blacksquare$
+
+**A1.** Overlay the sample ACFs of AR(1) draws against the theoretical $\phi^k$:
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+def ar1(phi, T, rng):
+    y = np.zeros(T); e = rng.normal(0, 1, T)
+    for k in range(1, T):
+        y[k] = phi * y[k-1] + e[k]
+    return y
+def acf(x, maxlag):
+    x = x - x.mean(); g0 = np.mean(x * x)
+    return np.array([np.mean(x[:len(x)-k] * x[k:]) / g0 for k in range(maxlag + 1)])
+
+rng = np.random.default_rng(1)
+plt.figure(figsize=(7, 4))
+for phi in (0.3, 0.7, 0.95):
+    r = acf(ar1(phi, 2000, rng), 12)
+    line, = plt.plot(range(13), r, "o-", label=f"sample ACF, φ={phi}")
+    plt.plot(range(13), [phi**k for k in range(13)], "--", color=line.get_color())
+plt.xlabel("lag"); plt.ylabel("ACF"); plt.legend(); plt.tight_layout(); plt.show()
+```
+
+Larger $\phi$ means slower decay: persistence is read directly off the decay rate, and the sample ACFs track $\phi^k$ closely (e.g. at $\phi=0.7$, $\rho_1\approx0.69$ against the theoretical $0.70$).
+
+**A2.** Residual variance falls as harmonics are added, then plateaus once the true seasonal shape is captured:
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(2)
+s, T = 52, 312; t = np.arange(T)
+def design(t, s, K):
+    cols = [np.ones_like(t, dtype=float), t.astype(float)]
+    for j in range(1, K + 1):
+        cols.append(np.cos(2*np.pi*j*t/s)); cols.append(np.sin(2*np.pi*j*t/s))
+    return np.column_stack(cols)
+y = 0.01*t + 2*np.cos(2*np.pi*t/s) + np.sin(2*np.pi*t/s) + 0.6*np.cos(4*np.pi*t/s) + rng.normal(0, 0.5, T)
+rv = []
+for K in range(0, 7):
+    X = design(t, s, K) if K > 0 else np.column_stack([np.ones(T), t.astype(float)])
+    b, *_ = np.linalg.lstsq(X, y, rcond=None)
+    rv.append(np.var(y - X @ b))
+plt.figure(figsize=(6, 4)); plt.plot(range(7), rv, "o-")
+plt.xlabel("Fourier order K"); plt.ylabel("residual variance"); plt.tight_layout(); plt.show()
+print("residual variance by K=0..6:", [round(v, 3) for v in rv])
+```
+
+The drop is steep through $K=2$ (the true seasonal has two harmonics) and flat thereafter — added harmonics fit only noise.
+
+**A3.** Orthogonality means a harmonic's coefficients do not change when another harmonic is added — *exactly*, provided the design has no non-orthogonal column (drop the trend and fit on a whole number of periods):
+
+```{python}
+import numpy as np
+
+s, T = 52, 312; t = np.arange(T)          # T = 6*s, a whole number of periods
+def design(t, s, K):                       # intercept + harmonics only (all orthogonal here)
+    cols = [np.ones_like(t, dtype=float)]
+    for j in range(1, K + 1):
+        cols.append(np.cos(2*np.pi*j*t/s)); cols.append(np.sin(2*np.pi*j*t/s))
+    return np.column_stack(cols)
+rng = np.random.default_rng(3)
+y = 2*np.cos(2*np.pi*t/s) + np.sin(2*np.pi*t/s) + 0.6*np.cos(4*np.pi*t/s) + rng.normal(0, 0.5, T)
+b1, *_ = np.linalg.lstsq(design(t, s, 1), y, rcond=None)
+b2, *_ = np.linalg.lstsq(design(t, s, 2), y, rcond=None)
+print("first-harmonic (a1, b1) at K=1:", np.round(b1[1:3], 5))
+print("first-harmonic (a1, b1) at K=2:", np.round(b2[1:3], 5))
+assert np.allclose(b1[:3], b2[:3], atol=1e-10)
+```
+
+The first-harmonic coefficients are identical to machine precision. (A non-orthogonal column — a linear trend on a finite grid — would leak and perturb them slightly; orthogonality of the harmonics alone is what guarantees the clean independence.)
+
+## Chapter 8 — Markov Chains
 
 ### C — Conceptual / Reading Comprehension
 
@@ -1035,7 +1142,7 @@ $$
 
 The chain is irreducible: from state $1$ the chain reaches state $2$ in one step and vice versa. The unique stationary distribution solves $\pi P = \pi$ with $\pi_1 + \pi_2 = 1$: expanding the first component gives $0 \cdot \pi_1 + 1 \cdot \pi_2 = \pi_1$, so $\pi_2 = \pi_1$, hence $\pi = (1/2, 1/2)$. Yet starting from $\pi_0 = (1, 0)$ the chain is deterministic: $\pi_1 = (0, 1)$, $\pi_2 = (1, 0)$, $\pi_3 = (0, 1)$, and so on forever. The marginal $\pi_t$ alternates between $(1, 0)$ and $(0, 1)$ and never converges to $\pi = (1/2, 1/2)$. The period of every state is $2$ (all return times are even), so aperiodicity fails and the convergence theorem does not apply.
 
-**Spectral gap and mixing time.** The spectral gap $\gamma = 1 - |\lambda_2|$ controls the geometric rate at which $\pi_t$ approaches $\pi$ in total variation: $\lVert \pi_t - \pi \rVert \le C\,|\lambda_2|^t$. The mixing time $t_{\mathrm{mix}}(\varepsilon) \sim \log(1/\varepsilon)/\gamma$ is the number of steps before $\pi_t$ is within tolerance $\varepsilon$ of $\pi$. When $|\lambda_2|$ is close to $1$ the spectral gap is nearly zero, $|\lambda_2|^t$ decays only slowly, and $t_{\mathrm{mix}}(\varepsilon)$ grows without bound: the sampler must run for an impractically large number of steps before its output carries reliable information about the target. Slow mixing manifests as high autocorrelation, poor $\hat{R}$ values, and trace plots that drift rather than bounce — the precise failure mode that Chapters 9 and 10 address.
+**Spectral gap and mixing time.** The spectral gap $\gamma = 1 - |\lambda_2|$ controls the geometric rate at which $\pi_t$ approaches $\pi$ in total variation: $\lVert \pi_t - \pi \rVert \le C\,|\lambda_2|^t$. The mixing time $t_{\mathrm{mix}}(\varepsilon) \sim \log(1/\varepsilon)/\gamma$ is the number of steps before $\pi_t$ is within tolerance $\varepsilon$ of $\pi$. When $|\lambda_2|$ is close to $1$ the spectral gap is nearly zero, $|\lambda_2|^t$ decays only slowly, and $t_{\mathrm{mix}}(\varepsilon)$ grows without bound: the sampler must run for an impractically large number of steps before its output carries reliable information about the target. Slow mixing manifests as high autocorrelation, poor $\hat{R}$ values, and trace plots that drift rather than bounce — the precise failure mode that Chapters 10 and 11 address.
 
 **C3.** Solving the global linear system $\pi P = \pi$ requires handling $m$ coupled equations in $m$ unknowns simultaneously — a system whose size grows with the full state space and whose solution simultaneously determines every component of $\pi$ relative to a normalizing constraint. By contrast, **detailed balance** is a *local* condition: one scalar equation per ordered pair $(i, j)$,
 
@@ -1219,7 +1326,7 @@ for ch, name in enumerate(["Display", "Search", "Email"]):
 
 Channels with higher removal effects are the more indispensable drivers of revenue: the ranking reflects not just each channel's own direct conversion rate but its structural role in enabling other channels' paths to Convert. The Markov-chain attribution framework makes this structural contribution exact rather than heuristic.
 
-**A2.** On the log-linear distance plot the empirical decay slope will closely match $\log|\lambda_2|$ once the distribution moves away from the numerical floor — the geometric decay governed by the subdominant eigenvalue dominates after the first few steps. The running time-average of $\mathbf{1}[X_t = x_0]$ will stabilize near $\pi_{x_0}$ after a burn-in period of order $t_{\mathrm{mix}} \sim 1/\gamma$; for a chain with a large spectral gap this happens quickly, while for $|\lambda_2|$ near $1$ the trace remains noisy for a long time. The Metropolis chain will recover the target $w/\sum w$ because only the ratio $w_j/w_i$ appears in the acceptance step — the normalizing constant $\sum_k w_k$ cancels identically, the mechanism that makes Metropolis–Hastings applicable to unnormalized posteriors in Chapter 8.
+**A2.** On the log-linear distance plot the empirical decay slope will closely match $\log|\lambda_2|$ once the distribution moves away from the numerical floor — the geometric decay governed by the subdominant eigenvalue dominates after the first few steps. The running time-average of $\mathbf{1}[X_t = x_0]$ will stabilize near $\pi_{x_0}$ after a burn-in period of order $t_{\mathrm{mix}} \sim 1/\gamma$; for a chain with a large spectral gap this happens quickly, while for $|\lambda_2|$ near $1$ the trace remains noisy for a long time. The Metropolis chain will recover the target $w/\sum w$ because only the ratio $w_j/w_i$ appears in the acceptance step — the normalizing constant $\sum_k w_k$ cancels identically, the mechanism that makes Metropolis–Hastings applicable to unnormalized posteriors in Chapter 9.
 
 A reference sketch:
 
@@ -1269,7 +1376,7 @@ assert np.allclose(freq, p_star, atol=0.015)
 
 The Metropolis acceptance ratio $\min(1, w_j/w_i)$ uses only the unnormalized weights: the common denominator $Z = \sum_k w_k$ appears in both $\pi_j = w_j/Z$ and $\pi_i = w_i/Z$ and cancels identically. This cancellation is not a computational convenience — it is the structural property that makes Metropolis–Hastings the standard inference engine for Bayesian posteriors whose normalizing constant is an intractable integral over parameter space.
 
-## Chapter 8 — Markov Chain Monte Carlo
+## Chapter 9 — Markov Chain Monte Carlo
 
 ### C — Conceptual / Reading Comprehension
 
@@ -1285,7 +1392,7 @@ is unbiased ($\mathbb{E}[\hat\mu_n] = \mathbb{E}_\pi[f]$) with standard deviatio
 
 **The obstacle.** Drawing i.i.d. from a complex posterior requires either the closed-form quantile function — unavailable in more than one dimension — or a rejection envelope $\pi(x) \le M\,q(x)$ with a tractable bounding constant $M$. In high dimensions $M$ grows exponentially in $p$ as the proposal $q$ and the target $\pi$ diverge in their concentration, making rejection sampling prohibitive. The posteriors of Chapter 5 — non-conjugate likelihoods, half-normal priors, adstock nonlinearities — have no closed-form sampler.
 
-**Why dependent draws still work.** Chapter 7's **ergodic theorem** states that for any irreducible Markov chain with stationary distribution $\pi$, the time average
+**Why dependent draws still work.** Chapter 8's **ergodic theorem** states that for any irreducible Markov chain with stationary distribution $\pi$, the time average
 
 $$
 \frac{1}{n}\sum_{t=1}^n f(X_t) \xrightarrow{\ \text{a.s.}\ } \mathbb{E}_\pi[f]
@@ -1317,7 +1424,7 @@ $$
 \frac{\pi(x_i',x_{-i})\,p(x_i\mid x_{-i})}{\pi(x_i,x_{-i})\,p(x_i'\mid x_{-i})} = \frac{p(x_i'\mid x_{-i})\,\pi(x_{-i})\,p(x_i\mid x_{-i})}{p(x_i\mid x_{-i})\,\pi(x_{-i})\,p(x_i'\mid x_{-i})} = 1,
 $$
 
-so $\alpha \equiv 1$: every Gibbs proposal is accepted with certainty. The Chapter 6 hierarchical sampler cycles through conjugate full conditionals for $\beta_g$, $\mu_\beta$, $\Sigma_\beta$, and $\sigma^2$ — it is exactly a Gibbs sampler, now justified by this invariance result together with Chapter 7's ergodic theorem.
+so $\alpha \equiv 1$: every Gibbs proposal is accepted with certainty. The Chapter 6 hierarchical sampler cycles through conjugate full conditionals for $\beta_g$, $\mu_\beta$, $\Sigma_\beta$, and $\sigma^2$ — it is exactly a Gibbs sampler, now justified by this invariance result together with Chapter 8's ergodic theorem.
 
 **Metropolis-within-Gibbs** handles the case where one block lacks a tractable full conditional: that block's Gibbs draw is replaced by a Metropolis–Hastings step targeting its full conditional. Each update — whether a direct Gibbs draw or a Metropolis step targeting the same conditional — leaves $\pi$ invariant, so the composition of all updates is again invariance-preserving.
 
@@ -1409,7 +1516,7 @@ $$
 \pi(y)P(y,x) = \pi(y)\,q(x\mid y)\,\min\!\left(1,\frac{\pi(x)\,q(y\mid x)}{\pi(y)\,q(x\mid y)}\right) = \min\!\bigl(\pi(y)\,q(x\mid y),\;\pi(x)\,q(y\mid x)\bigr),
 $$
 
-which is the identical quantity. Therefore $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all $x \ne y$; the diagonal satisfies detailed balance trivially. By Chapter 7's detailed-balance-implies-stationarity theorem, $\pi$ is stationary for this kernel. $\blacksquare$
+which is the identical quantity. Therefore $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all $x \ne y$; the diagonal satisfies detailed balance trivially. By Chapter 8's detailed-balance-implies-stationarity theorem, $\pi$ is stationary for this kernel. $\blacksquare$
 
 **P2.** *Claim.* (i) The Gibbs full-conditional update $x_i' \sim p(\cdot\mid x_{-i})$ with $x_{-i}' = x_{-i}$ leaves $\pi$ invariant. (ii) This update is Metropolis–Hastings with acceptance probability identically $1$.
 
@@ -1561,7 +1668,7 @@ assert abs(chain_mh.mean() - grid_mean) < 0.1
 
 **Takeaway.** The Gibbs autocorrelation rises steeply with $\rho$ and ESS collapses — confirming the $\rho^2$ lag-1 formula and the slow-mixing ridge geometry that motivates Hamiltonian Monte Carlo. For the non-conjugate logistic posterior, MCMC recovers the correct posterior without ever computing the normalizing constant, demonstrating that the intractability identified in Chapter 5 is fully resolved by Metropolis–Hastings.
 
-## Chapter 9 — Hamiltonian Monte Carlo & NUTS
+## Chapter 10 — Hamiltonian Monte Carlo & NUTS
 
 ### C — Conceptual / Reading Comprehension
 
@@ -1758,15 +1865,15 @@ $$
 \alpha = \min\!\left(1,\; \frac{\pi(T(q,p))}{\pi(q,p)}\cdot|\det \partial T|\right) = \min\!\left(1,\; \frac{e^{-H(q^*,\,p^*)}}{e^{-H(q,\,p)}}\cdot 1\right) = \min\!\bigl(1,\, e^{-\Delta H}\bigr),
 $$
 
-with neither a Jacobian factor ($|\det \partial T| = 1$) nor a proposal-ratio correction. By Chapter 8's Metropolis–Hastings detailed-balance theorem, this kernel satisfies detailed balance with respect to the joint density $e^{-H(q,p)}$, making $e^{-H}$ invariant under the leapfrog-plus-Metropolis sub-step.
+with neither a Jacobian factor ($|\det \partial T| = 1$) nor a proposal-ratio correction. By Chapter 9's Metropolis–Hastings detailed-balance theorem, this kernel satisfies detailed balance with respect to the joint density $e^{-H(q,p)}$, making $e^{-H}$ invariant under the leapfrog-plus-Metropolis sub-step.
 
-The momentum-resampling sub-step draws $p$ from its conditional distribution $\mathcal{N}(0,M)$ given $q$, which is exactly the marginal of $e^{-H} = e^{-U(q)}e^{-K(p)}$ in $p$. This is a **Gibbs step** on the $p$-block, which leaves the joint $e^{-H}$ invariant by Chapter 8's Gibbs invariance result (P2 of that chapter).
+The momentum-resampling sub-step draws $p$ from its conditional distribution $\mathcal{N}(0,M)$ given $q$, which is exactly the marginal of $e^{-H} = e^{-U(q)}e^{-K(p)}$ in $p$. This is a **Gibbs step** on the $p$-block, which leaves the joint $e^{-H}$ invariant by Chapter 9's Gibbs invariance result (P2 of that chapter).
 
 Since both sub-steps preserve $e^{-H}$, their composition does as well. Integrating out $p$, the $q$-marginal of $e^{-H}$ is $e^{-U(q)} = \pi(q)$ (up to normalization), so $\pi(q)$ is invariant under the full HMC step. $\blacksquare$
 
 ### A — Applied / Code
 
-**A1.** Implement a leapfrog integrator and an HMC sampler for $\mathcal{N}(0,\Sigma)$ with $\Sigma = \bigl[\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\bigr]$, alongside a random-walk Metropolis baseline. At matched iteration counts, HMC's effective sample size substantially exceeds that of random-walk Metropolis, and the gap grows sharply as $\rho \to 1$: near $\rho = 0.95$ the ratio exceeds two orders of magnitude, confirming the collapse of RWM ESS that Chapter 8 diagnosed theoretically. Studying the acceptance rate and mean $|\Delta H|$ as a function of step size $\varepsilon$ confirms the expected monotone trade-off — acceptance falls and energy error grows with $\varepsilon$ — and identifies a well-tuned step size in the recommended acceptance band of $0.65$–$0.8$.
+**A1.** Implement a leapfrog integrator and an HMC sampler for $\mathcal{N}(0,\Sigma)$ with $\Sigma = \bigl[\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\bigr]$, alongside a random-walk Metropolis baseline. At matched iteration counts, HMC's effective sample size substantially exceeds that of random-walk Metropolis, and the gap grows sharply as $\rho \to 1$: near $\rho = 0.95$ the ratio exceeds two orders of magnitude, confirming the collapse of RWM ESS that Chapter 9 diagnosed theoretically. Studying the acceptance rate and mean $|\Delta H|$ as a function of step size $\varepsilon$ confirms the expected monotone trade-off — acceptance falls and energy error grows with $\varepsilon$ — and identifies a well-tuned step size in the recommended acceptance band of $0.65$–$0.8$.
 
 ```python
 import numpy as np
@@ -1842,7 +1949,7 @@ for eps in [0.1, 0.25, 0.5, 0.8, 1.2]:
     print(f"{eps:.2f}   {acc:.3f}    {mdh:.4f}")
 ```
 
-**Takeaway.** HMC's ESS approaches the chain length at any $\rho$ because gradient guidance keeps trajectories within the posterior's high-density contours, proposing moves that are far and accepted with near-unit probability. Random-walk Metropolis ESS collapses toward zero as $\rho \to 1$, quantitatively confirming Chapter 8's autocorrelation analysis. The $\varepsilon$ sweep reveals that the acceptance band $0.65$–$0.8$ corresponds to small but bounded mean $|\Delta H|$; below this band ESS is limited by short moves, above it by frequent rejection, and the Metropolis filter discards most proposals.
+**Takeaway.** HMC's ESS approaches the chain length at any $\rho$ because gradient guidance keeps trajectories within the posterior's high-density contours, proposing moves that are far and accepted with near-unit probability. Random-walk Metropolis ESS collapses toward zero as $\rho \to 1$, quantitatively confirming Chapter 9's autocorrelation analysis. The $\varepsilon$ sweep reveals that the acceptance band $0.65$–$0.8$ corresponds to small but bounded mean $|\Delta H|$; below this band ESS is limited by short moves, above it by frequent rejection, and the Metropolis filter discards most proposals.
 
 **A2.** Implement Neal's funnel $v \sim \mathcal{N}(0, 3^2)$, $x \mid v \sim \mathcal{N}(0, e^v)$ in both its centered and non-centered parameterizations, and run fixed-$(\varepsilon, L)$ HMC on each. The centered parameterization accumulates many divergent transitions (iterations where $|\Delta H|$ exceeds a large threshold or is non-finite), concentrated at negative values of $v$ where the curvature of the potential in the $x$ direction scales as $e^{-v}$ and grows exponentially in the funnel's neck. The non-centered parameterization $\tilde{x} \sim \mathcal{N}(0,1)$, $x = \tilde{x}e^{v/2}$ presents a geometrically uniform landscape — a product of two independent Gaussians — where divergences vanish entirely and the recovered $v$-marginal matches $\mathcal{N}(0, 9)$.
 
@@ -1908,7 +2015,7 @@ print(f"Non-centered v:  mean = {v_nc.mean():.3f}  (expect ~0),  "
 
 **Takeaway.** The centered funnel's divergences are a direct signal that a fixed $\varepsilon$ cannot cope with the curvature gradient between the funnel's wide mouth and its narrow neck. The non-centered form presents a geometrically flat landscape in $(\tilde{x}, v)$ coordinates that a single step size handles throughout — confirmed by zero divergences and a $v$-marginal that recovers the correct mean and variance. Divergence elimination together with $v$-marginal recovery demonstrates that the reparameterization cures the geometric obstruction rather than merely suppressing a symptom.
 
-## Chapter 10 — Model Checking & Calibration
+## Chapter 11 — Model Checking & Calibration
 
 ### C — Conceptual / Reading Comprehension
 
@@ -2039,7 +2146,7 @@ print(f"difference = {e1 - e2:.2f}  (positive favors model 1)")
 ```
 The correctly specified model (unit variance) attains the higher $\widehat{\text{elpd}}_{\text{WAIC}}$ and is preferred. Whether the gap is decisive is judged against its standard error — the standard deviation of the pointwise elpd differences times $\sqrt{n}$ — and a difference smaller than two or three of those is not strong evidence either way.
 
-## Chapter 11 — Convexity Theory
+## Chapter 12 — Convexity Theory
 
 ### C — Conceptual / Reading Comprehension
 
@@ -2146,7 +2253,7 @@ print("distinct optima:", distinct)
 ```
 The eight starts split between the interior optimum (total $\approx 1.0$) and the corner optima (total $\approx 0.8$): two distinct values from one problem. Without convexity the starting point selects the basin, exactly as Rung 10 warns — the global optimum is found only because *some* of the starts happened to begin near it.
 
-## Chapter 12 — Linear Programming
+## Chapter 13 — Linear Programming
 
 ### C — Conceptual / Reading Comprehension
 
@@ -2208,7 +2315,7 @@ print("dual objective =", round(dual_obj, 4), " (== primal => strong duality)")
 ```
 The optimum is $x^\star = (2,2)$ with value $10$; the shadow prices are $(2,1)$; and the dual objective $4(2)+2(1) = 10$ equals the primal value — zero gap, strong duality confirmed by the solver.
 
-**A2.** Refine a piecewise-linear secant fit of $\sqrt{\cdot}$ response and watch the LP converge to Chapter 11's smooth optimum.
+**A2.** Refine a piecewise-linear secant fit of $\sqrt{\cdot}$ response and watch the LP converge to Chapter 12's smooth optimum.
 ```{python}
 import numpy as np
 from scipy.optimize import linprog
@@ -2233,7 +2340,7 @@ for K in [3, 10, 50, 200]:
     print(f"K={K:3d}  b=({b[0]:.3f},{b[1]:.3f})  lambda={lam:.4f}  resp={val:.4f}")
 print("smooth optimum: b*=(7.2,1.8), lambda=0.3727, resp=%.4f" % (2*np.sqrt(7.2)+np.sqrt(1.8)))
 ```
-As $K$ grows the allocation snaps to $(7.2, 1.8)$ and the budget shadow price climbs toward $\lambda = 0.3727$ with response $6.7082$ — Chapter 11's hand-derived answer, recovered as an LP dual price.
+As $K$ grows the allocation snaps to $(7.2, 1.8)$ and the budget shadow price climbs toward $\lambda = 0.3727$ with response $6.7082$ — Chapter 12's hand-derived answer, recovered as an LP dual price.
 
 **A3.** For an S-shaped response, "fill steepest first" diverges from the true optimum.
 ```{python}
@@ -2258,15 +2365,15 @@ print(f"corner (all in one channel): total={hill(B)+hill(0):.4f}")
 print("fill-steepest-first would chase the mid-curve steep segments and miss"
       " the better symmetric split -- the LP relaxation no longer matches the problem.")
 ```
-The slopes rise then fall, so the steepest segments are interior; the true optimum is the symmetric split with the higher total, which a steepest-first fill does not find. Once concavity is lost the LP and the true problem part ways — the boundary of Rung 9, and the start of Chapter 13.
+The slopes rise then fall, so the steepest segments are interior; the true optimum is the symmetric split with the higher total, which a steepest-first fill does not find. Once concavity is lost the LP and the true problem part ways — the boundary of Rung 9, and the start of Chapter 14.
 
-## Chapter 13 — Constrained Nonlinear Optimization & SLSQP
+## Chapter 14 — Constrained Nonlinear Optimization & SLSQP
 
 ### C — Conceptual / Reading Comprehension
 
-**C1.** The word *global* in "global convergence" describes the **starting point**, not the answer: SLSQP converges from *any* initial point to a point satisfying the KKT conditions — a stationary point and *local* optimum. It is not a promise of the global optimum, because by Chapter 11's keystone a local KKT point equals the global optimum only when the problem is convex; off the convex world a non-convex problem has several KKT points of differing value, and the solver slides into whichever basin it started in. The practical remedy is **multi-start**: run from many spread-out initial allocations and keep the best KKT point found. It is a strategy, not a certificate, because it can only report the best optimum it *happened* to find — nothing in it proves a better one does not exist in an unsampled basin.
+**C1.** The word *global* in "global convergence" describes the **starting point**, not the answer: SLSQP converges from *any* initial point to a point satisfying the KKT conditions — a stationary point and *local* optimum. It is not a promise of the global optimum, because by Chapter 12's keystone a local KKT point equals the global optimum only when the problem is convex; off the convex world a non-convex problem has several KKT points of differing value, and the solver slides into whichever basin it started in. The practical remedy is **multi-start**: run from many spread-out initial allocations and keep the best KKT point found. It is a strategy, not a certificate, because it can only report the best optimum it *happened* to find — nothing in it proves a better one does not exist in an unsampled basin.
 
-**C2.** The KKT map whose root we chase is $F(x,\lambda) = (\nabla f + \nabla c^\top \lambda,\ c)$. Its Jacobian — the matrix every Newton step factors — has top-left block $\partial_x(\nabla f + \nabla c^\top \lambda) = \nabla^2 f + \sum_i \lambda_i \nabla^2 c_i = \nabla^2_{xx}\mathcal{L}$. The constraint-curvature terms $\sum_i \lambda_i \nabla^2 c_i$ appear precisely because differentiating the multiplier-weighted constraint gradients pulls in the constraints' second derivatives. A quadratic model built from $\nabla^2 f$ alone would therefore be the Jacobian of the *wrong* map — it would ignore how the constraint surfaces bend away from their linearization — and the resulting step would not be Newton's method on the true KKT system, forfeiting the quadratic convergence. The terms vanish exactly when every constraint is **linear**, $\nabla^2 c_i = 0$, so $\nabla^2_{xx}\mathcal{L} = \nabla^2 f$; that is Chapter 12's affine world, where the constraint linearization is exact rather than approximate.
+**C2.** The KKT map whose root we chase is $F(x,\lambda) = (\nabla f + \nabla c^\top \lambda,\ c)$. Its Jacobian — the matrix every Newton step factors — has top-left block $\partial_x(\nabla f + \nabla c^\top \lambda) = \nabla^2 f + \sum_i \lambda_i \nabla^2 c_i = \nabla^2_{xx}\mathcal{L}$. The constraint-curvature terms $\sum_i \lambda_i \nabla^2 c_i$ appear precisely because differentiating the multiplier-weighted constraint gradients pulls in the constraints' second derivatives. A quadratic model built from $\nabla^2 f$ alone would therefore be the Jacobian of the *wrong* map — it would ignore how the constraint surfaces bend away from their linearization — and the resulting step would not be Newton's method on the true KKT system, forfeiting the quadratic convergence. The terms vanish exactly when every constraint is **linear**, $\nabla^2 c_i = 0$, so $\nabla^2_{xx}\mathcal{L} = \nabla^2 f$; that is Chapter 13's affine world, where the constraint linearization is exact rather than approximate.
 
 **C3.** The $\ell_1$ merit function $\phi(x;\mu) = f(x) + \mu \sum_i |c_i(x)|_+$ folds objective and total constraint violation into one scalar that is low only where $f$ is small *and* the constraints are nearly met, so a decrease in $\phi$ is an honest measure of progress that cannot be fooled by an objective that drops by fleeing feasibility. The backtracking line search takes $x_{k+1} = x_k + \alpha p$, starting at $\alpha = 1$ and halving until $\phi$ decreases sufficiently (Armijo), shortening the step when the full SQP step overreaches. A positive-definite $B_k$ is what makes $p$ a descent direction for $\phi$: the QP's predicted reduction in the linearized objective along $p$ is a genuine decrease because $B_k \succ 0$, and the QP drives the linearized violation to zero, so for $\mu$ larger than the multiplier magnitudes the violation-reduction dominates any objective increase and $D_p\phi < 0$.
 
@@ -2367,7 +2474,7 @@ print("Newton errors:", [f"{e:.1e}" for e in errs])
 ```
 The Newton error plunges to machine precision in four steps while the linear reference is still nibbling away one bit per iteration — the digit-doubling of the convergence theorem, the speed inside every SLSQP step.
 
-## Chapter 14 — The MMM Data-Generating Process
+## Chapter 15 — The MMM Data-Generating Process
 
 **C1.** The normalized weights $w_k = (1-\lambda)\lambda^k$ sum to $1$, so a constant input $x$ maps to $x \cdot \sum_k w_k = x$: the level is preserved. The *unnormalized* weights $\lambda^k$ sum to $1/(1-\lambda)$, so the same constant input maps to $x/(1-\lambda)$, inflated by the carryover. The consequence for $\beta_i$ is interpretive: under the normalized convention $\beta_i$ is revenue per unit of *spend* at steady state, a stable quantity; under the unnormalized convention $\beta_i$ is revenue per unit of *accumulated effective exposure*, so its scale is entangled with $\lambda$ (the two parameterizations' coefficients differ by exactly $1/(1-\lambda)$).
 
@@ -2468,7 +2575,7 @@ plt.tight_layout(); plt.show()
 
 Every $(\beta, K)$ pair on the curve yields a contribution of exactly $0.5$ at $x_0 = 3$ — the flat likelihood ridge of Proof P4. Data at one operating point cannot pick a point along it; only spend at *other* levels can.
 
-## Chapter 15 — Building & Fitting an MMM
+## Chapter 16 — Building & Fitting an MMM
 
 **C1.** Fit measures how close the model's fitted trajectory is to the observed series; recovery measures how close the inferred parameters are to the ones that generated the data. They diverge whenever different parameter vectors produce nearly the same trajectory — the identification ridge. A model can ride the ridge to an excellent in-sample fit while sitting far from the true parameters, so a small residual is no guarantee that the response curve, the adstock decay, or the channel attribution is right. Only knowing the truth (synthetic data) exposes the gap.
 
