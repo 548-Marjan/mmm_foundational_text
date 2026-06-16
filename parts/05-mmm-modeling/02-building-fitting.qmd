@@ -14,7 +14,53 @@ The tension from Chapter 14's wound runs through everything that follows. When s
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The theory develops in three rungs. Rung 1 translates Chapter 14's structural equation directly into a Gaussian likelihood, identifies the mean function, and contrasts the nonlinear role of $(K, n, \lambda)$ here with the linear case of Chapter 5. Proposition P1 then establishes the non-conjugacy of this likelihood — the formal obstruction that forces approximate or sampling-based inference. Rung 2 specifies weakly informative priors that encode domain knowledge and carry the regularization load on the directions the likelihood cannot pin.
+
+### Rung 1 — From DGP to likelihood
+
+Chapter 14's generative model runs forward: a parameter vector $\theta = (\beta, K, n, \lambda, \ldots)$ produces a mean trajectory through the adstock–saturation pipeline, and Gaussian noise is added on top. Bayesian inference runs the same model backward. The key observation is that the noise model — already specified in Chapter 14's structural equation — supplies a Gaussian likelihood directly.
+
+Collect the baseline terms into a single function $\text{baseline}_t$ — absorbing the intercept, trend, seasonality, and any controls — so that the **mean function** is
+
+$$
+\mu_t(\theta) = \text{baseline}_t + \sum_{i=1}^{C} \beta_i\, g\!\big(a_\lambda(x_{i,t});\, K_i,\, n_i\big).
+$$
+
+The noise term $\varepsilon_t \sim \mathcal{N}(0, \sigma^2)$ from Rung 1 of Chapter 14 then determines the observation model: each week's sales is Gaussian around its mean,
+
+$$
+y_t \mid \theta \;\sim\; \mathcal{N}\!\big(\mu_t(\theta),\, \sigma^2\big), \qquad t = 1, \ldots, T.
+$$
+
+Assuming conditional independence across weeks, the joint log-likelihood factors into a sum over time:
+
+$$
+\ell(\theta) = -\frac{1}{2\sigma^2}\sum_{t=1}^{T} \big(y_t - \mu_t(\theta)\big)^2 - T\log\sigma + \text{const}.
+$$
+
+**Contrast with Chapter 5.** In the Bayesian linear regression of Chapter 5 the mean function was $\mu_t = X_t^\top \beta$ — linear in the parameters — and the likelihood was a Gaussian in $\beta$ that could be analyzed in closed form. Here $\mu_t(\theta)$ is **nonlinear** in $(K_i, n_i, \lambda_i)$: the Hill function $g(a;\, K, n) = a^n / (K^n + a^n)$ is a rational power function of $(K, n)$, and the adstock $a_\lambda(x)_t = \sum_{k=0}^{\infty} \lambda^k x_{t-k}$ is a weighted sum whose weights are powers of $\lambda$. That nonlinearity breaks the conjugate structure and makes the posterior intractable — as the proposition below establishes.
+
+### Proposition P1 — Non-conjugacy
+
+> **Proposition P1.** The posterior $p(\theta \mid y_{1:T})$ has no closed form: no standard conjugate prior family closes the Gaussian likelihood of Rung 1 under multiplication.
+
+**Proof (sketch).** Conjugacy requires that the prior and likelihood share a functional form such that their product is the kernel of a distribution from the same family. For parameters entering the likelihood *linearly* — such as $\beta_i$ in the large-$K$ limit where $g \approx x/K$ is nearly linear — a Gaussian or half-normal prior on $\beta_i$ closes under the Gaussian likelihood, yielding a Gaussian posterior. The closure fails for $(K_i, n_i, \lambda_i)$. The likelihood's dependence on these parameters enters through $g(a_\lambda(x_{i,t});\, K_i, n_i) = a_\lambda(x_{i,t})^{n_i}/(K_i^{n_i} + a_\lambda(x_{i,t})^{n_i})$ — a rational power function — and through the adstock weights $\lambda_i^k$, powers of $\lambda_i$ summed over all lags. Multiplying the Gaussian likelihood by any standard prior on $(K_i, n_i, \lambda_i)$ — Beta, Gamma, half-normal, log-normal — does not produce the kernel of a recognized distribution: no functional identity collapses the product into a named family, and the normalizing constant $\int p(y_{1:T} \mid \theta)\, p(\theta)\, d\theta$ has no closed-form expression. We must therefore either approximate the posterior (MAP estimation combined with a Laplace approximation around the mode) or sample it directly (MCMC). The remainder of this chapter uses the latter. $\blacksquare$
+
+### Rung 2 — Priors
+
+Because the likelihood cannot identify all of $\theta$ — the wound from Chapter 14 runs straight through the posterior — the choice of prior is not cosmetic: it is load-bearing. A prior encodes domain knowledge about plausible parameter values and regularizes the posterior in the directions the likelihood cannot pin. The guiding principle is **weakly informative**: the prior should exclude physically impossible or economically absurd values without forcing the posterior away from what the data actually say.
+
+**Adstock decay $\lambda_i \sim \text{Beta}(2, 2)$.** The decay parameter lives on $[0, 1)$ by definition. A $\text{Beta}(2, 2)$ distribution is symmetric around $0.5$, placing mass in the interior and ruling out both zero carryover ($\lambda = 0$, no memory at all) and near-permanent memory ($\lambda \to 1$), while remaining diffuse enough to move toward the data's verdict. If category-level evidence suggests shorter or longer carryover, the Beta's two shape parameters can encode that asymmetry.
+
+**Half-saturation point $K_i \sim \text{HalfNormal}(\sigma_K)$.** The half-saturation point is strictly positive — it is a spend level. A half-normal prior places mass on $(0, \infty)$ with a single scale parameter. The scale $\sigma_K$ should be set to the order of magnitude of the observed spend distribution for channel $i$: if typical weekly spend runs in the hundreds of thousands, a matching $\sigma_K$ keeps the prior from anchoring far from realistic values.
+
+**Shape exponent $n_i \sim \text{HalfNormal}(\sigma_n)$.** The shape exponent is positive by the Hill function's definition, and empirical marketing saturations rarely exhibit very large shape parameters. A half-normal with scale $\sigma_n \approx 1$ places prior mass near the range $1$–$2$ — covering pure concavity ($n \le 1$) and mild S-shape ($n \approx 2$) — while permitting larger values if the data support a pronounced convex toe.
+
+**Channel scale $\beta_i \sim \text{HalfNormal}(\sigma_\beta)$.** Channel coefficients are non-negative: advertising raises sales or has no effect, but does not reduce them. A half-normal encodes this sign constraint while remaining diffuse over the plausible range of revenue per unit of saturated exposure.
+
+**Noise scale $\sigma \sim \text{HalfNormal}(\sigma_0)$.** The observation noise is a standard deviation and therefore positive. A half-normal prior on $\sigma$ is weakly informative and guards against posteriors that collapse $\sigma$ toward zero — a pathology that can arise when a flexible mean function overfits in-sample.
+
+**Throughline to Proof P2.** Together, these priors ensure that the posterior $p(\theta \mid y_{1:T})$ is proper even when the likelihood is nearly flat along the identification ridge from Chapter 14. Proof P2 (later in this chapter) will make this precise: when the data are weak — when spend is confined to a narrow operating range — the likelihood supplies almost no curvature in the $(K_i, \beta_i)$ direction, and the half-normal priors on $K_i$ and $\beta_i$ provide the missing regularization, keeping the posterior concentrated without overriding the data's verdict where the data *are* informative. The prior is the correct Bayesian formalization of the domain knowledge that advertising effects are positive, bounded, and measured on scales the practitioner can calibrate before seeing the data.
 
 ## Worked Examples
 
