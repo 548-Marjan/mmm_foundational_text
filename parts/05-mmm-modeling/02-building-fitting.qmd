@@ -122,6 +122,50 @@ When spend instead spans a range of operating points, the gradient vectors $\{\n
 
 **Step 4 — Answering Chapter 14's open question.** Chapter 14 closed with the question: *how much spend variation is enough?* The Fisher information matrix gives a crisp answer. Spend variation is sufficient for local identifiability if and only if the resulting gradient vectors $\{\nabla_\theta\mu_t(\theta_0)\}_{t=1}^T$ span the parameter space — equivalently, if $I(\theta_0)$ is nonsingular. For the two-parameter slice $(\beta, K)$ of the worked example to follow, this means at least two time points whose spending levels produce non-parallel gradient vectors: two distinct operating points on the Hill curve whose tangent directions in $(\beta, K)$-space are linearly independent. One operating point is always insufficient, because it yields a rank-one $I(\theta_0)$; two generic operating points generically suffice. $\blacksquare$
 
+### Rung 4 — The fitting workflow
+
+Bayesian inference for the MMM follows five stages in disciplined sequence, each catching a distinct failure mode before the next stage begins.
+
+**(1) Prior predictive check.** Draw $\theta \sim p(\theta)$, pass each draw through the mean function $\mu_t(\theta)$, and simulate a sales series; the distribution of simulated series should look plausible — bounded, seasonal, in the right order of magnitude — before any observed data enter the analysis.
+
+**(2) Fit.** Condition on $y_{1:T}$ and locate the posterior $p(\theta \mid y_{1:T})$, either by finding the MAP mode and forming a Laplace approximation around it, or by running a gradient-based sampler (Chapters 8–9) to draw directly from the posterior.
+
+**(3) Convergence diagnostics.** Inspect $\hat{R}$, effective sample size, and divergence counts for each parameter (Chapter 10); values of $\hat{R} > 1.01$, low effective sample sizes, or any divergences signal that the chains have not mixed and the draws do not faithfully represent $p(\theta \mid y_{1:T})$.
+
+**(4) Posterior predictive check.** Draw replicated series $y^{\text{rep}}_{1:T}$ by sampling $\theta$ from the posterior and simulating forward; compare them to the observed series to test whether the fitted model reproduces the scale, seasonality, and autocorrelation structure of the data, or whether a systematic discrepancy reveals model misspecification.
+
+**(5) Parameter recovery.** Because the data are synthetic and the true $\theta$ is on record, compare each marginal posterior to its ground-truth value; a 90% credible interval that contains the true value constitutes recovery, and a posterior that fits the series but concentrates on the wrong parameter vector signals the identification wound.
+
+### Proof P2 — Prior dominates the unidentified ridge
+
+> **Proposition P2.** Suppose the log-likelihood is flat along a direction $d$ at $\theta_0$: $\ell(\theta_0 + s\,d) = \ell(\theta_0)$ for all $s$ in a neighborhood of $0$. Then along that ridge the posterior is proportional to the prior: $p(\theta_0 + s\,d \mid y) \propto p(\theta_0 + s\,d)$, and the conditional posterior density of $s$ is the prior restricted to the ridge.
+
+**Proof.** Define $L_0 := e^{\ell(\theta_0)}$. By assumption,
+
+$$
+L(\theta_0 + s\,d) = e^{\ell(\theta_0 + s\,d)} = e^{\ell(\theta_0)} = L_0
+$$
+
+for all $s$ in the neighborhood. Bayes' theorem gives $p(\theta \mid y) \propto p(\theta)\,L(\theta)$. Restricting to the ridge $\theta = \theta_0 + s\,d$,
+
+$$
+p(\theta_0 + s\,d \mid y) \propto p(\theta_0 + s\,d)\,L(\theta_0 + s\,d) = p(\theta_0 + s\,d)\,L_0 \propto p(\theta_0 + s\,d),
+$$
+
+since $L_0$ does not depend on $s$. Normalizing along the ridge yields the conditional density of $s$ given that $\theta$ lies on the ridge:
+
+$$
+p(s \mid \theta \in \text{ridge},\, y) = \frac{p(\theta_0 + s\,d)}{\displaystyle\int p(\theta_0 + s'\,d)\,ds'},
+$$
+
+which is exactly the prior restricted to the ridge and renormalized. $\blacksquare$
+
+**Interpretation.** On directions where the data are informative the likelihood provides curvature and the posterior differs from the prior; on the unidentified ridge the likelihood is constant and the posterior *is* the prior. The prior therefore carries the entire identification load on that ridge — the Bayesian counterpart of the ridge regularization introduced in Chapter 5, and the formal explanation of why a well-chosen prior keeps the MMM posterior proper even at the identification wound. This is not a failure of the inference: it is the correct Bayesian account of what the data can and cannot say.
+
+### Rung 5 — Identification in practice
+
+With these two proofs in hand the chapter's experimental design becomes transparent. When spend varies widely across the saturation curve, the gradient vectors $\{\nabla_\theta\mu_t(\theta_0)\}$ are diverse, $I(\theta_0)$ is well-conditioned, and Proof P1 guarantees local identifiability: the posterior concentrates near the true parameter vector and recovery succeeds. When spend is confined to a narrow operating range, $I(\theta_0)$ acquires a near-zero eigenvalue along the ridge direction $d$ from Proof P1, and recovery of the correlated parameters $(\beta_i, K_i)$ fails: by Proof P2 the posterior along $d$ is the prior, regardless of how long the chains run or how many observations are collected at the same operating point. This residual non-identification is not a defect to be engineered away within a single observational study; it is an irreducible consequence of operating-point geometry. It is precisely the setting Part VI addresses: experimentally induced spend variation shifts the operating point, diversifies the gradient vectors, fills the null space of $I(\theta_0)$, and breaks the degeneracy that confines the posterior to the ridge.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
