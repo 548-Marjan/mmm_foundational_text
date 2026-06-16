@@ -244,6 +244,16 @@ $\blacksquare$
 
 So a penalty *is* a prior. A tighter prior — small $\tau^2$, expressing strong belief that coefficients are near zero — yields a larger $\lambda$ and heavier shrinkage, while a vague prior $\tau^2\to\infty$ sends $\lambda\to0$ and recovers OLS. Changing the penalty changes the prior: an $\ell_1$ penalty $\lambda\lVert\beta\rVert_1$ is a Laplace prior, giving **lasso** and its sparse, variable-selecting solutions, and combining the two penalties gives the **elastic-net**. The next chapter takes this view to its conclusion: Bayesian inference keeps the *entire* posterior $p(\beta\mid y)$ rather than just its mode, turning regularization strength from a tuning knob into an explicit modeling choice.
 
+::: {.callout-note appearance="simple"}
+**Advanced track — generalized linear models and link functions.** *The core path does not depend on this; it is the foundation for the optional log-link likelihood discussed in Part V.*
+
+Everything above assumes the mean responds *linearly* to the features and the noise is additive Gaussian, $y \sim \mathcal{N}(X\beta,\, \sigma^2 I)$. Two consequences are baked in: the model can predict negative outcomes, and the noise has constant variance $\sigma^2$ regardless of the level of $X\beta$. Neither holds for revenue, which is strictly positive and whose spread typically grows with its level.
+
+A **generalized linear model (GLM)** keeps the linear predictor $\eta = X\beta$ but inserts a **link function** $g$ between it and the mean, $g(\mathbb{E}[y \mid X]) = X\beta$, and pairs it with a response distribution from the exponential family. The choice $g = \log$ — the **log link** — gives $\mathbb{E}[y \mid X] = \exp(X\beta)$, which is positive for every $\beta$ and turns additive effects on the linear scale into *multiplicative* effects on the response, so a coefficient reads as a percentage lift rather than a dollar increment. Combined with a lognormal or Gamma response it also lets the variance scale with the mean, repairing the heteroscedasticity the additive Gaussian form ignores.
+
+The MMM in this book deliberately stays with the additive Gaussian likelihood, because additivity is what makes per-channel contributions *sum* to total predicted sales and keeps each channel's response curve separable for the budget optimizer of Part IV. The log link is the narrow, principled escape hatch when positivity or variance-scaling genuinely bites — adopted as a likelihood swap, not a redesign of the contribution structure. We return to it in Part V.
+:::
+
 ## Worked Examples
 
 ### Example: a coefficient with its confidence interval

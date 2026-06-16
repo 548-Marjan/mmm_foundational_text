@@ -128,7 +128,7 @@ $$
 
 Equivalently, $\pi$ is a **left eigenvector** of $P$ for eigenvalue 1. If the chain's distribution at time $t$ is $\pi_t = \pi$, then $\pi_{t+1} = \pi_t P = \pi$: the distribution does not evolve. Whether $\pi_t \to \pi$ as $t \to \infty$ from an arbitrary start is the convergence question taken up in Rung 4.
 
-> **Theorem (existence and uniqueness, Perron–Frobenius).** [@strang2016] An irreducible finite Markov chain has a unique stationary distribution $\pi$, and $\pi_i > 0$ for every $i \in S$.
+> **Theorem (existence and uniqueness, Perron–Frobenius).** [@norris1997] An irreducible finite Markov chain has a unique stationary distribution $\pi$, and $\pi_i > 0$ for every $i \in S$.
 
 Irreducibility is essential: a reducible chain may have multiple stationary distributions, one supported on each closed communicating class, and there is no way to select among them without additional information about the starting point.
 
@@ -177,6 +177,8 @@ $$
 $$
 
 $\blacksquare$
+
+**The non-diagonalizable case, in one line.** If $P$ is not diagonalizable, replace the spectral sum with the Jordan form. A Jordan block for an eigenvalue $\lambda_k$ contributes terms $\binom{n}{j}\lambda_k^{\,n-j}$ — a polynomial in $n$ times a power of $\lambda_k$ — and since $n^{\,j}|\lambda_k|^{\,n} \to 0$ for any fixed $j$ whenever $|\lambda_k| < 1$, every subdominant block still vanishes. The dominant eigenvalue $\lambda_1 = 1$ is simple (Perron–Frobenius), so its block is $1\times 1$ and contributes no polynomial factor; thus $P^n \to \mathbf{1}\pi$ exactly as before. See [@norris1997] for the full Jordan-form and coupling treatments.
 
 **Rate of convergence and the spectral gap.** The slowest-decaying term in the sum governs the approach to stationarity. With the **subdominant eigenvalue** $\lambda_2$ (largest modulus among $k \ge 2$),
 

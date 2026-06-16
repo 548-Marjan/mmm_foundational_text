@@ -109,3 +109,15 @@ probability, inference, sampling, and optimization underneath it — so that by 
 end you can derive the model, build it, calibrate it against experiments, and
 optimize against it, while knowing exactly what each component is doing and where
 its limits are.
+
+One theme deserves naming up front, because it shapes everything that follows:
+**identification**. Observational media data is collinear, seasonally confounded,
+and chosen in part *because* a response was expected — so the central question is
+never merely *how well does the model fit?* but *which quantities can the data
+actually pin down, and which are we resolving by assumption alone?* Spend that
+rises with anticipated demand can make a channel look effective when the causation
+runs the other way, and no amount of sampling repairs a bias built into the
+data-generating process. Part VI confronts this directly — potential outcomes,
+causal diagrams, and calibration against experiments — and the honest accounting
+of what a model *cannot* identify recurs throughout. It is the difference between a
+model that fits and a model you can act on.

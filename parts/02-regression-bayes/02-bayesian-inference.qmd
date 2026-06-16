@@ -238,6 +238,32 @@ This prior encodes the sign constraint directly, before any data arrive, rather 
 
 What follows from this barrier is not a dead end but a change of tools. A posterior that cannot be written down can still be **sampled from**, and samples from the posterior carry every inferential quantity that a closed-form expression would — posterior means, credible intervals, predictive distributions, and marginals over any subset of parameters. Constructing those samples is the business of **Markov chain Monte Carlo**, developed in Part III. Everything established in the rungs above — the prior, the likelihood, the Bayes' theorem update, the posterior predictive decomposition of Rung 6 — defines exactly what MCMC will be sampling from. The conjugacy wall at the end of this section is not a flaw in the exposition; it is the precise structural reason that Part III is not optional.
 
+### Rung 8 — Eliciting priors: method of moments
+
+Rung 7 argued that a prior is a genuine modeling choice; this rung makes that choice *operational*. In practice an analyst rarely thinks in hyperparameters — they think in business statements: "a coefficient around $0.3$, but I am not very sure," or "advertising's effect roughly halves after three weeks." The **method of moments** turns such a statement into hyperparameters by matching the prior's mean and standard deviation to the elicited values and solving for the distribution's parameters. Three workhorse families cover almost every MMM prior.
+
+**A bounded quantity — the Beta.** A retention or decay fraction lives in $(0,1)$, the natural support of $\mathrm{Beta}(\alpha, \beta)$, whose mean and variance are $\mu = \alpha/(\alpha+\beta)$ and $\sigma^2 = \mu(1-\mu)/(\alpha+\beta+1)$. Writing the **concentration** $\nu = \alpha + \beta$, the variance identity inverts to
+
+$$
+\nu = \frac{\mu(1-\mu)}{\sigma^2} - 1, \qquad \alpha = \mu\,\nu, \qquad \beta = (1-\mu)\,\nu,
+$$
+
+valid exactly when $\sigma^2 < \mu(1-\mu)$ — an elicited spread wider than a Bernoulli's is infeasible and signals an overconfident or contradictory statement. This is precisely how an adstock retention prior is built: an elicited "half-life of three weeks" fixes a target mean retention $\mu$ (geometric carryover $\alpha^{t}$ reaches one-half at $t = \ln 2 / \ln(1/\mu)$), and a stated confidence fixes $\sigma$.
+
+**A positive quantity — the Gamma.** For a strictly positive parameter such as a saturation half-point or a scale, $\mathrm{Gamma}(\alpha, \beta)$ (shape–rate) has mean $\alpha/\beta$ and variance $\alpha/\beta^2$, so matching $\mu$ and $\sigma$ gives
+
+$$
+\alpha = \left(\frac{\mu}{\sigma}\right)^2, \qquad \beta = \frac{\mu}{\sigma^2}.
+$$
+
+**A positive quantity from a single number — the half-normal.** When only a *typical magnitude* is offered and the quantity must stay non-negative, the half-normal of the previous section has the single parameter $\sigma$ and mean $\sigma\sqrt{2/\pi}$, so a target mean $\mu$ inverts to
+
+$$
+\sigma = \mu\sqrt{\pi/2}.
+$$
+
+The discipline these formulas enforce is twofold. First, **check feasibility** — the Beta bound above is a real constraint, not a formality. Second, **mind the direction of the inversion**: it is easy to confuse a half-life with a decay rate, or a mean with a mode, and a prior built from an inverted relationship is silently wrong — it samples cleanly and fits without complaint while encoding the opposite of the elicited belief. Verifying an elicited prior by drawing from it and inspecting the implied quantities (a *prior predictive check*, Rung 6) is the cheap insurance against exactly this failure, and we make it a routine step in Part V.
+
 ## Worked Examples
 
 ### Example (a) — Beta–Binomial by hand
