@@ -1005,6 +1005,113 @@ assert diffs.max() < 0.15, f"deviation {diffs.max():.4f} exceeds 0.15"
 
 The Gibbs posterior means match the empirical-Bayes closed form within Monte Carlo and hyperparameter-uncertainty error. The full-Bayes intervals are wider because $\mu$ and $\tau^2$ are themselves uncertain: the posterior of $\theta_g$ is an average over the posterior of $(\mu,\tau^2)$, not a conditional at a point estimate — this is the honest accounting that empirical Bayes discards and full Bayes preserves.
 
+## Chapter 7 — Time Series, Trend & Seasonality
+
+**C1.** (a) A *time series'* autocorrelation describes the real-world process — how this week's sales relate to past weeks' — and is signal to be modeled; an *MCMC chain's* autocorrelation describes a sampler's output — how correlated successive draws are — and is a computational nuisance to be minimized. (b) A *covariance-stationary series* is a stochastic process whose mean, variance, and autocovariances are invariant under a time shift; a Markov chain's *stationary distribution* $\pi$ is a single probability measure over states fixed by $\pi P = \pi$. The shared words ("autocorrelation," "stationary") name different objects in different settings; assuming a result about one transfers to the other is the trap.
+
+**C2.** A slow, near-linear decay over many lags with no oscillation is the signature of a **deterministic trend** (the series drifts, so distant points stay correlated). Strong AR(1) persistence also decays, but *geometrically* ($\rho_k=\phi^k$) and faster once $k$ grows; yearly seasonality produces a *periodic* ACF with a spike at the seasonal lag $s$ and dips in between, not a smooth decay. The absence of oscillation rules out seasonality; the near-linear (rather than geometric) decay points to a trend over pure AR(1).
+
+**C3.** *Statistical:* $K$ harmonics use $2K$ parameters versus $s-1$ for dummies (e.g. $6$ vs $51$ for a weekly year), so Fourier seasonality is far more parsimonious and the harmonic regressors are orthogonal, giving independent, low-variance coefficient estimates. *Practical:* the Fourier seasonal is smooth and extrapolates sensibly to unseen weeks, whereas per-week dummies are noisy, overfit short histories, and give no value for a week not yet observed.
+
+**B1.** With $\phi = 0.5$: $\rho_1 = 0.5$, $\rho_2 = 0.5^2 = 0.25$, $\rho_3 = 0.5^3 = 0.125$. Variance factor $1/(1-\phi^2) = 1/(1-0.25) = 1/0.75 = 1.3333$.
+
+**B2.** On $t = 0,1,2,3$ with $s=4$: $\cos(2\pi t/4)$ takes values $\cos 0 = 1$, $\cos(\pi/2)=0$, $\cos\pi=-1$, $\cos(3\pi/2)=0$. Then $\sum_{t=0}^{3}\cos^2 = 1^2 + 0^2 + (-1)^2 + 0^2 = 2 = s/2$.
+
+**B3.** $\sin(2\pi t/4)$ takes values $0, 1, 0, -1$. The product $\cos\cdot\sin$ is $1\cdot0,\ 0\cdot1,\ (-1)\cdot0,\ 0\cdot(-1) = 0,0,0,0$, so $\sum_{t=0}^{3}\cos(2\pi t/4)\sin(2\pi t/4) = 0$: cosine and sine at the first harmonic are orthogonal.
+
+**P1.** By definition $\rho_k = \gamma_k/\gamma_0$ with $\gamma_k = \mathrm{Cov}(y_t, y_{t+k})$. The Cauchy–Schwarz inequality gives $|\mathrm{Cov}(U,V)| \le \sqrt{\mathrm{Var}(U)\,\mathrm{Var}(V)}$. With $U = y_t$, $V = y_{t+k}$ and using constant variance $\mathrm{Var}(y_t) = \mathrm{Var}(y_{t+k}) = \gamma_0$ (covariance-stationarity), $|\gamma_k| \le \sqrt{\gamma_0\cdot\gamma_0} = \gamma_0$. Dividing by $\gamma_0 > 0$ yields $|\rho_k| \le 1$. $\blacksquare$
+
+**P2.** From $y_t = \sum_{j=0}^{\infty}\phi^j\varepsilon_{t-j}$, write $y_{t+k} = \sum_{i=0}^{\infty}\phi^i\varepsilon_{t+k-i}$. Then
+$$
+\gamma_k = \mathbb E[y_t\,y_{t+k}] = \sum_{j,i}\phi^j\phi^i\,\mathbb E[\varepsilon_{t-j}\varepsilon_{t+k-i}].
+$$
+The innovations are independent with $\mathbb E[\varepsilon_a\varepsilon_b] = \sigma^2$ if $a=b$ and $0$ otherwise; $\varepsilon_{t-j}$ and $\varepsilon_{t+k-i}$ coincide exactly when $i = j+k$. Substituting,
+$$
+\gamma_k = \sum_{j=0}^{\infty}\phi^j\phi^{j+k}\sigma^2 = \phi^k\sigma^2\sum_{j=0}^{\infty}\phi^{2j} = \phi^k\,\frac{\sigma^2}{1-\phi^2} = \phi^k\gamma_0,
+$$
+so $\rho_k = \gamma_k/\gamma_0 = \phi^k$. $\blacksquare$
+
+**P3.** Expand with Euler's formulas: $\cos\theta = \tfrac12(e^{i\theta}+e^{-i\theta})$ and $\sin\theta = \tfrac1{2i}(e^{i\theta}-e^{-i\theta})$. With $\theta_j = 2\pi j t/s$,
+$$
+\cos\theta_j\sin\theta_k = \frac{1}{4i}\big(e^{i\theta_j}+e^{-i\theta_j}\big)\big(e^{i\theta_k}-e^{-i\theta_k}\big)
+= \frac{1}{4i}\Big(e^{i\theta_{j+k}} - e^{-i\theta_{j+k}} - e^{i\theta_{j-k}} + e^{-i\theta_{j-k}}\Big),
+$$
+writing $\theta_{j\pm k} = 2\pi(j\pm k)t/s$. Summing over $t = 0,\dots,s-1$ and using $\sum_t e^{2\pi i m t/s} = s\,[m\equiv0\bmod s]$: for $1\le j,k<s/2$ we have $1 \le j+k < s$ (never $\equiv 0$) and $|j-k| < s/2 < s$ (zero only if $j=k$). Each exponential sum is therefore $0$ unless $j=k$; and when $j=k$, the surviving terms $-e^{i\theta_0}+e^{-i\theta_0}$ contribute $\tfrac1{4i}(-s + s) = 0$. Hence $\sum_{t=0}^{s-1}\cos(2\pi j t/s)\sin(2\pi k t/s) = 0$ for all such $j,k$. $\blacksquare$
+
+**A1.** Overlay the sample ACFs of AR(1) draws against the theoretical $\phi^k$:
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+def ar1(phi, T, rng):
+    y = np.zeros(T); e = rng.normal(0, 1, T)
+    for k in range(1, T):
+        y[k] = phi * y[k-1] + e[k]
+    return y
+def acf(x, maxlag):
+    x = x - x.mean(); g0 = np.mean(x * x)
+    return np.array([np.mean(x[:len(x)-k] * x[k:]) / g0 for k in range(maxlag + 1)])
+
+rng = np.random.default_rng(1)
+plt.figure(figsize=(7, 4))
+for phi in (0.3, 0.7, 0.95):
+    r = acf(ar1(phi, 2000, rng), 12)
+    line, = plt.plot(range(13), r, "o-", label=f"sample ACF, φ={phi}")
+    plt.plot(range(13), [phi**k for k in range(13)], "--", color=line.get_color())
+plt.xlabel("lag"); plt.ylabel("ACF"); plt.legend(); plt.tight_layout(); plt.show()
+```
+
+Larger $\phi$ means slower decay: persistence is read directly off the decay rate, and the sample ACFs track $\phi^k$ closely (e.g. at $\phi=0.7$, $\rho_1\approx0.69$ against the theoretical $0.70$).
+
+**A2.** Residual variance falls as harmonics are added, then plateaus once the true seasonal shape is captured:
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(2)
+s, T = 52, 312; t = np.arange(T)
+def design(t, s, K):
+    cols = [np.ones_like(t, dtype=float), t.astype(float)]
+    for j in range(1, K + 1):
+        cols.append(np.cos(2*np.pi*j*t/s)); cols.append(np.sin(2*np.pi*j*t/s))
+    return np.column_stack(cols)
+y = 0.01*t + 2*np.cos(2*np.pi*t/s) + np.sin(2*np.pi*t/s) + 0.6*np.cos(4*np.pi*t/s) + rng.normal(0, 0.5, T)
+rv = []
+for K in range(0, 7):
+    X = design(t, s, K) if K > 0 else np.column_stack([np.ones(T), t.astype(float)])
+    b, *_ = np.linalg.lstsq(X, y, rcond=None)
+    rv.append(np.var(y - X @ b))
+plt.figure(figsize=(6, 4)); plt.plot(range(7), rv, "o-")
+plt.xlabel("Fourier order K"); plt.ylabel("residual variance"); plt.tight_layout(); plt.show()
+print("residual variance by K=0..6:", [round(v, 3) for v in rv])
+```
+
+The drop is steep through $K=2$ (the true seasonal has two harmonics) and flat thereafter — added harmonics fit only noise.
+
+**A3.** Orthogonality means a harmonic's coefficients do not change when another harmonic is added — *exactly*, provided the design has no non-orthogonal column (drop the trend and fit on a whole number of periods):
+
+```{python}
+import numpy as np
+
+s, T = 52, 312; t = np.arange(T)          # T = 6*s, a whole number of periods
+def design(t, s, K):                       # intercept + harmonics only (all orthogonal here)
+    cols = [np.ones_like(t, dtype=float)]
+    for j in range(1, K + 1):
+        cols.append(np.cos(2*np.pi*j*t/s)); cols.append(np.sin(2*np.pi*j*t/s))
+    return np.column_stack(cols)
+rng = np.random.default_rng(3)
+y = 2*np.cos(2*np.pi*t/s) + np.sin(2*np.pi*t/s) + 0.6*np.cos(4*np.pi*t/s) + rng.normal(0, 0.5, T)
+b1, *_ = np.linalg.lstsq(design(t, s, 1), y, rcond=None)
+b2, *_ = np.linalg.lstsq(design(t, s, 2), y, rcond=None)
+print("first-harmonic (a1, b1) at K=1:", np.round(b1[1:3], 5))
+print("first-harmonic (a1, b1) at K=2:", np.round(b2[1:3], 5))
+assert np.allclose(b1[:3], b2[:3], atol=1e-10)
+```
+
+The first-harmonic coefficients are identical to machine precision. (A non-orthogonal column — a linear trend on a finite grid — would leak and perturb them slightly; orthogonality of the harmonics alone is what guarantees the clean independence.)
+
 ## Chapter 7 — Markov Chains
 
 ### C — Conceptual / Reading Comprehension
