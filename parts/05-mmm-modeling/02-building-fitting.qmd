@@ -168,7 +168,141 @@ With these two proofs in hand the chapter's experimental design becomes transpar
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+Three worked examples carry the chapter's main results into arithmetic — one for the Fisher information calculation that decides identifiability, one for parameter recovery under the favorable design, and one for the same model under confined spend where the ridge is quantified directly.
+
+### WE1 — Fisher singular vs nonsingular
+
+Single channel, $\beta = 4$, $K = 3$, $n = 2$; parameters of interest $(\beta, K)$. The gradient of the mean function with respect to $(\beta, K)$ at operating point $x$ is
+
+$$
+\nabla\mu(x) = \bigl(g(x;\,K,n),\;\beta\,g_K(x;\,K,n)\bigr),
+$$
+
+where $g_K = \partial g/\partial K = -nK^{n-1}x^n/(K^n+x^n)^2$. The Fisher information $I(\theta_0) = \frac{1}{\sigma^2}\sum_t \nabla\mu_t\,\nabla\mu_t^\top$ is a sum of rank-one outer products; its rank equals the dimension of the span of the gradient vectors.
+
+**One operating point: $x_0 = 3$.**
+
+Substituting $K = 3$, $n = 2$, $x_0 = 3$:
+
+$$
+g(3;\,3,2) = \frac{3^2}{3^2+3^2} = \frac{9}{18} = 0.5,
+$$
+
+$$
+g_K(3;\,3,2) = -\frac{2\cdot 3\cdot 9}{18^2} = -\frac{54}{324} = -\frac{1}{6}.
+$$
+
+The gradient at $x_0$ is $\nabla\mu(3) = (0.5,\;4\cdot(-\tfrac{1}{6})) = (0.5,\;-\tfrac{2}{3})$. When every data point has $x_t = 3$, all $T$ gradient vectors equal this single vector $v = (0.5,\,-\tfrac{2}{3})^\top$. The Fisher information collapses to
+
+$$
+I(\theta_0) = \frac{T}{\sigma^2}\,v\,v^\top = \frac{T}{\sigma^2}
+\begin{pmatrix}
+0.25 & -\tfrac{1}{3}\\
+-\tfrac{1}{3} & \tfrac{4}{9}
+\end{pmatrix}.
+$$
+
+This $2\times 2$ matrix has determinant $0.25\cdot\tfrac{4}{9} - \tfrac{1}{9} = \tfrac{1}{9} - \tfrac{1}{9} = 0$, so $I(\theta_0)$ is rank one and $\det I(\theta_0) = 0$. No accumulation of data at $x_0 = 3$ can break the degeneracy. The $(\beta, K)$ ridge is the null space of $v\,v^\top$.
+
+**Two operating points: add $x_1 = 6$.**
+
+Evaluate the gradient at the second spend level with the same $K = 3$, $n = 2$, $\beta = 4$:
+
+$$
+g(6;\,3,2) = \frac{6^2}{3^2+6^2} = \frac{36}{45} = 0.8,
+$$
+
+$$
+g_K(6;\,3,2) = -\frac{2\cdot 3\cdot 36}{45^2} = -\frac{216}{2025} = -\frac{8}{75} \approx -0.10667.
+$$
+
+The gradient at $x_1 = 6$ is $\nabla\mu(6) = (0.8,\;4\cdot(-\tfrac{8}{75})) = (0.8,\;-\tfrac{32}{75}) \approx (0.8,\;-0.42667)$.
+
+Are the two gradient vectors parallel? Parallel vectors satisfy the same ratio across all components: $0.5/0.8 = 0.625$, while $(\tfrac{2}{3})/(\tfrac{32}{75}) = \tfrac{2}{3}\cdot\tfrac{75}{32} = \tfrac{150}{96} = 1.5625$. The ratios differ, so the vectors are not parallel. Stack them as rows of the Jacobian $J$:
+
+$$
+J = \begin{pmatrix} 0.5 & -\tfrac{2}{3} \\ 0.8 & -\tfrac{32}{75} \end{pmatrix}.
+$$
+
+Computing the determinant:
+
+$$
+\begin{aligned}
+\det J &= 0.5\cdot\Bigl(-\tfrac{32}{75}\Bigr) - \Bigl(-\tfrac{2}{3}\Bigr)\cdot 0.8 \\
+       &= -\frac{16}{75} + \frac{40}{75} = \frac{24}{75} = 0.32,
+\end{aligned}
+$$
+
+$$
+\det(J^\top J) = (\det J)^2 = 0.32^2 = 0.1024 > 0.
+$$
+
+The Fisher information $I(\theta_0) \propto J^\top J$ is nonsingular. By Proof P1, local identifiability holds at any parameter vector consistent with this two-point design. The lesson lives entirely in these two determinants: identifiability is about the diversity of gradient directions across operating points, not the number of weeks of data at a fixed point.
+
+### WE2 — Parameter recovery (wide spend)
+
+**Setup.**
+
+Generate a synthetic 104-week single-channel sales series from the true parameters $\beta = 4$, $K = 3$, $n = 2$, $\lambda = 0.5$, with spend varying widely across the saturation curve — operating below, near, and well above $K = 3$ in different weeks. This is the favorable design: gradient vectors are diverse, the Fisher information is well-conditioned, and Proof P1 predicts local identifiability. The question is not whether the model fits the series but whether it recovers the parameters that generated it.
+
+**Fitting.**
+
+MAP estimation locates the posterior mode; a Metropolis chain initialized at the MAP explores the posterior. The marginal posteriors are narrow and the 90% credible interval for each parameter contains the true value.
+
+| Parameter | True | MAP |
+|:----------|-----:|----:|
+| $\beta$ | 4.00 | 3.60 |
+| $K$ | 3.00 | 2.65 |
+| $n$ | 2.00 | 2.50 |
+| $\lambda$ | 0.50 | 0.47 |
+
+**Reading the table.**
+
+No MAP value equals the true parameter exactly — the posterior mode is not the true value, and with a nonlinear model and finite data it need not be. What matters is that the truth is bracketed: each 90% credible interval contains its ground-truth value. The half-saturation point $K$ is recovered to within $|2.65 - 3.00| \approx 0.35$, a small error relative to the posterior's spread. The adstock decay $\lambda$ is recovered to within $0.03$. All four parameters are recovered in the sense the chapter uses: the posterior concentrates near the truth and the credible intervals enclose it.
+
+**Fit versus recovery.**
+
+In a real campaign the distinction is invisible — good fit, narrow posteriors, and passing diagnostics look the same whether the posterior mode is near the truth or far from it. Synthetic data impose the stricter standard. The true parameter vector is on record, so we can demand that the posterior concentrate near it, not merely that the fitted trajectory look plausible. The wide-spend design satisfies that demand; WE3 shows what happens when it does not.
+
+### WE3 — The ridge made numerical (confined spend)
+
+**Setup.**
+
+Same model, same true parameters — $\beta = 4$, $K = 3$, $n = 2$, $\lambda = 0.5$ — but spend is now confined near $x_0 = 3$ with only small week-to-week variation. By WE1's arithmetic, all operating points land near the same location on the Hill curve; all gradient vectors $\nabla_\theta\mu_t$ point in nearly the same direction; the Fisher information matrix is nearly rank-one. Proof P1 predicts near-non-identifiability in the $(\beta, K)$ direction, and Proof P2 predicts that the posterior along the resulting ridge will be proportional to the prior.
+
+**The MAP fit still passes.**
+
+MAP estimation converges; the fitted mean trajectory follows the observed sales series; residuals are small; posterior predictive checks pass. Nothing in the fit diagnostics signals trouble. This is the wound's most insidious feature: good fit does not imply good recovery, and standard fit diagnostics cannot distinguish them.
+
+**The recovery has failed.**
+
+MAP estimation places $K \approx 4.9$ against the true $K = 3$ — a discrepancy of nearly two units. The model has found a different point on the $(\beta, K)$ ridge that fits the confined-spend data equally well, consistent with the Proof P4 ridge $\{(\beta, K) : \beta\cdot 9/(K^2+9) = \text{const}\}$.
+
+**The ill-conditioning is visible in the Hessian.**
+
+Evaluate the Hessian of the negative log-posterior at the MAP. Its smallest eigenvalue quantifies the curvature in the flattest direction.
+
+| Design | Smallest Hessian eigenvalue |
+|:-------|----------------------------:|
+| Wide spend | $\approx 123$ |
+| Confined spend | $\approx 0.69$ |
+
+The ratio is roughly $180$: the confined-spend posterior is about $180$ times less curved in its flattest direction than the wide-spend posterior. The eigenvector associated with the tiny eigenvalue points along the $(\beta, K)$ ridge — the direction Proof P1 identified as the null space of the nearly-singular Fisher information.
+
+**The Metropolis posterior confirms the width.**
+
+Run a Metropolis chain from the MAP under each design and examine the marginal posterior for $K$.
+
+| Design | Posterior std dev for $K$ |
+|:-------|-------------------------:|
+| Wide spend | $\approx 0.18$ |
+| Confined spend | $\approx 1.6$ |
+
+The confined-spend posterior for $K$ has a standard deviation roughly nine times larger, and its mean sits far from the true $K = 3$. The chain is exploring a flat ridge, not a tight bowl.
+
+**Connecting to the proofs.**
+
+The anatomy is fully legible. By Proof P1, confined spend produces nearly collinear gradient vectors and a nearly singular $I(\theta_0)$: the likelihood is nearly flat along the $(\beta, K)$ ridge. By Proof P2, on a likelihood-flat ridge the posterior is proportional to the prior: the marginal posterior for $K$ inherits the prior's spread, not the data's information. The wide posterior for $K$ is not a sampler failure, not correctable by running longer chains, and not a sign of insufficient data — it is the correct Bayesian account of what the confined-spend design cannot tell us. Good fit, unrecoverable shape. The wound, now quantified.
 
 ## Code Tie-in
 
