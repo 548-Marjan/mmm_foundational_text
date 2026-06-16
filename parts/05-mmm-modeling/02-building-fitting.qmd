@@ -14,7 +14,7 @@ The tension from Chapter 14's wound runs through everything that follows. When s
 
 ## Theory & Proofs
 
-The theory develops in three rungs. Rung 1 translates Chapter 14's structural equation directly into a Gaussian likelihood, identifies the mean function, and contrasts the nonlinear role of $(K, n, \lambda)$ here with the linear case of Chapter 5. Proposition P1 then establishes the non-conjugacy of this likelihood — the formal obstruction that forces approximate or sampling-based inference. Rung 2 specifies weakly informative priors that encode domain knowledge and carry the regularization load on the directions the likelihood cannot pin.
+The theory develops in three rungs. Rung 1 translates Chapter 14's structural equation directly into a Gaussian likelihood, identifies the mean function, and contrasts the nonlinear role of $(K, n, \lambda)$ here with the linear case of Chapter 5. A short proposition then establishes the non-conjugacy of this likelihood — the formal obstruction that forces approximate or sampling-based inference. Rung 2 specifies weakly informative priors that encode domain knowledge and carry the regularization load on the directions the likelihood cannot pin.
 
 ### Rung 1 — From DGP to likelihood
 
@@ -40,9 +40,9 @@ $$
 
 **Contrast with Chapter 5.** In the Bayesian linear regression of Chapter 5 the mean function was $\mu_t = X_t^\top \beta$ — linear in the parameters — and the likelihood was a Gaussian in $\beta$ that could be analyzed in closed form. Here $\mu_t(\theta)$ is **nonlinear** in $(K_i, n_i, \lambda_i)$: the Hill function $g(a;\, K, n) = a^n / (K^n + a^n)$ is a rational power function of $(K, n)$, and the adstock $a_\lambda(x)_t = \sum_{k=0}^{\infty} \lambda^k x_{t-k}$ is a weighted sum whose weights are powers of $\lambda$. That nonlinearity breaks the conjugate structure and makes the posterior intractable — as the proposition below establishes.
 
-### Proposition P1 — Non-conjugacy
+### Proposition — Non-conjugacy
 
-> **Proposition P1.** The posterior $p(\theta \mid y_{1:T})$ has no closed form: no standard conjugate prior family closes the Gaussian likelihood of Rung 1 under multiplication.
+> **Proposition (Non-conjugacy).** The posterior $p(\theta \mid y_{1:T})$ has no closed form: no standard conjugate prior family closes the Gaussian likelihood of Rung 1 under multiplication.
 
 **Proof (sketch).** Conjugacy requires that the prior and likelihood share a functional form such that their product is the kernel of a distribution from the same family. For parameters entering the likelihood *linearly* — such as $\beta_i$ in the large-$K$ limit where $g \approx x/K$ is nearly linear — a Gaussian or half-normal prior on $\beta_i$ closes under the Gaussian likelihood, yielding a Gaussian posterior. The closure fails for $(K_i, n_i, \lambda_i)$. The likelihood's dependence on these parameters enters through $g(a_\lambda(x_{i,t});\, K_i, n_i) = a_\lambda(x_{i,t})^{n_i}/(K_i^{n_i} + a_\lambda(x_{i,t})^{n_i})$ — a rational power function — and through the adstock weights $\lambda_i^k$, powers of $\lambda_i$ summed over all lags. Multiplying the Gaussian likelihood by any standard prior on $(K_i, n_i, \lambda_i)$ — Beta, Gamma, half-normal, log-normal — does not produce the kernel of a recognized distribution: no functional identity collapses the product into a named family, and the normalizing constant $\int p(y_{1:T} \mid \theta)\, p(\theta)\, d\theta$ has no closed-form expression. We must therefore either approximate the posterior (MAP estimation combined with a Laplace approximation around the mode) or sample it directly (MCMC). The remainder of this chapter uses the latter. $\blacksquare$
 
