@@ -302,6 +302,89 @@ Fourth — and most consequential for regression practice — the orthogonality 
 
 ## Worked Examples
 
+### WE1 — ACF of a seasonal series
+
+Take the deterministic series $y_t = \cos(2\pi t/4)$ evaluated at $t = 0, 1, 2, \ldots$, which produces the repeating four-step pattern
+
+$$
+y_0 = 1, \quad y_1 = 0, \quad y_2 = -1, \quad y_3 = 0, \quad y_4 = 1, \quad \ldots
+$$
+
+The series has mean $\mu = 0$ and variance $\gamma_0 = 1/2$ (the average of $\cos^2$ over one full cycle is $1/2$). The autocovariance $\gamma_k = \frac{1}{s}\sum_{t=0}^{s-1} y_t\, y_{t+k}$ evaluated over one period $s = 4$ gives
+
+$$
+\begin{aligned}
+\gamma_1 &= \tfrac{1}{4}\bigl(1\cdot 0 + 0\cdot(-1) + (-1)\cdot 0 + 0\cdot 1\bigr) = 0, \\
+\gamma_2 &= \tfrac{1}{4}\bigl(1\cdot(-1) + 0\cdot 0 + (-1)\cdot 1 + 0\cdot 0\bigr) = -\tfrac{1}{2}, \\
+\gamma_3 &= \tfrac{1}{4}\bigl(1\cdot 0 + 0\cdot 1 + (-1)\cdot 0 + 0\cdot(-1)\bigr) = 0, \\
+\gamma_4 &= \tfrac{1}{4}\bigl(1\cdot 1 + 0\cdot 0 + (-1)\cdot(-1) + 0\cdot 0\bigr) = \tfrac{1}{2}.
+\end{aligned}
+$$
+
+Dividing by $\gamma_0 = 1/2$ gives the autocorrelations:
+
+$$
+\rho_1 = 0, \quad \rho_2 = -1, \quad \rho_3 = 0, \quad \rho_4 = +1.
+$$
+
+The pattern then repeats: $\rho_5 = 0$, $\rho_6 = -1$, $\rho_7 = 0$, $\rho_8 = +1$, and so on. The ACF is itself periodic with the same period as the underlying series: it returns to $+1$ at lags $k = 4, 8, \ldots$, equals $-1$ at lags $k = 2, 6, \ldots$, and is zero at every odd lag. **A peak in the ACF at lag $s$ is the signature of period-$s$ seasonality.**
+
+The contrast with an AR(1) is sharp. At $\phi = 0.7$ the AR(1) ACF is $\rho_k = 0.7^k$, giving $\rho_1 = 0.700$, $\rho_2 = 0.490$, $\rho_3 = 0.343$ — a monotone geometric decay with no oscillation and no seasonal peak. On an ACF plot the two patterns are visually and interpretively distinct: a sequence of spikes at multiples of $s$ points immediately at seasonality, while a smooth monotone decay implicates short-lag autocorrelation. Correctly identifying which pattern is present determines whether the appropriate remedy is a Fourier seasonal term (Rung 5) or an autoregressive error structure (Rung 3).
+
+### WE2 — AR(1) geometric ACF and the adstock parallel
+
+Set $\phi = 0.7$. Proposition P2 gives the ACF immediately as $\rho_k = \phi^k$. The first three lags are
+
+$$
+\rho_1 = 0.700, \qquad \rho_2 = 0.490, \qquad \rho_3 = 0.343,
+$$
+
+a geometric sequence with common ratio $0.7$. The stationary variance from the same proposition is
+
+$$
+\gamma_0 = \frac{\sigma^2}{1 - \phi^2} = \frac{\sigma^2}{1 - 0.49} = \frac{\sigma^2}{0.51} \approx 1.9608\,\sigma^2.
+$$
+
+A series with $\phi = 0.7$ has nearly twice the variance of white noise driven by the same innovations: past shocks contribute $\phi\varepsilon_{t-1},\, \phi^2\varepsilon_{t-2},\, \ldots$ through the MA($\infty$) representation, and their combined variance accounts for the factor $1/(1 - \phi^2)$ above the baseline $\sigma^2$.
+
+The geometric decay in the ACF has an exact algebraic parallel in the adstock transformation. At decay parameter $\lambda = 0.7$, the carryover weights assigned to advertising impressions at successive lags are
+
+$$
+\lambda^1 = 0.700, \qquad \lambda^2 = 0.490, \qquad \lambda^3 = 0.343, \qquad \ldots
+$$
+
+These are the same numbers as $\rho_1$, $\rho_2$, $\rho_3$ above. Both sequences satisfy the same first-order recurrence $v_k = 0.7\,v_{k-1}$ with $v_0 = 1$. In the AR(1) setting this recurrence describes how a shock's influence persists forward through the error process; in the adstock setting it describes how an advertising impulse decays in its effect on the outcome. The economic interpretations differ — errors-persistence versus advertising-carryover — but the arithmetic is identical. As noted at the close of Rung 3, this algebraic coincidence is not superficial: both phenomena are described by the same stochastic difference equation, and the two threads will be unified by state-space models in Part V.
+
+### WE3 — Fourier orthogonality on the weekly grid
+
+Take $s = 52$ weeks and the grid $t = 0, 1, \ldots, 51$. Proposition P3 makes three concrete predictions about inner products among the Fourier columns of a weekly-data design matrix.
+
+**Squared norm of the first cosine column.** Setting $j = k = 1$ in the cosine–cosine identity of P3:
+
+$$
+\sum_{t=0}^{51}\cos^2\!\left(\frac{2\pi t}{52}\right) = \frac{s}{2} = \frac{52}{2} = 26.
+$$
+
+The first cosine column has squared length $26$. The same holds for the first sine column and, by the same identity with any $j = k$, for every harmonic's cosine and sine column: every Fourier column in the design matrix has exactly the same squared norm $s/2$.
+
+**Cross-harmonic inner product.** Setting $j = 1$, $k = 2$ in the cosine–cosine identity of P3:
+
+$$
+\sum_{t=0}^{51}\cos\!\left(\frac{2\pi t}{52}\right)\cos\!\left(\frac{4\pi t}{52}\right) = \frac{s}{2}\,\delta_{12} = 0.
+$$
+
+The first-harmonic and second-harmonic cosine columns are orthogonal. The same zero dot product holds for every pair of distinct harmonics $j \ne k$: different harmonics are never collinear in the design matrix.
+
+**Same-harmonic cosine–sine inner product.** Setting $j = k = 1$ in the cosine–sine identity of P3:
+
+$$
+\sum_{t=0}^{51}\cos\!\left(\frac{2\pi t}{52}\right)\sin\!\left(\frac{2\pi t}{52}\right) = 0.
+$$
+
+The cosine and sine columns for the same harmonic are orthogonal to each other. The cosine–sine identity in P3 holds for all integer pairs $(j, k)$, including $j = k$, so this zero is not restricted to distinct harmonics.
+
+**Practical payoff.** Together these three identities confirm that all $2K$ Fourier columns are mutually orthogonal. By the projection theorem from the linear-algebra chapter, the OLS estimate for any one harmonic's coefficient pair $(a_j, b_j)$ is independent of the estimates for all other harmonics: adding or removing a harmonic does not alter the remaining fitted coefficients. A practitioner comparing $K = 3$ versus $K = 6$ harmonics does not re-estimate the $j = 1, 2, 3$ amplitudes when the extra harmonics are included. Model selection over $K$ reduces to a sequence of clean nested comparisons, with each harmonic's contribution assessed independently rather than in a tangle of collinear effects. This is the direct practical payoff of the orthogonality proved in P3.
+
 ## Code Tie-in
 
 ## Exercises
