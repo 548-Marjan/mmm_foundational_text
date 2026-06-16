@@ -168,6 +168,138 @@ Because $\mu = 0$, $\gamma_0 < \infty$, and $\gamma_k = \phi^k \gamma_0$ depend 
 
 **Connection to adstock.** The geometric ACF $\rho_k = \phi^k$ is the same algebra as the geometric adstock carryover weights $\lambda^k$ introduced in the data-generating-process chapter: persistence of a shock and carryover of an advertising impulse obey the same first-order linear recurrence. This is not a coincidence — both phenomena are described by the same stochastic difference equation — and the two threads will be unified by state-space models in Part V.
 
+### Rung 4 — Trend and seasonal decomposition
+
+The AR(1) model applies cleanly once a series is stationary. Real marketing data rarely start that way: a brand's weekly revenue may trend upward over several years while simultaneously cycling through the same calendar rhythm year after year. The **additive decomposition** unpacks these influences explicitly. Write
+
+$$
+y_t = T_t + S_t + R_t,
+$$
+
+where $T_t$ is the **trend** — a smooth, slowly varying function of time capturing the long-run level of the series — $S_t$ is the **seasonal** component of period $s$, a pattern that repeats with period $s$ (for instance, $s = 52$ weeks for a yearly cycle in weekly data), and $R_t$ is the **remainder**, what is left after trend and seasonal are removed. The analysis goal is for $R_t$ to be covariance-stationary, at which point the ACF tools of Rungs 1–3 apply to it directly.
+
+The seasonal and trend are separately identified by a **zero-sum constraint** imposed over any complete period:
+
+$$
+\sum_{j=0}^{s-1} S_{t+j} = 0 \qquad \text{for all } t.
+$$
+
+Because the seasonal values sum to zero across one full cycle, $S_t$ carries no net level and therefore cannot absorb the long-run trend in $T_t$. In practice, one estimates $T_t$ (for instance, by a moving average or a low-degree polynomial trend) and $S_t$ (for instance, by averaging values at the same seasonal position after trend removal), subtracts both to obtain $\hat{R}_t = y_t - \hat{T}_t - \hat{S}_t$, and then inspects the ACF of $\hat{R}_t$. If the ACF of $\hat{R}_t$ decays geometrically, an AR(1) model for the remainder is appropriate; if it does not, a richer model is warranted. Decomposition thus converts the original series into a stationary residual to which the theoretical results of this chapter apply.
+
+### Rung 5 — Fourier seasonality
+
+A direct implementation of the additive seasonal requires $s - 1$ free parameters — one level per position within the cycle, subject to the zero-sum constraint. For a weekly series with $s = 52$ that is 51 parameters devoted to seasonality alone. In many marketing datasets $T$ is not large enough to estimate 51 seasonal effects precisely, and the resulting uncertainty propagates into every other coefficient.
+
+A parsimonious alternative represents the periodic seasonal as a **Fourier series** truncated to $K$ harmonics:
+
+$$
+S_t = \sum_{j=1}^{K}\Big[a_j\cos\!\big(\tfrac{2\pi j t}{s}\big) + b_j\sin\!\big(\tfrac{2\pi j t}{s}\big)\Big].
+$$
+
+Each term is a sinusoidal wave completing $j$ full cycles per period of length $s$. The first harmonic ($j = 1$) captures one smooth peak and trough per year; the second ($j = 2$) allows two peaks per year; and so on. With $K$ harmonics the seasonal is described by $2K$ parameters. A yearly cycle in weekly data is typically adequate with $K = 3$ to $K = 6$ harmonics, replacing 51 binary seasonal indicators with 6 to 12 Fourier regressors.
+
+From a regression standpoint the Fourier terms are additional predictor columns. For each harmonic $j = 1, \ldots, K$, construct the two columns $\cos(2\pi j t / s)$ and $\sin(2\pi j t / s)$ evaluated at each observed time $t$, append them to the design matrix, and estimate $a_j$ and $b_j$ by least squares or Bayesian updating. The connection back to earlier chapters is direct: this is precisely how the baseline seasonality is parameterized in the data-generating-process chapter, where the structural form of the MMM likelihood includes these Fourier features as part of the trend-and-seasonality baseline. The orthogonality of the Fourier columns — proved in P3 immediately below — is what makes this parameterization especially well-behaved in regression.
+
+### Proof P3 — Fourier orthogonality (keystone)
+
+**Proposition P3.** *On the regular grid $t = 0, 1, \ldots, s-1$, for integers $1 \le j, k < s/2$,*
+
+$$
+\sum_{t=0}^{s-1}\cos\!\big(\tfrac{2\pi j t}{s}\big)\cos\!\big(\tfrac{2\pi k t}{s}\big) = \tfrac{s}{2}\,\delta_{jk}, \qquad
+\sum_{t=0}^{s-1}\sin\!\big(\tfrac{2\pi j t}{s}\big)\sin\!\big(\tfrac{2\pi k t}{s}\big) = \tfrac{s}{2}\,\delta_{jk}, \qquad
+\sum_{t=0}^{s-1}\cos\!\big(\tfrac{2\pi j t}{s}\big)\sin\!\big(\tfrac{2\pi k t}{s}\big) = 0.
+$$
+
+*Proof.*
+
+**Root-of-unity identity.** Define $\omega = e^{2\pi i/s}$, a primitive $s$-th root of unity, and set
+
+$$
+S(m) = \sum_{t=0}^{s-1} \omega^{mt} = \sum_{t=0}^{s-1} e^{2\pi i m t / s}
+$$
+
+for any integer $m$. If $m \equiv 0 \pmod{s}$ every term equals $1$ and $S(m) = s$. If $m \not\equiv 0 \pmod{s}$ the common ratio $r = e^{2\pi i m/s}$ satisfies $r \ne 1$, and the geometric-series formula gives
+
+$$
+S(m) = \frac{r^s - 1}{r - 1} = \frac{e^{2\pi i m} - 1}{r - 1} = \frac{1 - 1}{r - 1} = 0,
+$$
+
+since $e^{2\pi i m} = 1$ for every integer $m$. Therefore:
+
+$$
+S(m) = \begin{cases}
+  s & \text{if } m \equiv 0 \pmod{s}, \\
+  0 & \text{otherwise.}
+\end{cases}
+$$
+
+Because $S(m)$ is real for all integers $m$ (every value is either $0$ or $s$), the identity $S(-m) = S(m)$ holds for all $m$.
+
+**Applying Euler's formula.** The complex exponential decompositions are
+
+$$
+\cos\theta = \tfrac{1}{2}\!\left(e^{i\theta} + e^{-i\theta}\right), \qquad \sin\theta = \tfrac{1}{2i}\!\left(e^{i\theta} - e^{-i\theta}\right).
+$$
+
+Set $\alpha = 2\pi/s$. Each of the three inner products is evaluated by expanding into a sum of complex exponentials and applying the root-of-unity identity to each term.
+
+*Cosine–cosine.* Expanding the product:
+
+$$
+\begin{aligned}
+\sum_{t=0}^{s-1}\cos(\alpha jt)\cos(\alpha kt)
+  &= \frac{1}{4}\sum_{t=0}^{s-1}\!\left(e^{i\alpha jt}+e^{-i\alpha jt}\right)\!\left(e^{i\alpha kt}+e^{-i\alpha kt}\right) \\
+  &= \frac{1}{4}\!\left[S(j+k) + S(j-k) + S(-(j-k)) + S(-(j+k))\right] \\
+  &= \frac{1}{4}\!\left[2S(j+k) + 2S(j-k)\right] = \frac{1}{2}\!\left[S(j+k)+S(j-k)\right],
+\end{aligned}
+$$
+
+where the third line uses $S(-m) = S(m)$. For $1 \le j, k < s/2$: the argument $j + k$ satisfies $2 \le j+k < s$, so $j+k \not\equiv 0 \pmod{s}$ and $S(j+k) = 0$. The argument $j - k$ satisfies $j - k = 0$ when $j = k$ (giving $S(0) = s$) and $|j-k| < s/2 < s$ otherwise (giving $S(j-k) = 0$). Therefore
+
+$$
+\sum_{t=0}^{s-1}\cos(\alpha jt)\cos(\alpha kt) = \frac{1}{2} \cdot s\,\delta_{jk} = \frac{s}{2}\,\delta_{jk}.
+$$
+
+*Sine–sine.* Expanding and using $(2i)^2 = -4$:
+
+$$
+\begin{aligned}
+\sum_{t=0}^{s-1}\sin(\alpha jt)\sin(\alpha kt)
+  &= \frac{-1}{4}\sum_{t=0}^{s-1}\!\left(e^{i\alpha jt}-e^{-i\alpha jt}\right)\!\left(e^{i\alpha kt}-e^{-i\alpha kt}\right) \\
+  &= \frac{-1}{4}\!\left[S(j+k) - S(j-k) - S(-(j-k)) + S(-(j+k))\right] \\
+  &= \frac{-1}{4}\!\left[2S(j+k) - 2S(j-k)\right] = \frac{1}{2}\!\left[S(j-k)-S(j+k)\right].
+\end{aligned}
+$$
+
+By the same argument, $S(j+k) = 0$ and $S(j-k) = s\,\delta_{jk}$, giving
+
+$$
+\sum_{t=0}^{s-1}\sin(\alpha jt)\sin(\alpha kt) = \frac{s}{2}\,\delta_{jk}.
+$$
+
+*Cosine–sine.* Combining both Euler forms:
+
+$$
+\begin{aligned}
+\sum_{t=0}^{s-1}\cos(\alpha jt)\sin(\alpha kt)
+  &= \frac{1}{4i}\sum_{t=0}^{s-1}\!\left(e^{i\alpha jt}+e^{-i\alpha jt}\right)\!\left(e^{i\alpha kt}-e^{-i\alpha kt}\right) \\
+  &= \frac{1}{4i}\!\left[S(j+k) - S(j-k) + S(-(j-k)) - S(-(j+k))\right] \\
+  &= \frac{1}{4i}\!\left[S(j+k) - S(j-k) + S(j-k) - S(j+k)\right] = 0.
+\end{aligned}
+$$
+
+The cosine–sine cross-sum vanishes identically for all integers $j$ and $k$ — including $j = k$ — because the $S$ terms cancel in pairs.
+
+**Consequences.** Four structural facts follow from the three identities.
+
+First, the $2K + 1$ functions $\{1, \cos_j, \sin_j : j = 1, \ldots, K\}$ evaluated at $t = 0, 1, \ldots, s-1$ are mutually orthogonal vectors in $\mathbb{R}^s$. The constant function $\mathbf{1}$ is orthogonal to every cosine and sine column because $\sum_{t=0}^{s-1}\cos(2\pi jt/s) = \operatorname{Re}[S(j)] = 0$ for $1 \le j < s/2$, and similarly for the sine columns. Together these vectors form an orthogonal basis for the subspace of period-$s$ signals they span.
+
+Second, completeness: taking $K = \lfloor s/2 \rfloor$ harmonics yields $s$ orthogonal basis vectors that span all of $\mathbb{R}^s$, so any period-$s$ sequence is represented exactly by the full harmonic expansion. This is the discrete Fourier transform statement in basis form.
+
+Third, truncating to $K < \lfloor s/2 \rfloor$ harmonics produces the **orthogonal projection** of the full period-$s$ signal onto the subspace spanned by the leading $2K$ sinusoids. By the projection theorem from the linear-algebra chapter, this projection is the least-squares best approximation: no other choice of $2K$ sinusoidal parameters fits the seasonal component more closely in sum-of-squares terms.
+
+Fourth — and most consequential for regression practice — the orthogonality means the Fourier design columns are uncorrelated with each other and with the constant column. Adding or removing a harmonic does not alter the least-squares estimates of the harmonics already included: the seasonal coefficients $\{a_j, b_j\}$ are estimable independently, with no collinearity among the Fourier features. Model selection over $K$ becomes a sequence of clean nested comparisons rather than a tangle of confounded effects. $\square$
+
 ## Worked Examples
 
 ## Code Tie-in
