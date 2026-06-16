@@ -81,6 +81,93 @@ $$
 
 By covariance-stationarity, $\mathrm{Cov}(y_{t_i},\, y_{t_j}) = \gamma_{|t_i - t_j|}$, so $\mathrm{Var}(Z) = \sum_{i,j} a_i\, a_j\, \gamma_{|t_i - t_j|} \ge 0$. Since this holds for every choice of $m$, times, and weights, the matrix $[\gamma_{|t_i - t_j|}]$ is positive-semidefinite. The implication is not merely algebraic: not every symmetric bounded sequence is a valid autocovariance function. Positive-semidefiniteness constrains which functions $k \mapsto \gamma_k$ can arise from any real stochastic process, and it rules out many candidate functions that look superficially reasonable. $\square$
 
+### Rung 3 — The AR(1) model
+
+The simplest model that gives a time series exactly the kind of memory measured by $\rho_k$ is the **first-order autoregression**, written AR(1):
+
+$$
+y_t = \phi\, y_{t-1} + \varepsilon_t, \qquad \varepsilon_t \overset{\text{iid}}{\sim} \mathcal{N}(0,\sigma^2),
+$$
+
+where $\phi$ is a real scalar — the **autoregressive coefficient** — and the stability condition $|\phi| < 1$ is imposed. Compared with the i.i.d. error model $y_t = \varepsilon_t$, the AR(1) adds one structural claim: whatever value the series took last period still influences today's value, attenuated by the factor $\phi$. A shock $\varepsilon_t$ does not vanish after one step; it echoes forward, shrinking by a factor of $|\phi|$ each period. The closer $|\phi|$ is to 1, the slower the echo decays and the longer the series's memory. At $\phi = 0$ the AR(1) collapses to i.i.d. noise; at $|\phi| = 1$ the echo never dies and the series drifts without bound, which is why the stability condition is strict.
+
+This is precisely the relaxation flagged by the i.i.d. assumption in the probability-statistics chapter: errors that are correlated across time are not independent, and the AR(1) is the minimal parametric description of how that correlation can arise from a one-step linear recurrence.
+
+### Proof P2 — AR(1) stationarity and geometric ACF
+
+**Proposition P2.** *Let $\{y_t\}$ satisfy the AR(1) recursion $y_t = \phi\, y_{t-1} + \varepsilon_t$ with $\varepsilon_t \overset{\text{iid}}{\sim} \mathcal{N}(0,\sigma^2)$ and $|\phi| < 1$. Then $\{y_t\}$ is covariance-stationary with mean $0$, variance*
+
+$$
+\gamma_0 = \frac{\sigma^2}{1 - \phi^2},
+$$
+
+*and autocorrelation function $\rho_k = \phi^k$ for all $k \ge 0$.*
+
+*Proof.*
+
+**MA($\infty$) form.** Unrolling the AR(1) recursion one step at a time yields
+
+$$
+\begin{aligned}
+y_t &= \phi\, y_{t-1} + \varepsilon_t \\
+    &= \phi(\phi\, y_{t-2} + \varepsilon_{t-1}) + \varepsilon_t \\
+    &= \phi^2 y_{t-2} + \phi\, \varepsilon_{t-1} + \varepsilon_t.
+\end{aligned}
+$$
+
+Continuing this substitution indefinitely and using $|\phi| < 1$ to send the $\phi^n y_{t-n}$ term to zero in mean square (since $|\phi|^n \to 0$ as $n \to \infty$) gives the **MA($\infty$) representation**:
+
+$$
+y_t = \sum_{j=0}^{\infty} \phi^j\, \varepsilon_{t-j}.
+$$
+
+The infinite sum converges in mean square because $\sum_{j=0}^{\infty} \phi^{2j} = 1/(1 - \phi^2) < \infty$ whenever $|\phi| < 1$.
+
+**Mean.** Taking expectations term by term (justified by mean-square convergence):
+
+$$
+\mathbb{E}[y_t] = \sum_{j=0}^{\infty} \phi^j\, \mathbb{E}[\varepsilon_{t-j}] = 0,
+$$
+
+since each innovation has mean zero by assumption. The mean is zero and does not depend on $t$.
+
+**Variance.** Because the innovations $\varepsilon_{t-j}$ are independent and each has variance $\sigma^2$, the variance of the MA($\infty$) sum is the sum of the variances:
+
+$$
+\gamma_0 = \mathrm{Var}(y_t) = \sigma^2 \sum_{j=0}^{\infty} \phi^{2j} = \frac{\sigma^2}{1 - \phi^2}.
+$$
+
+This is finite, positive, and independent of $t$.
+
+**Autocovariance.** For lag $k \ge 1$, write the future value $y_{t+k}$ by applying the AR(1) recursion $k$ times forward from $y_t$:
+
+$$
+y_{t+k} = \phi^k y_t + \sum_{j=0}^{k-1} \phi^j\, \varepsilon_{t+k-j}.
+$$
+
+The second sum collects innovations dated $t+1, t+2, \ldots, t+k$ — all strictly after time $t$. Since the $\varepsilon$'s are i.i.d. and $y_t$ depends only on $\varepsilon_t, \varepsilon_{t-1}, \ldots$, this sum is uncorrelated with $y_t$. Therefore:
+
+$$
+\begin{aligned}
+\gamma_k &= \mathbb{E}[y_t\, y_{t+k}] \\
+         &= \mathbb{E}\!\left[y_t\!\left(\phi^k y_t + \sum_{j=0}^{k-1} \phi^j\, \varepsilon_{t+k-j}\right)\right] \\
+         &= \phi^k\, \mathbb{E}[y_t^2] + 0 \\
+         &= \phi^k\, \gamma_0.
+\end{aligned}
+$$
+
+Dividing by $\gamma_0$ gives the **autocorrelation function**:
+
+$$
+\rho_k = \frac{\gamma_k}{\gamma_0} = \phi^k.
+$$
+
+Because $\mu = 0$, $\gamma_0 < \infty$, and $\gamma_k = \phi^k \gamma_0$ depend only on $k$ and not on $t$, the process satisfies all three conditions of covariance-stationarity (Rung 2). $\square$
+
+**Numerical anchor.** At $\phi = 0.7$: $\rho_1 = 0.7$, $\rho_2 = 0.49$, $\rho_3 = 0.343$, and the variance inflation factor is $1/(1 - 0.49) \approx 1.9608$. Roughly speaking, autocorrelation alone nearly doubles the variance of observations relative to the white-noise baseline $\sigma^2$.
+
+**Connection to adstock.** The geometric ACF $\rho_k = \phi^k$ is the same algebra as the geometric adstock carryover weights $\lambda^k$ introduced in the data-generating-process chapter: persistence of a shock and carryover of an advertising impulse obey the same first-order linear recurrence. This is not a coincidence — both phenomena are described by the same stochastic difference equation — and the two threads will be unified by state-space models in Part V.
+
 ## Worked Examples
 
 ## Code Tie-in
