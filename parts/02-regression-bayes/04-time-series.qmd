@@ -1,0 +1,532 @@
+# Time Series, Trend & Seasonality
+
+*Canonical anchors: @jin2017; @hyndman2021.*
+
+## Motivation
+
+Every regression model built so far rested on one quiet assumption: the errors are independent draws from the same distribution — the familiar i.i.d. condition $\varepsilon_t \overset{\text{iid}}{\sim} \mathcal{N}(0, \sigma^2)$. The probability-statistics chapter introduced this condition as a deliberate simplification and flagged the IOUs it was running up: the assumption would have to be relaxed "when we model autocorrelated or seasonal errors." That moment is now. Part II has given us the regression machinery (least squares, Bayesian updating, hierarchical pooling); this chapter attaches the time dimension — the feature that distinguishes marketing data from a bag of exchangeable observations and, consequently, the feature that makes MMM technically interesting.
+
+The case for taking time seriously is not abstract. Weekly brand sales do not arrive as an independent sequence: a strong promotional week tends to be followed by another strong week, partly because the ad exposure itself decays slowly in consumers' memories, partly because a market gaining momentum tends to stay in motion. Simultaneously, a firm calendar rhythm overlays the series — holiday surges, back-to-school spikes, summer troughs — that repeats with nearly metronomic regularity. These two phenomena, **autocorrelation** and **seasonality**, are structure embedded in the data-generating process. Treating them as noise does not make them disappear; it pushes them into the residuals, where they inflate standard errors, corrupt model-comparison statistics, and — most consequentially for media measurement — confound the estimated contribution of each channel with the rhythms it happened to run alongside.
+
+Three interlocking tools dismantle this structure into tractable pieces. The **autocorrelation function** (ACF) measures how strongly a series correlates with its own past at lag $k$: if $\rho_k = \operatorname{Corr}(y_t, y_{t-k})$ is large for $k = 1$, 2, …, the series has memory. The concept of a **stationary** series formalizes what it means for a time series to have a well-defined statistical character that does not drift: the mean, variance, and autocorrelation structure are invariant to shifts in time. Stationarity is both the precondition for estimating the ACF reliably and the diagnostic that tells us whether a trend needs to be removed before any further analysis. Finally, **decomposition** separates a series into trend, seasonal, and remainder components — and the seasonal component, when parameterized as a **Fourier basis**, can be captured with a handful of sine-and-cosine regressors that slot directly into a regression design matrix, turning seasonality from a modeling obstacle into a set of additional predictors.
+
+Two words used in this chapter collide with terminology already established elsewhere in the text, and both collisions are worth naming explicitly. "Autocorrelation" has already appeared in the MCMC chapter as a property of an MCMC chain's sample sequence: successive draws from a sampler are not independent, and high chain autocorrelation is a nuisance to be reduced by thinning or better proposals. That is a computational annoyance. The autocorrelation of a time series is a property of the phenomenon being modeled — information about how the real-world process behaves — and it is signal to be incorporated, not noise to be minimized. Likewise, "stationary" appeared in the Markov-chains chapter as the name for a chain's invariant distribution, the distribution $\pi$ satisfying $\pi P = \pi$. A stationary time series and a stationary distribution of a Markov chain are entirely different objects that happen to share an adjective; this chapter's "stationary" is the weaker, time-series sense, and the two should not be confused.
+
+This chapter is groundwork, not destination. The seasonal Fourier terms derived here feed directly into the baseline construction of the data-generating-process chapter, which builds them into the structural form of the full MMM likelihood. And the simplest model of autocorrelated errors — where each residual is a fraction $\phi$ of the previous one — produces a geometric decay in the ACF: $\rho_k = \phi^k$. Readers who have encountered the adstock transformation will notice that algebra is identical; the carryover of advertising effects obeys the same first-order recurrence as the simplest time-series model. That connection is not a coincidence, and it will be made precise in Part V when state-space models unify both threads into a single probabilistic framework.
+
+## Theory & Proofs
+
+### Rung 1 — Autocovariance and autocorrelation
+
+A **time series** is a sequence of random variables indexed by time, written $\{y_t\}_{t=1}^{T}$, where $T$ is the number of observations. Each $y_t$ is a random variable; an observed dataset is one realized path from the underlying stochastic process. The subscript $t$ carries the full temporal ordering of each measurement, and it is this ordering that makes time-series analysis richer, and more demanding, than ordinary cross-sectional regression.
+
+The primary measure of temporal dependence is the **autocovariance** at lag $k$:
+
+$$
+\gamma_k = \mathrm{Cov}(y_t,\, y_{t+k}) = \mathbb{E}\!\left[(y_t - \mu)(y_{t+k} - \mu)\right],
+$$
+
+where $\mu = \mathbb{E}[y_t]$ is the (constant) mean. At lag $k = 0$ the formula reduces to the ordinary variance: $\gamma_0 = \mathrm{Var}(y_t)$. Dividing by $\gamma_0$ standardizes the scale and produces the **autocorrelation** at lag $k$:
+
+$$
+\rho_k = \frac{\gamma_k}{\gamma_0}.
+$$
+
+The function $k \mapsto \rho_k$ is the **autocorrelation function** (ACF). Plotting it over a range of lags is the first diagnostic applied to any new series: a slow decay toward zero signals persistent memory; a sharp cutoff after a few lags indicates a short dependence structure; alternating positive and negative values suggest oscillatory behavior.
+
+**Notation collision — the MCMC chapter.** The symbol $\rho_k$ and the definition $\rho_k = \gamma_k/\gamma_0$ reappear in the MCMC chapter, where the effective sample size of a chain is $n_{\text{eff}} = n/(1 + 2\sum_{k=1}^{\infty}\rho_k)$ and a large $\rho_k$ signals that successive draws are too similar to explore the posterior efficiently. The two uses are mathematically identical — serial correlation between values separated by lag $k$ — but their roles are opposite. In this chapter the series under study is the real-world phenomenon: a large $\rho_1$ in weekly sales data is **signal**, evidence of how the process behaves, and the analyst's job is to model and exploit it. In the MCMC chapter the series is the sampler's output: a large $\rho_1$ in the chain is a **computational nuisance**, evidence of poor mixing, and the goal is to reduce it. Same formula, opposite role.
+
+### Rung 2 — Covariance-stationarity
+
+Many theoretical guarantees — consistent estimation of the ACF, a well-defined long-run variance, convergence of spectral representations — require that the statistical character of a series not drift over time. The standard formalization is **covariance-stationarity** (also called *weak stationarity* or *second-order stationarity*). A series $\{y_t\}$ is covariance-stationary if three conditions hold simultaneously:
+
+1. **Constant mean.** $\mathbb{E}[y_t] = \mu$ for all $t$.
+2. **Constant variance.** $\mathrm{Var}(y_t) = \gamma_0 < \infty$ for all $t$.
+3. **Lag-dependent autocovariance.** $\mathrm{Cov}(y_t,\, y_{t+k}) = \gamma_k$ depends only on the lag $k$, not on the time $t$.
+
+Conditions 1 and 3 together say that shifting the time window by any integer number of periods leaves the mean and all pairwise covariances unchanged — the series looks statistically the same wherever you sample it. A series with a deterministic upward trend violates condition 1; a series whose variance widens over time violates condition 2; a series whose autocorrelation structure differs systematically by season may violate condition 3. In practice, covariance-stationarity is approached by pre-processing: removing a trend by differencing or subtraction, and removing a deterministic seasonal pattern by subtraction or by including seasonal regressors. The structure of stationarity provides the conceptual target that guides those choices.
+
+**Notation collision — the Markov-chains chapter.** The Markov-chains chapter defines a *stationary distribution* as a probability vector $\pi$ satisfying $\pi P = \pi$, where $P$ is the transition matrix: $\pi$ is the distribution a chain returns to after any perturbation, and convergence to $\pi$ underpins the validity of MCMC. The word "stationary" is shared, but the objects are entirely different. A stationary *distribution* is a single probability measure over the state space; a covariance-stationary *series* is a stochastic process whose second-order moments are invariant under translation in time. One can construct a Markov chain whose stationary distribution describes a process that is not covariance-stationary in the time-series sense, and vice versa. The adjective is the same; the noun it modifies is not.
+
+### Proof P1 — Properties of the autocovariance and autocorrelation functions
+
+**Proposition P1.** *Let $\{y_t\}$ be a covariance-stationary series with autocovariance function $\gamma_k$ and autocorrelation function $\rho_k = \gamma_k/\gamma_0$. Then: (i) $\gamma_k = \gamma_{-k}$ for all $k$; (ii) $\rho_0 = 1$; (iii) $|\rho_k| \le 1$ for all $k$; and (iv) for any finite collection of times $t_1,\ldots,t_m$ and weights $a_1,\ldots,a_m \in \mathbb{R}$, the $m \times m$ matrix $\Gamma$ with $(i,j)$-entry $\gamma_{|t_i - t_j|}$ is positive-semidefinite.*
+
+*Proof.* **(i) Even symmetry.** Covariance is symmetric in its two arguments:
+
+$$
+\gamma_k = \mathrm{Cov}(y_t,\, y_{t+k}) = \mathrm{Cov}(y_{t+k},\, y_t).
+$$
+
+Now relabel the time index by setting $s = t + k$, so the right-hand side becomes $\mathrm{Cov}(y_s,\, y_{s-k})$. By covariance-stationarity, this quantity depends only on the lag, which is $-k$, giving $\mathrm{Cov}(y_s,\, y_{s-k}) = \gamma_{-k}$. Therefore $\gamma_k = \gamma_{-k}$: the autocovariance function is even in the lag. Plotting the ACF for negative lags adds no information; by convention, only $k \ge 0$ is displayed.
+
+**(ii) Normalization.** Setting $k = 0$ in the definition: $\rho_0 = \gamma_0/\gamma_0 = 1$. A series has perfect correlation with itself at zero lag.
+
+**(iii) Boundedness.** The Cauchy–Schwarz inequality for covariance states $|\mathrm{Cov}(U,\,V)| \le \sqrt{\mathrm{Var}(U)}\,\sqrt{\mathrm{Var}(V)}$ for any square-integrable random variables $U$ and $V$. Applying this with $U = y_t$ and $V = y_{t+k}$:
+
+$$
+|\gamma_k| = |\mathrm{Cov}(y_t,\, y_{t+k})| \le \sqrt{\mathrm{Var}(y_t)}\,\sqrt{\mathrm{Var}(y_{t+k})} = \sqrt{\gamma_0}\,\sqrt{\gamma_0} = \gamma_0,
+$$
+
+where the final equality uses the constant-variance condition of covariance-stationarity. Dividing both sides by $\gamma_0 > 0$ yields $|\rho_k| \le 1$.
+
+**(iv) Positive-semidefiniteness.** The variance of any real-valued random variable is non-negative. For arbitrary times $t_1,\ldots,t_m$ and real weights $a_1,\ldots,a_m$, form the linear combination $Z = \sum_{i=1}^{m} a_i\, y_{t_i}$. By bilinearity of covariance:
+
+$$
+\begin{aligned}
+\mathrm{Var}(Z) &= \mathrm{Cov}\!\left(\sum_{i=1}^{m} a_i\, y_{t_i},\; \sum_{j=1}^{m} a_j\, y_{t_j}\right) \\
+&= \sum_{i=1}^{m}\sum_{j=1}^{m} a_i\, a_j\, \mathrm{Cov}(y_{t_i},\, y_{t_j}).
+\end{aligned}
+$$
+
+By covariance-stationarity, $\mathrm{Cov}(y_{t_i},\, y_{t_j}) = \gamma_{|t_i - t_j|}$, so $\mathrm{Var}(Z) = \sum_{i,j} a_i\, a_j\, \gamma_{|t_i - t_j|} \ge 0$. Since this holds for every choice of $m$, times, and weights, the matrix $[\gamma_{|t_i - t_j|}]$ is positive-semidefinite. The implication is not merely algebraic: not every symmetric bounded sequence is a valid autocovariance function. Positive-semidefiniteness constrains which functions $k \mapsto \gamma_k$ can arise from any real stochastic process, and it rules out many candidate functions that look superficially reasonable. $\square$
+
+### Rung 3 — The AR(1) model
+
+The simplest model that gives a time series exactly the kind of memory measured by $\rho_k$ is the **first-order autoregression**, written AR(1):
+
+$$
+y_t = \phi\, y_{t-1} + \varepsilon_t, \qquad \varepsilon_t \overset{\text{iid}}{\sim} \mathcal{N}(0,\sigma^2),
+$$
+
+where $\phi$ is a real scalar — the **autoregressive coefficient** — and the stability condition $|\phi| < 1$ is imposed. Compared with the i.i.d. error model $y_t = \varepsilon_t$, the AR(1) adds one structural claim: whatever value the series took last period still influences today's value, attenuated by the factor $\phi$. A shock $\varepsilon_t$ does not vanish after one step; it echoes forward, shrinking by a factor of $|\phi|$ each period. The closer $|\phi|$ is to 1, the slower the echo decays and the longer the series's memory. At $\phi = 0$ the AR(1) collapses to i.i.d. noise; at $|\phi| = 1$ the echo never dies and the series drifts without bound, which is why the stability condition is strict.
+
+This is precisely the relaxation flagged by the i.i.d. assumption in the probability-statistics chapter: errors that are correlated across time are not independent, and the AR(1) is the minimal parametric description of how that correlation can arise from a one-step linear recurrence.
+
+### Proof P2 — AR(1) stationarity and geometric ACF
+
+**Proposition P2.** *Let $\{y_t\}$ satisfy the AR(1) recursion $y_t = \phi\, y_{t-1} + \varepsilon_t$ with $\varepsilon_t \overset{\text{iid}}{\sim} \mathcal{N}(0,\sigma^2)$ and $|\phi| < 1$. Then $\{y_t\}$ is covariance-stationary with mean $0$, variance*
+
+$$
+\gamma_0 = \frac{\sigma^2}{1 - \phi^2},
+$$
+
+*and autocorrelation function $\rho_k = \phi^k$ for all $k \ge 0$.*
+
+*Proof.*
+
+**MA($\infty$) form.** Unrolling the AR(1) recursion one step at a time yields
+
+$$
+\begin{aligned}
+y_t &= \phi\, y_{t-1} + \varepsilon_t \\
+    &= \phi(\phi\, y_{t-2} + \varepsilon_{t-1}) + \varepsilon_t \\
+    &= \phi^2 y_{t-2} + \phi\, \varepsilon_{t-1} + \varepsilon_t.
+\end{aligned}
+$$
+
+Continuing this substitution indefinitely and using $|\phi| < 1$ to send the $\phi^n y_{t-n}$ term to zero in mean square (since $|\phi|^n \to 0$ as $n \to \infty$) gives the **MA($\infty$) representation**:
+
+$$
+y_t = \sum_{j=0}^{\infty} \phi^j\, \varepsilon_{t-j}.
+$$
+
+The infinite sum converges in mean square because $\sum_{j=0}^{\infty} \phi^{2j} = 1/(1 - \phi^2) < \infty$ whenever $|\phi| < 1$.
+
+**Mean.** Taking expectations term by term (justified by mean-square convergence):
+
+$$
+\mathbb{E}[y_t] = \sum_{j=0}^{\infty} \phi^j\, \mathbb{E}[\varepsilon_{t-j}] = 0,
+$$
+
+since each innovation has mean zero by assumption. The mean is zero and does not depend on $t$.
+
+**Variance.** Because the innovations $\varepsilon_{t-j}$ are independent and each has variance $\sigma^2$, the variance of the MA($\infty$) sum is the sum of the variances:
+
+$$
+\gamma_0 = \mathrm{Var}(y_t) = \sigma^2 \sum_{j=0}^{\infty} \phi^{2j} = \frac{\sigma^2}{1 - \phi^2}.
+$$
+
+This is finite, positive, and independent of $t$.
+
+**Autocovariance.** For lag $k \ge 1$, write the future value $y_{t+k}$ by applying the AR(1) recursion $k$ times forward from $y_t$:
+
+$$
+y_{t+k} = \phi^k y_t + \sum_{j=0}^{k-1} \phi^j\, \varepsilon_{t+k-j}.
+$$
+
+The second sum collects innovations dated $t+1, t+2, \ldots, t+k$ — all strictly after time $t$. Since the $\varepsilon$'s are i.i.d. and $y_t$ depends only on $\varepsilon_t, \varepsilon_{t-1}, \ldots$, this sum is uncorrelated with $y_t$. Therefore:
+
+$$
+\begin{aligned}
+\gamma_k &= \mathbb{E}[y_t\, y_{t+k}] \\
+         &= \mathbb{E}\!\left[y_t\!\left(\phi^k y_t + \sum_{j=0}^{k-1} \phi^j\, \varepsilon_{t+k-j}\right)\right] \\
+         &= \phi^k\, \mathbb{E}[y_t^2] + 0 \\
+         &= \phi^k\, \gamma_0.
+\end{aligned}
+$$
+
+Dividing by $\gamma_0$ gives the **autocorrelation function**:
+
+$$
+\rho_k = \frac{\gamma_k}{\gamma_0} = \phi^k.
+$$
+
+Because $\mu = 0$, $\gamma_0 < \infty$, and $\gamma_k = \phi^k \gamma_0$ depend only on $k$ and not on $t$, the process satisfies all three conditions of covariance-stationarity (Rung 2). $\square$
+
+**Numerical anchor.** At $\phi = 0.7$: $\rho_1 = 0.7$, $\rho_2 = 0.49$, $\rho_3 = 0.343$, and the variance inflation factor is $1/(1 - 0.49) \approx 1.9608$. Roughly speaking, autocorrelation alone nearly doubles the variance of observations relative to the white-noise baseline $\sigma^2$.
+
+**Connection to adstock.** The geometric ACF $\rho_k = \phi^k$ is the same algebra as the geometric adstock carryover weights $\lambda^k$ introduced in the data-generating-process chapter: persistence of a shock and carryover of an advertising impulse obey the same first-order linear recurrence. This is not a coincidence — both phenomena are described by the same stochastic difference equation — and the two threads will be unified by state-space models in Part V.
+
+### Rung 4 — Trend and seasonal decomposition
+
+The AR(1) model applies cleanly once a series is stationary. Real marketing data rarely start that way: a brand's weekly revenue may trend upward over several years while simultaneously cycling through the same calendar rhythm year after year. The **additive decomposition** unpacks these influences explicitly. Write
+
+$$
+y_t = T_t + S_t + R_t,
+$$
+
+where $T_t$ is the **trend** — a smooth, slowly varying function of time capturing the long-run level of the series — $S_t$ is the **seasonal** component of period $s$, a pattern that repeats with period $s$ (for instance, $s = 52$ weeks for a yearly cycle in weekly data), and $R_t$ is the **remainder**, what is left after trend and seasonal are removed. The analysis goal is for $R_t$ to be covariance-stationary, at which point the ACF tools of Rungs 1–3 apply to it directly.
+
+The seasonal and trend are separately identified by a **zero-sum constraint** imposed over any complete period:
+
+$$
+\sum_{j=0}^{s-1} S_{t+j} = 0 \qquad \text{for all } t.
+$$
+
+Because the seasonal values sum to zero across one full cycle, $S_t$ carries no net level and therefore cannot absorb the long-run trend in $T_t$. In practice, one estimates $T_t$ (for instance, by a moving average or a low-degree polynomial trend) and $S_t$ (for instance, by averaging values at the same seasonal position after trend removal), subtracts both to obtain $\hat{R}_t = y_t - \hat{T}_t - \hat{S}_t$, and then inspects the ACF of $\hat{R}_t$. If the ACF of $\hat{R}_t$ decays geometrically, an AR(1) model for the remainder is appropriate; if it does not, a richer model is warranted. Decomposition thus converts the original series into a stationary residual to which the theoretical results of this chapter apply.
+
+### Rung 5 — Fourier seasonality
+
+A direct implementation of the additive seasonal requires $s - 1$ free parameters — one level per position within the cycle, subject to the zero-sum constraint. For a weekly series with $s = 52$ that is 51 parameters devoted to seasonality alone. In many marketing datasets $T$ is not large enough to estimate 51 seasonal effects precisely, and the resulting uncertainty propagates into every other coefficient.
+
+A parsimonious alternative represents the periodic seasonal as a **Fourier series** truncated to $K$ harmonics:
+
+$$
+S_t = \sum_{j=1}^{K}\Big[a_j\cos\!\big(\tfrac{2\pi j t}{s}\big) + b_j\sin\!\big(\tfrac{2\pi j t}{s}\big)\Big].
+$$
+
+Each term is a sinusoidal wave completing $j$ full cycles per period of length $s$. The first harmonic ($j = 1$) captures one smooth peak and trough per year; the second ($j = 2$) allows two peaks per year; and so on. With $K$ harmonics the seasonal is described by $2K$ parameters. A yearly cycle in weekly data is typically adequate with $K = 3$ to $K = 6$ harmonics, replacing 51 binary seasonal indicators with 6 to 12 Fourier regressors.
+
+From a regression standpoint the Fourier terms are additional predictor columns. For each harmonic $j = 1, \ldots, K$, construct the two columns $\cos(2\pi j t / s)$ and $\sin(2\pi j t / s)$ evaluated at each observed time $t$, append them to the design matrix, and estimate $a_j$ and $b_j$ by least squares or Bayesian updating. The connection back to earlier chapters is direct: this is precisely how the baseline seasonality is parameterized in the data-generating-process chapter, where the structural form of the MMM likelihood includes these Fourier features as part of the trend-and-seasonality baseline. The orthogonality of the Fourier columns — proved in P3 immediately below — is what makes this parameterization especially well-behaved in regression.
+
+### Proof P3 — Fourier orthogonality (keystone)
+
+**Proposition P3.** *On the regular grid $t = 0, 1, \ldots, s-1$, for integers $1 \le j, k < s/2$,*
+
+$$
+\sum_{t=0}^{s-1}\cos\!\big(\tfrac{2\pi j t}{s}\big)\cos\!\big(\tfrac{2\pi k t}{s}\big) = \tfrac{s}{2}\,\delta_{jk}, \qquad
+\sum_{t=0}^{s-1}\sin\!\big(\tfrac{2\pi j t}{s}\big)\sin\!\big(\tfrac{2\pi k t}{s}\big) = \tfrac{s}{2}\,\delta_{jk}, \qquad
+\sum_{t=0}^{s-1}\cos\!\big(\tfrac{2\pi j t}{s}\big)\sin\!\big(\tfrac{2\pi k t}{s}\big) = 0.
+$$
+
+*Proof.*
+
+**Root-of-unity identity.** Define $\omega = e^{2\pi i/s}$, a primitive $s$-th root of unity, and set
+
+$$
+S(m) = \sum_{t=0}^{s-1} \omega^{mt} = \sum_{t=0}^{s-1} e^{2\pi i m t / s}
+$$
+
+for any integer $m$. If $m \equiv 0 \pmod{s}$ every term equals $1$ and $S(m) = s$. If $m \not\equiv 0 \pmod{s}$ the common ratio $r = e^{2\pi i m/s}$ satisfies $r \ne 1$, and the geometric-series formula gives
+
+$$
+S(m) = \frac{r^s - 1}{r - 1} = \frac{e^{2\pi i m} - 1}{r - 1} = \frac{1 - 1}{r - 1} = 0,
+$$
+
+since $e^{2\pi i m} = 1$ for every integer $m$. Therefore:
+
+$$
+S(m) = \begin{cases}
+  s & \text{if } m \equiv 0 \pmod{s}, \\
+  0 & \text{otherwise.}
+\end{cases}
+$$
+
+Because $S(m)$ is real for all integers $m$ (every value is either $0$ or $s$), the identity $S(-m) = S(m)$ holds for all $m$.
+
+**Applying Euler's formula.** The complex exponential decompositions are
+
+$$
+\cos\theta = \tfrac{1}{2}\!\left(e^{i\theta} + e^{-i\theta}\right), \qquad \sin\theta = \tfrac{1}{2i}\!\left(e^{i\theta} - e^{-i\theta}\right).
+$$
+
+Set $\alpha = 2\pi/s$. Each of the three inner products is evaluated by expanding into a sum of complex exponentials and applying the root-of-unity identity to each term.
+
+*Cosine–cosine.* Expanding the product:
+
+$$
+\begin{aligned}
+\sum_{t=0}^{s-1}\cos(\alpha jt)\cos(\alpha kt)
+  &= \frac{1}{4}\sum_{t=0}^{s-1}\!\left(e^{i\alpha jt}+e^{-i\alpha jt}\right)\!\left(e^{i\alpha kt}+e^{-i\alpha kt}\right) \\
+  &= \frac{1}{4}\!\left[S(j+k) + S(j-k) + S(-(j-k)) + S(-(j+k))\right] \\
+  &= \frac{1}{4}\!\left[2S(j+k) + 2S(j-k)\right] = \frac{1}{2}\!\left[S(j+k)+S(j-k)\right],
+\end{aligned}
+$$
+
+where the third line uses $S(-m) = S(m)$. For $1 \le j, k < s/2$: the argument $j + k$ satisfies $2 \le j+k < s$, so $j+k \not\equiv 0 \pmod{s}$ and $S(j+k) = 0$. The argument $j - k$ satisfies $j - k = 0$ when $j = k$ (giving $S(0) = s$) and $|j-k| < s/2 < s$ otherwise (giving $S(j-k) = 0$). Therefore
+
+$$
+\sum_{t=0}^{s-1}\cos(\alpha jt)\cos(\alpha kt) = \frac{1}{2} \cdot s\,\delta_{jk} = \frac{s}{2}\,\delta_{jk}.
+$$
+
+*Sine–sine.* Expanding and using $(2i)^2 = -4$:
+
+$$
+\begin{aligned}
+\sum_{t=0}^{s-1}\sin(\alpha jt)\sin(\alpha kt)
+  &= \frac{-1}{4}\sum_{t=0}^{s-1}\!\left(e^{i\alpha jt}-e^{-i\alpha jt}\right)\!\left(e^{i\alpha kt}-e^{-i\alpha kt}\right) \\
+  &= \frac{-1}{4}\!\left[S(j+k) - S(j-k) - S(-(j-k)) + S(-(j+k))\right] \\
+  &= \frac{-1}{4}\!\left[2S(j+k) - 2S(j-k)\right] = \frac{1}{2}\!\left[S(j-k)-S(j+k)\right].
+\end{aligned}
+$$
+
+By the same argument, $S(j+k) = 0$ and $S(j-k) = s\,\delta_{jk}$, giving
+
+$$
+\sum_{t=0}^{s-1}\sin(\alpha jt)\sin(\alpha kt) = \frac{s}{2}\,\delta_{jk}.
+$$
+
+*Cosine–sine.* Combining both Euler forms:
+
+$$
+\begin{aligned}
+\sum_{t=0}^{s-1}\cos(\alpha jt)\sin(\alpha kt)
+  &= \frac{1}{4i}\sum_{t=0}^{s-1}\!\left(e^{i\alpha jt}+e^{-i\alpha jt}\right)\!\left(e^{i\alpha kt}-e^{-i\alpha kt}\right) \\
+  &= \frac{1}{4i}\!\left[S(j+k) - S(j-k) + S(-(j-k)) - S(-(j+k))\right] \\
+  &= \frac{1}{4i}\!\left[S(j+k) - S(j-k) + S(j-k) - S(j+k)\right] = 0.
+\end{aligned}
+$$
+
+The cosine–sine cross-sum vanishes identically for all integers $j$ and $k$ — including $j = k$ — because the $S$ terms cancel in pairs.
+
+**Consequences.** Four structural facts follow from the three identities.
+
+First, the $2K + 1$ functions $\{1, \cos_j, \sin_j : j = 1, \ldots, K\}$ evaluated at $t = 0, 1, \ldots, s-1$ are mutually orthogonal vectors in $\mathbb{R}^s$. The constant function $\mathbf{1}$ is orthogonal to every cosine and sine column because $\sum_{t=0}^{s-1}\cos(2\pi jt/s) = \operatorname{Re}[S(j)] = 0$ for $1 \le j < s/2$, and similarly for the sine columns. Together these vectors form an orthogonal basis for the subspace of period-$s$ signals they span.
+
+Second, completeness: taking $K = \lfloor s/2 \rfloor$ harmonics yields $s$ orthogonal basis vectors that span all of $\mathbb{R}^s$, so any period-$s$ sequence is represented exactly by the full harmonic expansion. This is the discrete Fourier transform statement in basis form.
+
+Third, truncating to $K < \lfloor s/2 \rfloor$ harmonics produces the **orthogonal projection** of the full period-$s$ signal onto the subspace spanned by the leading $2K$ sinusoids. By the projection theorem from the linear-algebra chapter, this projection is the least-squares best approximation: no other choice of $2K$ sinusoidal parameters fits the seasonal component more closely in sum-of-squares terms.
+
+Fourth — and most consequential for regression practice — the orthogonality means the Fourier design columns are uncorrelated with each other and with the constant column. Adding or removing a harmonic does not alter the least-squares estimates of the harmonics already included: the seasonal coefficients $\{a_j, b_j\}$ are estimable independently, with no collinearity among the Fourier features. Model selection over $K$ becomes a sequence of clean nested comparisons rather than a tangle of confounded effects. $\square$
+
+## Worked Examples
+
+### WE1 — ACF of a seasonal series
+
+Take the deterministic series $y_t = \cos(2\pi t/4)$ evaluated at $t = 0, 1, 2, \ldots$, which produces the repeating four-step pattern
+
+$$
+y_0 = 1, \quad y_1 = 0, \quad y_2 = -1, \quad y_3 = 0, \quad y_4 = 1, \quad \ldots
+$$
+
+The series has mean $\mu = 0$ and variance $\gamma_0 = 1/2$ (the average of $\cos^2$ over one full cycle is $1/2$). The autocovariance $\gamma_k = \frac{1}{s}\sum_{t=0}^{s-1} y_t\, y_{t+k}$ evaluated over one period $s = 4$ gives
+
+$$
+\begin{aligned}
+\gamma_1 &= \tfrac{1}{4}\bigl(1\cdot 0 + 0\cdot(-1) + (-1)\cdot 0 + 0\cdot 1\bigr) = 0, \\
+\gamma_2 &= \tfrac{1}{4}\bigl(1\cdot(-1) + 0\cdot 0 + (-1)\cdot 1 + 0\cdot 0\bigr) = -\tfrac{1}{2}, \\
+\gamma_3 &= \tfrac{1}{4}\bigl(1\cdot 0 + 0\cdot 1 + (-1)\cdot 0 + 0\cdot(-1)\bigr) = 0, \\
+\gamma_4 &= \tfrac{1}{4}\bigl(1\cdot 1 + 0\cdot 0 + (-1)\cdot(-1) + 0\cdot 0\bigr) = \tfrac{1}{2}.
+\end{aligned}
+$$
+
+Dividing by $\gamma_0 = 1/2$ gives the autocorrelations:
+
+$$
+\rho_1 = 0, \quad \rho_2 = -1, \quad \rho_3 = 0, \quad \rho_4 = +1.
+$$
+
+The pattern then repeats: $\rho_5 = 0$, $\rho_6 = -1$, $\rho_7 = 0$, $\rho_8 = +1$, and so on. The ACF is itself periodic with the same period as the underlying series: it returns to $+1$ at lags $k = 4, 8, \ldots$, equals $-1$ at lags $k = 2, 6, \ldots$, and is zero at every odd lag. **A peak in the ACF at lag $s$ is the signature of period-$s$ seasonality.**
+
+The contrast with an AR(1) is sharp. At $\phi = 0.7$ the AR(1) ACF is $\rho_k = 0.7^k$, giving $\rho_1 = 0.700$, $\rho_2 = 0.490$, $\rho_3 = 0.343$ — a monotone geometric decay with no oscillation and no seasonal peak. On an ACF plot the two patterns are visually and interpretively distinct: a sequence of spikes at multiples of $s$ points immediately at seasonality, while a smooth monotone decay implicates short-lag autocorrelation. Correctly identifying which pattern is present determines whether the appropriate remedy is a Fourier seasonal term (Rung 5) or an autoregressive error structure (Rung 3).
+
+### WE2 — AR(1) geometric ACF and the adstock parallel
+
+Set $\phi = 0.7$. Proposition P2 gives the ACF immediately as $\rho_k = \phi^k$. The first three lags are
+
+$$
+\rho_1 = 0.700, \qquad \rho_2 = 0.490, \qquad \rho_3 = 0.343,
+$$
+
+a geometric sequence with common ratio $0.7$. The stationary variance from the same proposition is
+
+$$
+\gamma_0 = \frac{\sigma^2}{1 - \phi^2} = \frac{\sigma^2}{1 - 0.49} = \frac{\sigma^2}{0.51} \approx 1.9608\,\sigma^2.
+$$
+
+A series with $\phi = 0.7$ has nearly twice the variance of white noise driven by the same innovations: past shocks contribute $\phi\varepsilon_{t-1},\, \phi^2\varepsilon_{t-2},\, \ldots$ through the MA($\infty$) representation, and their combined variance accounts for the factor $1/(1 - \phi^2)$ above the baseline $\sigma^2$.
+
+The geometric decay in the ACF has an exact algebraic parallel in the adstock transformation. At decay parameter $\lambda = 0.7$, the carryover weights assigned to advertising impressions at successive lags are
+
+$$
+\lambda^1 = 0.700, \qquad \lambda^2 = 0.490, \qquad \lambda^3 = 0.343, \qquad \ldots
+$$
+
+These are the same numbers as $\rho_1$, $\rho_2$, $\rho_3$ above. Both sequences satisfy the same first-order recurrence $v_k = 0.7\,v_{k-1}$ with $v_0 = 1$. In the AR(1) setting this recurrence describes how a shock's influence persists forward through the error process; in the adstock setting it describes how an advertising impulse decays in its effect on the outcome. The economic interpretations differ — errors-persistence versus advertising-carryover — but the arithmetic is identical. As noted at the close of Rung 3, this algebraic coincidence is not superficial: both phenomena are described by the same stochastic difference equation, and the two threads will be unified by state-space models in Part V.
+
+### WE3 — Fourier orthogonality on the weekly grid
+
+Take $s = 52$ weeks and the grid $t = 0, 1, \ldots, 51$. Proposition P3 makes three concrete predictions about inner products among the Fourier columns of a weekly-data design matrix.
+
+**Squared norm of the first cosine column.** Setting $j = k = 1$ in the cosine–cosine identity of P3:
+
+$$
+\sum_{t=0}^{51}\cos^2\!\left(\frac{2\pi t}{52}\right) = \frac{s}{2} = \frac{52}{2} = 26.
+$$
+
+The first cosine column has squared length $26$. The same holds for the first sine column and, by the same identity with any $j = k$, for every harmonic's cosine and sine column: every Fourier column in the design matrix has exactly the same squared norm $s/2$.
+
+**Cross-harmonic inner product.** Setting $j = 1$, $k = 2$ in the cosine–cosine identity of P3:
+
+$$
+\sum_{t=0}^{51}\cos\!\left(\frac{2\pi t}{52}\right)\cos\!\left(\frac{4\pi t}{52}\right) = \frac{s}{2}\,\delta_{12} = 0.
+$$
+
+The first-harmonic and second-harmonic cosine columns are orthogonal. The same zero dot product holds for every pair of distinct harmonics $j \ne k$: different harmonics are never collinear in the design matrix.
+
+**Same-harmonic cosine–sine inner product.** Setting $j = k = 1$ in the cosine–sine identity of P3:
+
+$$
+\sum_{t=0}^{51}\cos\!\left(\frac{2\pi t}{52}\right)\sin\!\left(\frac{2\pi t}{52}\right) = 0.
+$$
+
+The cosine and sine columns for the same harmonic are orthogonal to each other. The cosine–sine identity in P3 holds for all integer pairs $(j, k)$, including $j = k$, so this zero is not restricted to distinct harmonics.
+
+**Practical payoff.** Together these three identities confirm that all $2K$ Fourier columns are mutually orthogonal. By the projection theorem from the linear-algebra chapter, the OLS estimate for any one harmonic's coefficient pair $(a_j, b_j)$ is independent of the estimates for all other harmonics: adding or removing a harmonic does not alter the remaining fitted coefficients. A practitioner comparing $K = 3$ versus $K = 6$ harmonics does not re-estimate the $j = 1, 2, 3$ amplitudes when the extra harmonics are included. Model selection over $K$ reduces to a sequence of clean nested comparisons, with each harmonic's contribution assessed independently rather than in a tangle of collinear effects. This is the direct practical payoff of the orthogonality proved in P3.
+
+## Code Tie-in
+
+We simulate a weekly series with all three ingredients — a linear trend, a yearly Fourier
+seasonal ($s=52$), and AR(1) noise ($\phi=0.7$) — and read its structure off the
+autocorrelation function. The raw ACF shows the slow decay of a non-stationary trend with a
+seasonal spike near lag $52$; after we decompose the series (least-squares fit of trend plus
+Fourier seasonal), the residual ACF recovers the AR(1) geometric decay $\phi^k$. A fixed seed
+makes the run reproducible.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(7)
+s, T = 52, 312
+t = np.arange(T)
+phi = 0.7
+
+# --- AR(1) theory (WE2) ---
+assert np.allclose([phi**k for k in range(4)], [1, 0.7, 0.49, 0.343])
+assert np.isclose(1 / (1 - phi**2), 1.9608, atol=1e-4)
+
+# --- Fourier design: intercept + linear trend + K harmonics ---
+def fourier_design(t, s, K):
+    cols = [np.ones_like(t, dtype=float), t.astype(float)]
+    for j in range(1, K + 1):
+        cols.append(np.cos(2 * np.pi * j * t / s))
+        cols.append(np.sin(2 * np.pi * j * t / s))
+    return np.column_stack(cols)
+
+# --- P3 / WE3: harmonic columns are orthogonal on one period ---
+tp = np.arange(s)
+H = fourier_design(tp, s, 3)[:, 2:]                 # keep only the harmonic columns
+G = H.T @ H
+assert np.allclose(np.diag(G), s / 2)               # each harmonic norm^2 = s/2 = 26
+assert np.allclose(G - np.diag(np.diag(G)), 0, atol=1e-8)   # off-diagonals vanish
+
+# --- simulate trend + seasonal + AR(1) noise ---
+trend = 0.01 * t
+season = 2.0 * np.cos(2*np.pi*t/s) + 1.0 * np.sin(2*np.pi*t/s) + 0.6 * np.cos(4*np.pi*t/s)
+ar = np.zeros(T); eps = rng.normal(0, 0.5, T)
+for k in range(1, T):
+    ar[k] = phi * ar[k-1] + eps[k]
+y = trend + season + ar
+
+def acf(x, maxlag):
+    x = x - x.mean(); g0 = np.mean(x * x)
+    return np.array([np.mean(x[:len(x)-k] * x[k:]) / g0 for k in range(maxlag + 1)])
+
+raw = acf(y, 60)                                    # slow decay (trend) + spike at lag 52
+
+# --- decompose: least-squares fit of trend + K=3 Fourier, inspect residual ---
+X = fourier_design(t, s, 3)
+beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+resid = y - X @ beta
+res_acf = acf(resid, 10)
+
+# --- the story, asserted ---
+assert abs(res_acf[1] - phi) < 0.12                 # residual ACF recovers AR(1) phi
+def r2(K):
+    Xk = fourier_design(t, s, K); b, *_ = np.linalg.lstsq(Xk, y, rcond=None)
+    return 1 - np.var(y - Xk @ b) / np.var(y)
+assert r2(2) > r2(1)                                # an added harmonic raises the fit
+print(f"raw ACF lag1={raw[1]:.3f} lag2={raw[2]:.3f} seasonal lag52={raw[52]:.3f}")
+print(f"residual ACF lag1..3 = {np.round(res_acf[1:4], 3)}  (AR1 truth 0.7, 0.49, 0.343)")
+print(f"R^2 by K=1..4: {[round(r2(K), 3) for K in (1, 2, 3, 4)]}")
+
+# --- figures ---
+fig, ax = plt.subplots(1, 3, figsize=(15, 4))
+ax[0].stem(range(61), raw)
+ax[0].axvline(52, ls="--", color="grey"); ax[0].set_title("raw ACF: trend decay + seasonal spike")
+ax[0].set_xlabel("lag")
+ax[1].stem(range(11), res_acf)
+ax[1].plot(range(11), [phi**k for k in range(11)], "r--", label=r"$\phi^k$")
+ax[1].set_title("residual ACF recovers AR(1)"); ax[1].set_xlabel("lag"); ax[1].legend()
+ax[2].plot([1, 2, 3, 4], [r2(K) for K in (1, 2, 3, 4)], "o-")
+ax[2].set_title(r"fit $R^2$ vs Fourier order $K$"); ax[2].set_xlabel("K"); ax[2].set_ylabel(r"$R^2$")
+plt.tight_layout()
+plt.show()
+```
+
+The raw ACF (left) decays slowly — the fingerprint of a trend — with a bump at lag $52$ where
+the yearly cycle re-aligns. After removing trend and seasonal, the residual ACF (centre) snaps
+onto the geometric curve $\phi^k$: the AR(1) memory the simulation put in is exactly what the
+decomposition leaves behind. And the fit $R^2$ (right) climbs as harmonics are added and then
+plateaus once the true seasonal shape — here two harmonics — is captured. This is the whole
+chapter in one figure: autocorrelation as diagnostic, decomposition as the tool, and the
+Fourier order as the knob that trades parsimony against seasonal detail.
+
+## Exercises
+
+### C -- Conceptual / Reading Comprehension
+
+**C1.** In one sentence each, distinguish (a) the autocorrelation of a *time series* from the autocorrelation of an *MCMC chain's output*, and (b) a *covariance-stationary series* from a *Markov chain's stationary distribution*. Why is the shared vocabulary a trap?
+
+**C2.** A series' sample ACF decays slowly and almost linearly toward zero over many lags, with no oscillation. Is this more consistent with strong AR(1) persistence, a deterministic trend, or yearly seasonality? Explain what each of the three would look like on the ACF.
+
+**C3.** Why are $K$ Fourier harmonics ($2K$ parameters) usually preferable to $s-1$ seasonal dummy variables for a yearly weekly cycle? Give one statistical and one practical reason.
+
+### B -- By Hand
+
+**B1.** For an AR(1) with $\phi = 0.5$, compute $\rho_1, \rho_2, \rho_3$ and the stationary variance factor $1/(1-\phi^2)$.
+
+**B2.** On the period-4 grid $t = 0,1,2,3$, verify the Fourier orthogonality identity $\sum_{t=0}^{3}\cos^2(2\pi t/4) = s/2 = 2$.
+
+**B3.** On the same period-4 grid, show $\sum_{t=0}^{3}\cos(2\pi t/4)\sin(2\pi t/4) = 0$, confirming the cosine and sine at the first harmonic are orthogonal.
+
+### P -- Prove It
+
+**P1.** Prove that for any covariance-stationary series, $|\rho_k| \le 1$ for all $k$, using the Cauchy–Schwarz inequality.
+
+**P2.** Starting from the MA($\infty$) representation $y_t = \sum_{j=0}^{\infty}\phi^j\varepsilon_{t-j}$ of a stable AR(1), prove that $\gamma_k = \phi^k\gamma_0$, and hence $\rho_k = \phi^k$.
+
+**P3.** Using the root-of-unity sum $\sum_{t=0}^{s-1} e^{2\pi i m t/s} = s\,[m \equiv 0 \bmod s]$, prove that $\sum_{t=0}^{s-1}\cos(2\pi j t/s)\sin(2\pi k t/s) = 0$ for all integers $j, k$ with $1 \le j, k < s/2$.
+
+### A -- Applied / Code
+
+**A1.** Simulate AR(1) series at $\phi \in \{0.3, 0.7, 0.95\}$ (same length and noise scale), compute each sample ACF, and overlay them against the theoretical $\phi^k$. Comment on how persistence shows up in the decay rate.
+
+**A2.** Fit Fourier seasonality at $K = 1, 2, 3$ harmonics (plus trend) to a simulated trend-plus-seasonal-plus-noise series and plot residual variance against $K$. Identify the $K$ at which adding harmonics stops helping.
+
+**A3.** Demonstrate orthogonality empirically: fit the $K=1$ Fourier coefficients, then refit with $K=2$, and show the first-harmonic coefficients are unchanged (up to numerical tolerance) — the practical consequence of P3.
+
+## Summary
+
+This chapter attached the time dimension to the regression machinery of Part II, paying off the i.i.d.-error IOU left in the probability chapter. It built three tools — the autocorrelation function, covariance-stationarity, and trend/seasonal decomposition with a Fourier basis — and was careful to disentangle two words that collide with earlier uses.
+
+**Key concepts**
+
+- **Autocorrelation** $\rho_k$ measures a series' memory; it shares its formula with an MCMC chain's autocorrelation but plays the opposite role — signal to model here, sampler nuisance to minimize there.
+- **Covariance-stationarity** (constant mean and variance, lag-only autocovariance) is the precondition for estimating the ACF; it is a different object from a Markov chain's stationary distribution $\pi$.
+- **AR(1)** is the minimal model of autocorrelated errors; its geometric ACF $\rho_k=\phi^k$ is the same algebra as adstock carryover $\lambda^k$.
+- **Decomposition** splits a series into trend, seasonal, and remainder; inspecting the remainder's ACF reveals the residual dependence (often AR(1)).
+- **Fourier seasonality** captures a period-$s$ cycle with $K$ harmonics ($2K$ parameters); the harmonic regressors are orthogonal, so each coefficient is estimated independently.
+
+**Key identities**
+
+- **Autocorrelation.** $\rho_k = \gamma_k/\gamma_0$, with $\rho_0 = 1$, $\gamma_k = \gamma_{-k}$, and $|\rho_k| \le 1$.
+- **Covariance-stationarity.** $\mathbb E[y_t]=\mu$, $\mathrm{Var}(y_t)=\gamma_0$, and $\gamma_k$ depends only on the lag $k$.
+- **AR(1).** $y_t=\phi y_{t-1}+\varepsilon_t$ with $|\phi|<1$ gives $\gamma_0=\sigma^2/(1-\phi^2)$ and $\rho_k=\phi^k$.
+- **Decomposition.** $y_t = T_t + S_t + R_t$ with $\sum_{j=0}^{s-1} S_{t+j}=0$.
+- **Fourier seasonal.** $S_t = \sum_{j=1}^{K}\big[a_j\cos(2\pi j t/s)+b_j\sin(2\pi j t/s)\big]$.
+- **Orthogonality.** On $t=0,\dots,s-1$: $\sum_t\cos^2 = \sum_t\sin^2 = s/2$, with all cross-sums zero.
+
+This groundwork feeds the seasonality baseline of the MMM data-generating-process chapter and, in Part V, the dynamic state-space models that let coefficients move over time.

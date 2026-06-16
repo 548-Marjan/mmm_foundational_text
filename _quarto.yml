@@ -27,6 +27,7 @@ book:
         - parts/02-regression-bayes/01-linear-regression.qmd
         - parts/02-regression-bayes/02-bayesian-inference.qmd
         - parts/02-regression-bayes/03-hierarchical-regression.qmd
+        - parts/02-regression-bayes/04-time-series.qmd
     - part: "Part III — Computation: Sampling"
       chapters:
         - parts/03-sampling/01-markov-chains.qmd

@@ -10,9 +10,9 @@ The model has a precise structural form. Weekly sales $y_t$ decompose into three
 
 The first transform is **adstock**, and it captures a mundane fact about advertising: a television spot seen on Monday keeps working on Tuesday, Wednesday, and into the following week as viewers remember and eventually buy. Adstock converts the raw weekly spend $x_{i,t}$ into an **effective exposure** $a_{i,t}$ by distributing the memory of past spending forward in time — the current effective exposure is a weighted combination of this week's outlay and the decaying remnants of prior weeks. The second transform is **saturation**, and it captures an equally mundane fact: the tenth million dollars spent on a channel buys considerably less incremental sales than the first million did. Saturation maps the effective exposure $a_{i,t}$ to a **diminishing-returns response** $s_{i,t}$ through a nonlinear curve — steep at low exposure and flattening as exposure grows. Trend, seasonality, and control variables are necessary scaffolding, but adstock and saturation are the nonlinear core that gives the model its power and its difficulty.
 
-Once the model has its stars, one sees immediately what Part IV was actually optimizing. The response curve $r_i(\cdot)$ that Chapter 11 took as given is the saturation function evaluated at the adstock-transformed spend — the composed map from raw outlay to incremental sales, its shape determined entirely by the parameters of both transforms. Choosing those parameters is estimation; that is Chapter 15's work. But first, a harder question arrives. Once we can *simulate* the data-generating process — once we can generate realistic synthetic spend-and-sales series from a known parameter vector — we can ask whether the reverse journey is possible. Given only the observed spend and the observed sales, can we *recover* the adstock and saturation parameters that produced them? The answer is no, not from observational spend data alone, and the reason is structural. That **identification wound** is where this chapter ends, and it is the wound that Part VI heals.
+Once the model has its stars, one sees immediately what Part IV was actually optimizing. The response curve $r_i(\cdot)$ that Chapter 12 took as given is the saturation function evaluated at the adstock-transformed spend — the composed map from raw outlay to incremental sales, its shape determined entirely by the parameters of both transforms. Choosing those parameters is estimation; that is Chapter 16's work. But first, a harder question arrives. Once we can *simulate* the data-generating process — once we can generate realistic synthetic spend-and-sales series from a known parameter vector — we can ask whether the reverse journey is possible. Given only the observed spend and the observed sales, can we *recover* the adstock and saturation parameters that produced them? The answer is no, not from observational spend data alone, and the reason is structural. That **identification wound** is where this chapter ends, and it is the wound that Part VI heals.
 
-The route through the chapter is as follows. We develop the mathematical form of adstock and saturation, establish their composed action as the channel response function, add the baseline and noise to complete the DGP, and then simulate a fully synthetic week-by-week sales series from a known parameter vector. That synthetic series is the dataset Chapter 15 will fit — a controlled environment where the ground truth is known and the estimation challenge can be examined clearly, before the harder work of fitting to real campaign data.
+The route through the chapter is as follows. We develop the mathematical form of adstock and saturation, establish their composed action as the channel response function, add the baseline and noise to complete the DGP, and then simulate a fully synthetic week-by-week sales series from a known parameter vector. That synthetic series is the dataset Chapter 16 will fit — a controlled environment where the ground truth is known and the estimation challenge can be examined clearly, before the harder work of fitting to real campaign data.
 
 ## Theory & Proofs
 
@@ -109,7 +109,7 @@ $$
 g(x;\, K,\, n) = \frac{x^{n}}{K^{n} + x^{n}}, \qquad x \ge 0,\; K > 0,\; n > 0.
 $$
 
-The parameter $K$ is the **half-saturation point**: direct substitution gives $g(K) = K^n / (K^n + K^n) = \tfrac{1}{2}$, so spend equal to $K$ earns exactly half the maximum possible response. The parameter $n$ controls **steepness and shape**: for $n \le 1$ the curve rises steeply at the origin and flattens immediately, while for $n > 1$ it begins nearly flat — a convex toe — before bending into its familiar diminishing-returns arc. This is the very curve Chapters 11–13 optimized over; it is defined here at last from the model's first principles.
+The parameter $K$ is the **half-saturation point**: direct substitution gives $g(K) = K^n / (K^n + K^n) = \tfrac{1}{2}$, so spend equal to $K$ earns exactly half the maximum possible response. The parameter $n$ controls **steepness and shape**: for $n \le 1$ the curve rises steeply at the origin and flattens immediately, while for $n > 1$ it begins nearly flat — a convex toe — before bending into its familiar diminishing-returns arc. This is the very curve Chapters 12–14 optimized over; it is defined here at last from the model's first principles.
 
 ### Proof P2 — Hill shape theorem
 
@@ -145,7 +145,7 @@ For $x < x^\star$ the bracket is positive ($g'' > 0$: convex); for $x > x^\star$
 
 **Numeric anchor ($K = 3$, $n = 2$).** The inflection is at $x^\star = 3\cdot(1/3)^{1/2} = \sqrt{3} \approx 1.732$. Evaluating: $g(\sqrt{3}) = 3/(9 + 3) = 0.25$; $g(3) = 9/18 = 0.5$; $g'(3) = 2\cdot9\cdot3/(18)^2 = 54/324 = \tfrac{1}{6}$; $g'(\sqrt{3}) = 2\cdot9\cdot\sqrt{3}/(12)^2 = 18\sqrt{3}/144 = \tfrac{\sqrt{3}}{8}$.
 
-This is the concavity Part IV *assumed* when it invoked equal-marginal allocation; for $n > 1$ the convex toe — the region below $x^\star$ where marginal returns are still *rising* — is precisely why Chapters 11–13 had to guard against non-convexity. $\blacksquare$
+This is the concavity Part IV *assumed* when it invoked equal-marginal allocation; for $n > 1$ the convex toe — the region below $x^\star$ where marginal returns are still *rising* — is precisely why Chapters 12–14 had to guard against non-convexity. $\blacksquare$
 
 ### Rung 4 — Assembling the DGP
 
@@ -225,7 +225,7 @@ Because the observable is the single number $c = \beta_i\, g(x_0;\, K, n)$, the 
 
 Identifying the *shape* parameters $(K, n)$ — not merely the height of the curve at a single point — requires spend that varies across a non-trivial range of the saturation curve. When the regressor is confined to a support of lower dimension than the parameter count, the likelihood is flat along a manifold, and estimation recovers only the composite $\beta_i\, g(x_0;\, K, n)$, never the factors separately. $\blacksquare$
 
-Breaking this degeneracy requires exogenous variation in spend — randomized or quasi-experimental shifts in the operating point that observational budgets cannot supply — and that is exactly the leverage Part VI (Chapters 18–21) provides.
+Breaking this degeneracy requires exogenous variation in spend — randomized or quasi-experimental shifts in the operating point that observational budgets cannot supply — and that is exactly the leverage Part VI (Chapters 19–22) provides.
 
 ## Worked Examples
 
@@ -307,7 +307,7 @@ $$
 
 The marginal return is *higher* at the inflection than at the half-saturation point — the curve is still accelerating below $x^\star$ and decelerating above it, so the steepest slope lives precisely at the inflection.
 
-**Closing the loop.** This is the exact curve whose shape Part IV optimized. The region $x < \sqrt{3}$ where $g'' > 0$ is the convex toe that forced Chapters 11–13 to guard against non-concavity; $x^\star = \sqrt{3}$ is the inflection Chapter 11 cited without derivation. Proof P2 has now closed that gap: the inflection formula delivers $\sqrt{3}$ directly, and Part V has derived the object Part IV had to take on faith.
+**Closing the loop.** This is the exact curve whose shape Part IV optimized. The region $x < \sqrt{3}$ where $g'' > 0$ is the convex toe that forced Chapters 12–14 to guard against non-concavity; $x^\star = \sqrt{3}$ is the inflection Chapter 12 cited without derivation. Proof P2 has now closed that gap: the inflection formula delivers $\sqrt{3}$ directly, and Part V has derived the object Part IV had to take on faith.
 
 ### WE3 — Non-identifiability made concrete
 
@@ -327,14 +327,14 @@ $$
 
 Both pairs give exactly $0.5$. Pair A uses a curve with $K = 3$: spend $x_0 = 3$ sits at its half-saturation point. Pair B uses a curve with $K = 3\sqrt{3} \approx 5.2$: spend $x_0 = 3$ sits below its half-saturation point, but the larger scale $\beta = 2$ exactly compensates. Any number of weeks of data at $x_0 = 3$ cannot separate these two stories, because every observation is an identical draw from the same likelihood: the data constrain only the product $\beta \cdot g(3;\, K, 2)$, never $\beta$ and $K$ individually.
 
-The fix is not more data at $x_0 = 3$ — it is data at *other* spend levels. Points drawn from the steep lower region and from the flat upper region of the saturation curve force the curve's shape, pinning $K$ and releasing $\beta$ separately. That variation is absent from an ordinary budget held roughly constant; obtaining it requires deliberate experimental variation in spend spread across a meaningful range of the saturation curve. This is the wound Proof P4 put on record, and the leverage Part VI (Chapters 18–21) provides.
+The fix is not more data at $x_0 = 3$ — it is data at *other* spend levels. Points drawn from the steep lower region and from the flat upper region of the saturation curve force the curve's shape, pinning $K$ and releasing $\beta$ separately. That variation is absent from an ordinary budget held roughly constant; obtaining it requires deliberate experimental variation in spend spread across a meaningful range of the saturation curve. This is the wound Proof P4 put on record, and the leverage Part VI (Chapters 19–22) provides.
 
 ## Code Tie-in
 
 The equations become a generator. We implement the two transforms, assert every
 identity proved above against the arithmetic, then run the full data-generating
 process forward to produce a synthetic two-year weekly sales series. That series is
-the dataset Chapter 15 will fit — a controlled environment whose ground-truth
+the dataset Chapter 16 will fit — a controlled environment whose ground-truth
 parameters we know exactly. A fixed seed makes the run reproducible.
 
 ```{python}
@@ -424,7 +424,7 @@ The asserts reproduce every pinned number from the proofs and worked examples: t
 adstock decay and its three summary statistics, the Hill anchors and marginals, the
 $0.2 \ne 0.25$ ordering gap, and the two observationally-identical parameter sets of
 the wound. The simulated `sales` series — baseline plus two adstocked-and-saturated
-channels plus noise — is exactly the input Chapter 15 inherits.
+channels plus noise — is exactly the input Chapter 16 inherits.
 
 ## Exercises
 
@@ -471,7 +471,7 @@ This chapter wrote down the data-generating process behind a marketing mix model
 - **Saturation** is the diminishing-returns transform: the Hill curve is bounded and strictly increasing, concave throughout for shape $n \le 1$ but S-shaped with a convex toe for $n > 1$ — the case that cost Part IV its global guarantee.
 - **Transform ordering is a modeling choice**, not a convention: because saturation is nonlinear, adstock-then-saturate and saturate-then-adstock are different models.
 - **The identification wound:** observational spend — confined to a narrow operating range, collinear across channels, confounded with the baseline — cannot recover the response curve. A single operating point pins one point on the curve, never its shape. Breaking the degeneracy needs the exogenous variation supplied in Part VI.
-- **The simulated series is Chapter 15's data:** the code generates a synthetic sales series from known parameters, the controlled environment in which fitting is first studied.
+- **The simulated series is Chapter 16's data:** the code generates a synthetic sales series from known parameters, the controlled environment in which fitting is first studied.
 
 **Key identities**
 
@@ -481,4 +481,4 @@ This chapter wrote down the data-generating process behind a marketing mix model
 - **Curvature sign.** $\operatorname{sign} g''(x) = \operatorname{sign}\big[(n-1)K^n - (n+1)x^n\big]$, giving the inflection $x^\star = K\big(\tfrac{n-1}{n+1}\big)^{1/n}$ for $n > 1$.
 - **Non-identification ridge.** At a single operating point $x_0$, the data constrain only the scalar $\beta_i\, g(x_0; K, n)$.
 
-With the data-generating process defined and its pathologies understood, Chapter 15 turns to the inverse problem: fitting this model to the series it produced.
+With the data-generating process defined and its pathologies understood, Chapter 16 turns to the inverse problem: fitting this model to the series it produced.
