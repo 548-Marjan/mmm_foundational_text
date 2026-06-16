@@ -1,14 +1,27 @@
 # Dynamic Linear Models & State-Space MMM
 
-*Canonical anchors: West & Harrison 1997; Durbin & Koopman.*
-
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
+*Canonical anchors: @west1997; @durbin2012.*
 
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapter 16 closed a loop: given the data-generating process from Chapter 15 and a Bayesian inference engine assembled from Chapters 5, 9, and 11, it recovered the adstock decay, saturation curve, and channel coefficients that produced a synthetic sales series. The model that made that recovery possible assumed **constant coefficients** — the effectiveness of each channel, $\beta_i$, was treated as a fixed number to be learned from the full time series at once. That assumption is a defensible starting point, but it is a falsifiable null, not a law of marketing. Media efficiency decays as audiences habituate to a creative. Targeting algorithms shift reach pools as platform inventory fluctuates. Brand equity builds and erodes on timescales of months. A channel that drove strong returns in the first two quarters of a campaign may be near saturation by the fourth. A constant $\beta_i$ averages over this drift; it cannot distinguish a channel that was equally effective across all periods from one that was effective early and exhausted later. The practical cost is real: a model that pools effectiveness across time misprices the present, misattributes the recent, and gives budget recommendations anchored to an average that may describe no actual period in the data.
+
+The dynamic linear model (DLM) relaxes the constant-coefficient assumption while preserving tractable inference. The key move is to treat the coefficient vector as a **latent state** that evolves through time — $\theta_t$ rather than $\theta$ — and to model two layers simultaneously: a **state equation** that describes how the coefficient vector drifts from one period to the next, and an **observation equation** that links the current state to the observed sales through the familiar structural equation. In matrix form,
+
+$$
+\begin{aligned}
+\theta_t &= G_t\, \theta_{t-1} + w_t, \qquad w_t \sim \mathcal{N}(0,\, W_t), \\
+y_t      &= F_t^\top \theta_t + v_t,   \qquad v_t \sim \mathcal{N}(0,\, V_t),
+\end{aligned}
+$$
+
+where $F_t$ is the vector of regressors at time $t$ (adstocked spend, baseline components), $G_t$ is the evolution matrix (often the identity for a local-level random walk), and $W_t$, $V_t$ are the state and observation noise covariances. The coefficients are never observed directly; they are inferred from the noisy sales signal $y_t$. When $G_t = I$ and the variances are small, the states move slowly and the model behaves like its constant-coefficient cousin; as $W_t$ grows, the model allows faster drift and the effective information per period shrinks. The DLM encodes the modeler's prior belief about how quickly channel effectiveness changes, and the data update that belief period by period.
+
+This is the time-series payoff that Chapter 7 pointed toward but could not yet deliver. That chapter showed that AR(1) dynamics and adstock carryover are both first-order recursions — linear maps applied one step at a time to a scalar state. State-space models generalize that structure to the **regression coefficients themselves**: the coefficient vector at time $t$ is a linear function of its value at time $t-1$, perturbed by Gaussian noise, exactly as the adstock recursion $a_t = \lambda\, a_{t-1} + x_t$ carries media exposure forward. The DLM's state equation $\theta_t = G_t\,\theta_{t-1} + w_t$ applies the same logic to the full parameter vector. The two ideas — carry-forward of media exposure and carry-forward of marketing effectiveness — are now expressed in the same mathematical language, and the distinction between them is a matter of what enters the state rather than how the state evolves.
+
+The chapter's internal structure repeats the book's earlier frequentist-to-Bayesian arc. Chapters 4 and 5 introduced linear regression first as an ordinary-least-squares problem and then as a Bayesian conditioning problem, showing that the two formulations coincide under Gaussian noise. This chapter runs the same arc at the time-series level. The classical **Kalman filter** derives the minimum-variance linear estimator of the latent state at each period by recursively applying Gaussian conditioning (Chapters 3 and 5) — no sampling, no approximation, just the analytic consequence of multiplying Gaussians. The Bayesian DLM then places prior distributions on the variance parameters and recovers the full posterior by appending a backward smoothing pass — the **forward-filtering backward-sampling (FFBS) algorithm** of @west1997 — that draws joint samples from the state sequence. With variances fixed and known, the Kalman recursions are the exact posterior: conjugacy closes completely. Make the variances unknown and the conjugacy breaks; the marginal posterior over the variance parameters has no closed form, and you are back to Gibbs sampling (Chapters 6 and 9), alternating between a closed-form state draw from the Kalman smoother and an MCMC draw over the variances. The DLM is the book's cleanest illustration of where conjugacy ends and sampling must begin.
+
+The machinery developed here reaches forward into the book's final arc. Chapter 20's causal counterfactuals — estimating what sales would have been absent a spend change — rest on the Kalman filter's ability to project latent states forward under an alternative scenario; the DLM provides the model that makes those projections probabilistically calibrated. Chapter 22's prior store extracts the posterior distributions over channel effectiveness from a fitted DLM and recycles them as informative priors in future campaigns, closing the loop between inference and planning. The advanced production reframing of the DLM for time-varying coefficient MMM deployment is flagged at the chapter's close as an optional endpoint for readers who want to carry these ideas directly into practice.
 
 ## Theory & Proofs
 
