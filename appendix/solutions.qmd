@@ -2468,4 +2468,126 @@ plt.tight_layout(); plt.show()
 
 Every $(\beta, K)$ pair on the curve yields a contribution of exactly $0.5$ at $x_0 = 3$ — the flat likelihood ridge of Proof P4. Data at one operating point cannot pick a point along it; only spend at *other* levels can.
 
+## Chapter 15 — Building & Fitting an MMM
+
+**C1.** Fit measures how close the model's fitted trajectory is to the observed series; recovery measures how close the inferred parameters are to the ones that generated the data. They diverge whenever different parameter vectors produce nearly the same trajectory — the identification ridge. A model can ride the ridge to an excellent in-sample fit while sitting far from the true parameters, so a small residual is no guarantee that the response curve, the adstock decay, or the channel attribution is right. Only knowing the truth (synthetic data) exposes the gap.
+
+**C2.** A singular Fisher information means the likelihood surface has a flat direction: there is a parameter displacement $d$ along which, to first order, no observation changes, so the likelihood does not move. Geometrically the likelihood is a ridge (a trough with a level floor) rather than a single peak, and the set of parameter values consistent with the data is a curve (or higher-dimensional surface) rather than a point. The data cannot distinguish any two points along that ridge.
+
+**C3.** The half-normal prior on $\beta_i$ puts all its mass on $\beta_i \ge 0$, encoding the domain fact that advertising does not reduce sales. The *same* density also decays as $\beta_i$ grows, so on a direction the likelihood leaves unconstrained it supplies the only curvature, pulling the posterior toward smaller, more plausible values. The two roles do not conflict because the prior never overrides the likelihood where the likelihood is informative (there its curvature dominates); it acts decisively only on directions the data leave flat — exactly where regularization is wanted.
+
+**B1.** With $K=2$, $n=2$, $\beta=3$ and $g_K = -nK^{n-1}x^n/(K^n+x^n)^2$:
+
+At $x=2$: $g(2;2,2) = \dfrac{4}{4+4} = 0.5$ and $g_K(2;2,2) = -\dfrac{2\cdot2\cdot4}{8^2} = -\dfrac{16}{64} = -0.25$, so $\nabla\mu = (0.5,\ 3\cdot(-0.25)) = (0.5,\ -0.75)$.
+
+At $x=4$: $g(4;2,2) = \dfrac{16}{4+16} = 0.8$ and $g_K(4;2,2) = -\dfrac{2\cdot2\cdot16}{20^2} = -\dfrac{64}{400} = -0.16$, so $\nabla\mu = (0.8,\ 3\cdot(-0.16)) = (0.8,\ -0.48)$.
+
+The component ratios differ — $0.5/0.8 = 0.625$ while $0.75/0.48 = 1.5625$ — so the two gradient vectors are not parallel. Stacked as rows of $J$, $\det(J^\top J) > 0$ and the two operating points jointly identify $(\beta,K)$.
+
+**B2.** If $x_t \equiv x_0$ for all $t$, then every gradient $\nabla_\theta\mu_t$ equals the single vector $v = \nabla_\theta\mu(x_0)$. The Fisher information is $I = \tfrac{1}{\sigma^2}\sum_{t=1}^{T} v\,v^\top = \tfrac{T}{\sigma^2}\,v\,v^\top$, an outer product scaled by $T$. An outer product $vv^\top$ has rank one, hence (for the $2\times2$ case) determinant zero, for every $T$: adding more weeks at the same operating point scales the matrix but cannot raise its rank.
+
+**B3.** Along a flat direction $d$ the posterior equals the prior: $p(\theta_0 + s\,d \mid y) \propto p(\theta_0 + s\,d)$. This is Proof P2 (prior dominates the unidentified ridge).
+
+**P1.** The log-likelihood is $\ell(\theta) = -\tfrac{1}{2\sigma^2}\sum_t (y_t-\mu_t(\theta))^2 + \text{const}$. Its gradient (score) is $\nabla_\theta\ell = \tfrac{1}{\sigma^2}\sum_t (y_t-\mu_t)\nabla_\theta\mu_t$, and its Hessian is
+$$
+\nabla^2_\theta\ell = \frac{1}{\sigma^2}\sum_t\Big[(y_t-\mu_t)\nabla^2_\theta\mu_t - \nabla_\theta\mu_t\,\nabla_\theta\mu_t^\top\Big].
+$$
+The Fisher information is $I(\theta) = -\mathbb{E}_\theta[\nabla^2_\theta\ell]$. Under the model, $\mathbb{E}_\theta[y_t - \mu_t(\theta)] = 0$, so the expectation annihilates the first term (which is linear in the residual), leaving
+$$
+I(\theta) = \frac{1}{\sigma^2}\sum_t \nabla_\theta\mu_t\,\nabla_\theta\mu_t^\top.
+$$
+
+**P2.** Suppose $I(\theta_0)$ is singular. Then there exists $d \neq 0$ with $I(\theta_0)d = 0$, so $d^\top I(\theta_0)\,d = 0$. But
+$$
+d^\top I(\theta_0)\,d = \frac{1}{\sigma^2}\sum_t \big(\nabla_\theta\mu_t(\theta_0)^\top d\big)^2,
+$$
+a sum of squares that vanishes only if every term is zero: $\nabla_\theta\mu_t(\theta_0)^\top d = 0$ for all $t$. Hence displacing $\theta_0$ along $d$ leaves every $\mu_t$ unchanged to first order, so the likelihood is flat along $d$. $\blacksquare$
+
+**P3.** Let $\ell$ be constant along $d$: $\ell(\theta_0 + s\,d) = \ell(\theta_0)$ for $s$ near $0$, so $L(\theta_0 + s\,d) = e^{\ell(\theta_0)} =: L_0$ is constant. By Bayes, $p(\theta \mid y) \propto p(\theta)L(\theta)$, so restricting to the line $\theta = \theta_0 + s\,d$,
+$$
+p(\theta_0 + s\,d \mid y) \propto p(\theta_0 + s\,d)\,L_0 \propto p(\theta_0 + s\,d).
+$$
+Normalizing in $s$ gives the conditional density $p(s) = p(\theta_0 + s\,d)\big/\!\int p(\theta_0 + s'd)\,ds'$ — the prior restricted to the line and renormalized. $\blacksquare$
+
+**A1.** Smallest $(\beta,K)$ Hessian eigenvalue grows as the spend spread widens:
+
+```{python}
+import numpy as np
+from scipy.optimize import minimize
+
+def geometric_adstock(x, lam):
+    out = np.empty_like(x, dtype=float); p = 0.0
+    for t, xt in enumerate(x):
+        p = xt + lam * p; out[t] = p
+    return out
+def hill(x, K, n):
+    x = np.asarray(x, dtype=float); return x**n / (K**n + x**n)
+
+K_t, n_t, lam_t, beta_t, b0_t, sig_t = 3.0, 2.0, 0.5, 4.0, 10.0, 0.3
+T = 104; t = np.arange(T)
+def neg_log_post(th, x, y):
+    beta, K, n, lam, b0, ls = th
+    if not (0 < lam < 1 and K > 0 and n > 0 and beta > 0): return 1e12
+    sig = np.exp(ls); mu = b0 + beta * hill(geometric_adstock(x, lam), K, n)
+    return -(-0.5*np.sum((y-mu)**2)/sig**2 - T*ls - 0.5*(beta/5)**2 - 0.5*(K/5)**2
+             - 0.5*(n/3)**2 + np.log(lam) + np.log(1-lam) - 0.5*((b0-10)/5)**2 - 0.5*(sig/2)**2)
+def hess_betaK(th, x, y, h=1e-3):
+    H = np.zeros((2, 2))
+    for a in range(2):
+        for b in range(2):
+            pp, pm, mp, mm = (th.copy() for _ in range(4))
+            pp[a]+=h; pp[b]+=h; pm[a]+=h; pm[b]-=h; mp[a]-=h; mp[b]+=h; mm[a]-=h; mm[b]-=h
+            H[a,b] = (neg_log_post(pp,x,y)-neg_log_post(pm,x,y)
+                      -neg_log_post(mp,x,y)+neg_log_post(mm,x,y))/(4*h*h)
+    return H
+
+gen = np.random.default_rng(15)
+start = np.array([3.0, 3.0, 2.0, 0.5, 10.0, np.log(0.5)])
+spreads = [0.15, 0.6, 1.2, 2.5]; min_eig = []
+for sd in spreads:
+    x = np.clip(3.0 + sd*np.sin(2*np.pi*t/52) + gen.normal(0, sd*0.4+0.1, T), 0.05, None)
+    y = b0_t + beta_t*hill(geometric_adstock(x, lam_t), K_t, n_t) + gen.normal(0, sig_t, T)
+    m = minimize(neg_log_post, start, args=(x, y), method="Nelder-Mead",
+                 options=dict(maxiter=20000, xatol=1e-7, fatol=1e-7)).x
+    min_eig.append(np.linalg.eigvalsh(hess_betaK(m, x, y)).min())
+print("spreads :", spreads)
+print("min eig :", [round(v, 1) for v in min_eig])
+assert all(min_eig[i] < min_eig[i+1] for i in range(len(min_eig)-1))
+```
+
+The smallest curvature rises monotonically (here roughly $1 \to 9 \to 38 \to 79$): more operating-point diversity makes the Fisher information better-conditioned and the $(\beta,K)$ pair progressively identifiable.
+
+**A2.** A prior predictive check draws parameters from the priors, pushes them through the mean function, and inspects the simulated series:
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+def geometric_adstock(x, lam):
+    out = np.empty_like(x, dtype=float); p = 0.0
+    for t, xt in enumerate(x):
+        p = xt + lam * p; out[t] = p
+    return out
+def hill(x, K, n):
+    x = np.asarray(x, dtype=float); return x**n / (K**n + x**n)
+
+rng = np.random.default_rng(0)
+T = 104; t = np.arange(T)
+spend = np.clip(3.0 + 1.5*np.sin(2*np.pi*t/52) + rng.normal(0, 0.5, T), 0.05, None)
+
+plt.figure(figsize=(7, 4))
+for _ in range(8):                                   # draw from the priors
+    beta = abs(rng.normal(0, 5)); K = abs(rng.normal(0, 5))
+    n = abs(rng.normal(0, 3)); lam = rng.beta(2, 2)
+    b0 = rng.normal(10, 5)
+    mu = b0 + beta * hill(geometric_adstock(spend, lam), K, n)
+    plt.plot(t, mu, alpha=0.6)
+plt.xlabel("week"); plt.ylabel("prior-implied sales"); plt.title("prior predictive draws")
+plt.tight_layout(); plt.show()
+```
+
+The draws stay positive, seasonal, and in a plausible order of magnitude — the priors admit a wide but sane range of sales series, neither absurd nor pinned to one shape. (A draw with very large $\beta$ occasionally dominates; tightening the $\beta$ scale would temper it.)
+
+**A3.** Under confined spend, the posterior for $K$ tracks the prior scale, because the data leave that direction unidentified (Proof P2). Fitting the confined-spend series under half-normal $K$-priors of scale $3, 5, 8$ gives posterior $K$ means near $2.6, 6.4, 9.0$ with standard deviations near $1.3, 2.4, 2.6$ — the posterior slides outward with the prior rather than holding at the true $K = 3$. Where the likelihood is flat, the prior is the posterior.
+
 :::
