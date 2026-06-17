@@ -14,7 +14,148 @@ Each design, executed, delivers a calibrated functional of the response curve $S
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+Chapter 20's theory section develops in six rungs; this first half covers rungs 1–3. Rung 1 establishes the organizing taxonomy: every quasi-experimental estimand is a secant, a tangent, or a validation functional of the response curve $S(x)$, and a design table records which class each method belongs to. Rung 2 proves the chapter's first keystone result — difference-in-differences identifies the average treatment effect on the treated (ATT) under parallel trends, and the ATT is a secant of $S$ — showing algebraically how the DiD structure cancels the time-invariant region-level demand confounder that Chapter 19 (Causal Inference Foundations) proved blocks identification from a single cross-section. Rung 3 proves the second keystone — the Wald instrumental-variables estimator is a secant slope in disguise, equal by the fundamental theorem of calculus to the average of $S'$ over the complier spend interval, and by the mean value theorem to the tangent at some interior point $\xi$ — but not the tangent at the practitioner's current operating spend. Rungs 4–6, which cover synthetic control, interrupted time series, and the practitioner's design checklist, complete the section.
+
+### Rung 1 — The secant / tangent / validation taxonomy
+
+**The response curve and its derivative.** Throughout this chapter the revenue response to spend $x$ is modeled by the analytically tractable concave surrogate introduced in Chapter 18 (Budget Optimization):
+
+$$
+S(x) = 2\sqrt{x}, \qquad S'(x) = \frac{1}{\sqrt{x}}, \qquad S''(x) = -\frac{1}{2x^{3/2}} < 0.
+$$
+
+The curve is strictly concave — diminishing marginal returns at every positive spend — making it representative of saturating media response.
+
+**Three classes of estimand.** A quasi-experimental design produces a number. That number is a functional of $S$, and which functional it is determines what the experiment can legitimately tell you about the curve.
+
+- **Secant.** An interval-average slope over a spend interval $[x_0, x_1]$:
+
+$$
+\text{Secant}(x_0, x_1) = \frac{S(x_1) - S(x_0)}{x_1 - x_0},
+$$
+
+equivalently the level change (lift) $S(x_1) - S(x_0)$. This is the average revenue gain per unit of additional spend across the tested interval, not at any single point.
+
+- **Tangent.** A point derivative $S'(x)$ at a single operating point $x$, or the curvature $S''(x)$. This is the marginal return that the Chapter 18 optimizer differentiates to find the equal-marginal allocation, and it is the quantity a budget reallocation decision requires at the *current* spend level.
+
+- **Validation.** A quantity that is not a functional of $S$ at all — for example, a holdout forecast error checking whether the model's counterfactual is well-calibrated, or a brand-awareness lift that does not constrain the sales-response parameters. Validation estimands are useful diagnostic checks but do not directly anchor the response curve.
+
+**Design taxonomy.** Every design in this chapter identifies one of these three classes:
+
+| Estimand class | Designs |
+|:--------------|:--------|
+| **Secant** — average slope $[S(x_1)-S(x_0)]/(x_1-x_0)$ over a spend interval | Difference-in-differences (DiD), geo lift, synthetic control, ITS, IV / Wald |
+| **Tangent** — point derivative $S'(x)$ or curvature $S''(x)$ | Regression discontinuity (RDD), regression kink (RKD) |
+| **Validation** — not a functional of $S$ | Holdout forecast checks, non-$S$ awareness lift studies |
+
+**Why the distinction matters.** On a *linear* response curve $S(x) = \alpha + \beta x$, every secant equals the constant slope $\beta$ and the distinction is vacuous. On the strictly concave $S(x) = 2\sqrt{x}$, secants and tangents diverge. At $x_0 = 4$, $x_1 = 9$: the secant is $(6-4)/(9-4) = 0.4$, while the tangents are $S'(4) = 0.5$ and $S'(9) = 0.3\overline{3}$. The secant lies strictly between them by the mean value theorem, but it equals neither. Plugging a secant estimate into a formula designed for the tangent at the operating spend — or vice versa — produces a structural error of the same kind as the identification failure Chapter 19 proved plagues observational regression. The taxonomy names the error so it can be avoided when passing estimands to Chapter 21 (Advanced Calibration).
+
+### Rung 2 — Proof P1 (KEYSTONE): difference-in-differences identifies the ATT under parallel trends
+
+**Setup.** Two regions, treated ($T$) and control ($C$), observed in two periods, pre and post. In the post period the treated region's spend rises from $x_0$ to $x_1$; the control region holds at $x_0$ throughout. Let $Y_{r,t}(0)$ and $Y_{r,t}(1)$ denote the revenue region $r$ would realize in period $t$ under no treatment and under treatment, respectively. Observed outcomes: $Y_{T,\text{post}} = Y_{T,\text{post}}(1)$ (the treated region received treatment in the post period); $Y_{T,\text{pre}} = Y_{T,\text{pre}}(0)$, $Y_{C,\text{post}} = Y_{C,\text{post}}(0)$, $Y_{C,\text{pre}} = Y_{C,\text{pre}}(0)$ (all others untreated).
+
+**Parallel-trends assumption (PT).** The treated region's *counterfactual* (untreated) trend equals the control region's observed trend:
+
+$$
+\mathbb{E}\!\left[Y_{T,\text{post}}(0) - Y_{T,\text{pre}}(0)\right] = \mathbb{E}\!\left[Y_{C,\text{post}}(0) - Y_{C,\text{pre}}(0)\right].
+$$
+
+This says the two regions would have moved in parallel in the post period had neither been treated. It does not require their revenue *levels* to be equal — only their trends.
+
+**Theorem.** *The DiD estimand*
+
+$$
+\widehat{\tau}_{\text{DiD}} = \Bigl(\mathbb{E}[Y_{T,\text{post}}] - \mathbb{E}[Y_{T,\text{pre}}]\Bigr) - \Bigl(\mathbb{E}[Y_{C,\text{post}}] - \mathbb{E}[Y_{C,\text{pre}}]\Bigr)
+$$
+
+*equals the average treatment effect on the treated (ATT):*
+
+$$
+\text{ATT} = \mathbb{E}\!\left[Y_{T,\text{post}}(1) - Y_{T,\text{post}}(0)\right].
+$$
+
+**Proof.**
+
+$$
+\begin{aligned}
+\widehat{\tau}_{\text{DiD}}
+&= \Bigl(\mathbb{E}[Y_{T,\text{post}}] - \mathbb{E}[Y_{T,\text{pre}}]\Bigr) - \Bigl(\mathbb{E}[Y_{C,\text{post}}] - \mathbb{E}[Y_{C,\text{pre}}]\Bigr) \\[4pt]
+&= \Bigl(\mathbb{E}[Y_{T,\text{post}}(1)] - \mathbb{E}[Y_{T,\text{pre}}(0)]\Bigr) - \Bigl(\mathbb{E}[Y_{C,\text{post}}(0)] - \mathbb{E}[Y_{C,\text{pre}}(0)]\Bigr) \\[4pt]
+&= \Bigl(\mathbb{E}[Y_{T,\text{post}}(1)] - \mathbb{E}[Y_{T,\text{post}}(0)]\Bigr) \\
+&\quad + \Bigl(\mathbb{E}[Y_{T,\text{post}}(0)] - \mathbb{E}[Y_{T,\text{pre}}(0)]\Bigr) - \Bigl(\mathbb{E}[Y_{C,\text{post}}(0)] - \mathbb{E}[Y_{C,\text{pre}}(0)]\Bigr) \\[4pt]
+&= \text{ATT} + 0 \\[4pt]
+&= \text{ATT}.
+\end{aligned}
+$$
+
+Line 1 to line 2: substitute observed = potential outcomes (the treated region in the post period realized $Y(1)$; every other cell realized $Y(0)$). Line 2 to lines 3–4: add and subtract $\mathbb{E}[Y_{T,\text{post}}(0)]$ inside the treated difference, separating the ATT term from the treated region's counterfactual trend. Lines 3–4 to line 5: apply parallel trends (PT) — the bracket equals $\mathbb{E}[Y_{T,\text{post}}(0) - Y_{T,\text{pre}}(0)] - \mathbb{E}[Y_{C,\text{post}}(0) - Y_{C,\text{pre}}(0)] = 0$ — so the counterfactual trend terms cancel, leaving only the ATT. $\blacksquare$
+
+**MMM reading.** Let $Y_{r,t}(0) = \alpha_r + g_t$, where $\alpha_r$ is a region-specific baseline demand level (the time-invariant, market-level demand confounder whose existence Chapter 19 showed blocks identification from a single cross-section) and $g_t$ is a common time trend. Then $\mathbb{E}[Y_{T,\text{post}}(0) - Y_{T,\text{pre}}(0)] = g_{\text{post}} - g_{\text{pre}}$, identical for both regions — precisely what parallel trends requires. Crucially, $\alpha_T$ cancels completely in the differencing step: DiD is robust to any time-invariant region-level demand gap, the exact confounder Chapter 19's bias formula showed makes a naive cross-section unreliable. The ATT here is the revenue lift $S(x_1) - S(x_0)$: the level change in the response curve over the spend interval $[x_0, x_1]$. This is a **secant** of the response curve, not a point derivative.
+
+**Anchor.** $S(x) = 2\sqrt{x}$; treated spend $x_0 = 4 \to x_1 = 9$, so lift $= S(9) - S(4) = 6 - 4 = 2$. Baseline demand $\alpha_T = 10$, $\alpha_C = 8$; control spend held at $x_0 = 4$ throughout:
+
+| | $Y_T$ | $Y_C$ |
+|:--|--:|--:|
+| Pre | $\alpha_T + S(4) = 10 + 4 = 14$ | $\alpha_C + S(4) = 8 + 4 = 12$ |
+| Post | $\alpha_T + S(9) = 10 + 6 = 16$ | $\alpha_C + S(4) = 8 + 4 = 12$ |
+
+The **naive** post-period cross-section $Y_{T,\text{post}} - Y_{C,\text{post}} = 16 - 12 = 4$ is biased: it returns the true lift $2$ plus the baseline gap $\alpha_T - \alpha_C = 2$. The **DiD** $(16 - 14) - (12 - 12) = 2 - 0 = 2$ recovers the lift exactly, the baseline gap having differenced out.
+
+### Rung 3 — Proof P2 (KEYSTONE): the IV / Wald estimator is a secant in disguise
+
+**Setup.** An instrument $W \in \{0, 1\}$ shifts spend $X$ without directly affecting revenue $Y$ except through $X$. The **Wald estimator** is:
+
+$$
+\hat\beta_{\text{IV}} = \frac{\mathbb{E}[Y \mid W=1] - \mathbb{E}[Y \mid W=0]}{\mathbb{E}[X \mid W=1] - \mathbb{E}[X \mid W=0]}.
+$$
+
+**Instrument-validity conditions.** Four conditions are required:
+
+1. **Relevance:** $W$ shifts $X$ — the denominator is nonzero.
+2. **Exclusion:** $W$ affects $Y$ only through $X$ — no direct path from $W$ to $Y$.
+3. **Independence:** $W$ is independent of potential outcomes and confounders.
+4. **Monotonicity:** no defiers — $W$ shifts spend in the same direction for all compliers.
+
+Under these conditions the Wald estimator identifies the Local Average Treatment Effect (LATE) for the complier subpopulation — units whose spend actually shifts in response to $W$.
+
+**Theorem.** *For a smooth response $Y_i(x) = S(x) + \alpha_i$, where $\alpha_i$ is a unit baseline independent of $W$, a complier whose spend the instrument shifts from $x_0$ to $x_1$ has outcome change $S(x_1) - S(x_0) = \int_{x_0}^{x_1} S'(u)\,du$, so*
+
+$$
+\hat\beta_{\text{IV}} = \frac{S(x_1) - S(x_0)}{x_1 - x_0} = \frac{1}{x_1 - x_0}\int_{x_0}^{x_1} S'(u)\,du.
+$$
+
+*This is the average derivative of $S$ over the complier spend interval — a secant slope by the fundamental theorem of calculus — equal by the mean value theorem to $S'(\xi)$ at some $\xi \in (x_0, x_1)$, but not the tangent $S'(x)$ at the practitioner's current operating spend.*
+
+**Proof.**
+
+$$
+\begin{aligned}
+\mathbb{E}[Y \mid W{=}1] - \mathbb{E}[Y \mid W{=}0]
+&= \bigl(S(x_1) + \mathbb{E}[\alpha \mid W{=}1]\bigr) - \bigl(S(x_0) + \mathbb{E}[\alpha \mid W{=}0]\bigr) \\[4pt]
+&= S(x_1) - S(x_0),
+\end{aligned}
+$$
+
+where $\mathbb{E}[\alpha \mid W=1] = \mathbb{E}[\alpha \mid W=0]$ by independence — the unit baselines are uncorrelated with the instrument, so they cancel. The denominator equals $x_1 - x_0$ by complier monotonicity: for compliers $W=1$ forces $X = x_1$ and $W=0$ forces $X = x_0$; always-takers and never-takers contribute equal spend to both arms and cancel. Therefore:
+
+$$
+\begin{aligned}
+\hat\beta_{\text{IV}}
+&= \frac{S(x_1) - S(x_0)}{x_1 - x_0} \\[4pt]
+&= \frac{1}{x_1-x_0}\int_{x_0}^{x_1} S'(u)\,du \quad (\text{fundamental theorem of calculus}) \\[4pt]
+&= S'(\xi) \quad \text{for some } \xi \in (x_0, x_1) \quad (\text{mean value theorem for integrals}).
+\end{aligned}
+$$
+
+The Wald estimator is the secant slope of $S$ over the complier spend interval. The mean value theorem guarantees a $\xi$ exists where the secant equals the tangent, but $\xi$ is determined by the geometry of $S$ on $[x_0, x_1]$, not by the current operating point. $\blacksquare$
+
+**Anchor.** $x_0 = 4 \to x_1 = 9$:
+
+$$
+\hat\beta_{\text{IV}} = \frac{S(9) - S(4)}{9 - 4} = \frac{6 - 4}{5} = \frac{2}{5} = 0.4.
+$$
+
+By the MVT, $S'(\xi) = 1/\sqrt{\xi} = 0.4$ implies $\xi = (1/0.4)^2 = 6.25$. The IV number is the tangent slope at $\xi = 6.25$, strictly interior to $(4, 9)$ — and it is **neither** $S'(4) = 0.5$ (the marginal return at the pre-experiment spend) **nor** $S'(9) = 0.3\overline{3}$ (the marginal return at the post-experiment spend). The single IV number is an interval average, not the marginal return at any specific spend level. This cashes the IV teaser from Chapter 19 (Causal Inference Foundations): an IV estimate from a geo experiment cannot be directly inserted as a prior on $S'(x_{\text{current}})$ without a geometric correction for where $x_{\text{current}}$ lies relative to the complier spend interval $[x_0, x_1]$.
 
 ## Worked Examples
 
