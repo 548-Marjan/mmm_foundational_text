@@ -380,7 +380,93 @@ Even the naive univariate OLS regression of $Y$ on $X$ alone — with $Z$ still 
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The single cell below builds the confounded MMM from scratch — nothing but NumPy and Matplotlib, the regressions solved with `numpy.linalg.lstsq`, so every claim is the few lines of linear algebra it actually is. It does four things in order. First it regresses sales on spend **alone** and recovers the biased slope $\approx 3.50$, checking it against the analytic omitted-variable bias of $1.5$. Second it adds the observed confounder $Z$ to the regression — the back-door adjustment of Rung 5 — and recovers the true $\beta \approx 2.00$. Third it notes that when $Z$ is unobserved only the first regression is available, so the bias is irreducible. Finally it performs **graph surgery**: it severs the $Z \to X$ edge by regenerating spend independently of demand (a randomized experiment), and the *naive* regression on that interventional data recovers $\beta \approx 2.00$ even though $Z$ is still unobserved. One observable carries the chapter: the same data-generating process yields slope $3.5$ when spend is observed and slope $2.0$ when spend is set.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+# ----------------------------------------------------------------------
+# Confounded MMM: a latent demand driver Z moves BOTH spend X and sales Y.
+#   Z ~ N(0,1)                  demand / seasonality index (the confounder)
+#   X = delta*Z + nu            managers spend more in high-demand periods
+#   Y = beta*X + gamma*Z + eps  true causal response slope beta
+# beta=2 is the truth; the naive slope confuses spend's effect with demand's.
+# ----------------------------------------------------------------------
+rng = np.random.default_rng(19)
+N = 200_000
+beta, gamma, delta = 2.0, 3.0, 1.0
+
+Z   = rng.normal(0, 1, N)
+nu  = rng.normal(0, 1, N)
+eps = rng.normal(0, 1, N)
+X = delta * Z + nu
+Y = beta * X + gamma * Z + eps
+
+def ols(cols, y):
+    """OLS slope(s): design = [intercept, *cols]. Returns coefficients."""
+    A = np.column_stack([np.ones(len(y))] + cols)
+    return np.linalg.lstsq(A, y, rcond=None)[0]
+
+# === 1. Naive regression Y ~ X (omit the confounder Z) ===
+b_naive = ols([X], Y)[1]
+ovb_analytic = gamma * (delta * 1.0) / (delta**2 * 1.0 + 1.0)   # gamma*cov(X,Z)/var(X)
+print("1) Naive OLS  (Y ~ X), confounder omitted")
+print(f"   slope        = {b_naive:.4f}   (analytic plim {beta + ovb_analytic:.4f})")
+print(f"   OVB bias     = {b_naive - beta:.4f}   (analytic {ovb_analytic:.4f} = 3*1/2 = 1.5)")
+assert abs(b_naive - 3.5) < 0.02
+assert abs(ovb_analytic - 1.5) < 1e-9
+
+# === 2. Adjusted regression Y ~ X + Z (back-door adjustment) ===
+coef_adj = ols([X, Z], Y)
+b_adj, g_adj = coef_adj[1], coef_adj[2]
+print("\n2) Adjusted OLS  (Y ~ X + Z), confounder controlled")
+print(f"   slope on X   = {b_adj:.4f}   (recovers beta = 2)")
+print(f"   slope on Z   = {g_adj:.4f}   (recovers gamma = 3)")
+assert abs(b_adj - 2.0) < 0.02 and abs(g_adj - 3.0) < 0.02
+
+# === 3. Unobserved confounder: adjustment is unavailable ===
+# If Z is never recorded, only step 1 is feasible -> stuck at ~3.5. The bias
+# of 1.5 is irreducible: no estimator built from (X, Y) alone removes it.
+print("\n3) Z unobserved -> only the naive slope is available: stuck at ~3.5 (irreducible bias 1.5)")
+
+# === 4. Intervention: sever Z -> X (randomize spend), then do(X) ===
+# Graph surgery: delete the Z->X edge. Spend is now assigned independently of
+# demand; the same structural Y still holds. Even the *naive* regression now
+# recovers beta, with Z STILL unobserved -- this is the math of "run an experiment".
+X_do = rng.normal(0, 1, N)                       # exogenous (randomized) spend, X _|_ Z
+Y_do = beta * X_do + gamma * Z + eps             # same structural outcome equation
+b_do = ols([X_do], Y_do)[1]
+print("\n4) Intervention do(X): sever Z->X (randomized spend)")
+print(f"   naive slope on severed DGP = {b_do:.4f}   (interventional slope beta = 2; Z still unobserved)")
+assert abs(b_do - 2.0) < 0.02
+
+print("\nObservational slope ~ 3.5  vs  interventional slope = 2.0  -- the do/observe gap.")
+
+# ----------------------------------------------------------------------
+# Figure: the confounding, drawn. Scatter (subsample) colored by demand Z,
+# with the steep observational fit (~3.5) and the true causal slope (2.0).
+# ----------------------------------------------------------------------
+m = 3000
+idx = rng.choice(N, m, replace=False)
+xline = np.linspace(X.min(), X.max(), 100)
+b0_naive = ols([X], Y)[0]
+
+fig, ax = plt.subplots(figsize=(7, 5))
+sc = ax.scatter(X[idx], Y[idx], c=Z[idx], cmap="coolwarm", s=6, alpha=0.5)
+ax.plot(xline, b0_naive + b_naive * xline, color="black", lw=2.2,
+        label=f"observational fit (slope {b_naive:.2f})")
+ax.plot(xline, beta * xline, color="green", lw=2.2, ls="--",
+        label=f"true causal slope (do), {beta:.0f}")
+ax.set_xlabel("spend  $X$"); ax.set_ylabel("sales  $Y$")
+ax.set_title("Confounding: observational slope 3.5 vs causal slope 2")
+cb = fig.colorbar(sc, ax=ax); cb.set_label("demand $Z$ (confounder)")
+ax.legend(loc="upper left")
+fig.tight_layout()
+plt.show()
+```
+
+The printed output pins the chapter's arithmetic exactly. The naive regression returns $\hat\beta \approx 3.50$, matching the analytic plim $\beta + \gamma\,\mathrm{cov}(X,Z)/\mathrm{var}(X) = 2 + 1.5$; the omitted-variable bias is $\approx 1.50$, the $75\%$ overstatement of the true $\beta = 2$. Adding the confounder $Z$ to the regression — the back-door adjustment — recovers $\hat\beta \approx 2.00$ and $\hat\gamma \approx 3.00$, exactly the structural coefficients. When $Z$ is unobserved that adjustment is unavailable and the estimate is stuck at $3.50$, the irreducible bias of Chapter 18's wound. The intervention then severs $Z \to X$: with spend randomized, $\mathrm{cov}(X,Z) = 0$, and the naive regression on the experimental data returns $\hat\beta \approx 2.00$ with $Z$ still never measured — the back-door path closed at source. The figure makes it visual: the cloud is colored by the demand confounder, the steep black line is the slope a fit-the-data MMM reports, and the dashed green line is the shallower causal truth an experiment would reveal. The whole of Part VI is the program for getting from the black line to the green one.
 
 ## Exercises
 
