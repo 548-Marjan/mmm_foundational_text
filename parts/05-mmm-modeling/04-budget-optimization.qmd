@@ -279,13 +279,13 @@ Same surrogate and baseline optimum as WE1: $B = 9$, $b^\star = (7.2, 1.8)$, $\l
 
 | Scenario | Budget / constraint | Re-optimized $V^\star$ | First-order prediction | Overshoot |
 |:---------|:-------------------:|----------------------:|----------------------:|----------:|
-| Baseline | $B = 9$ | $6.7082$ | — | — |
-| $+20\%$ | $B = 10.8$ | $\sqrt{54} = 7.3485$ | $6.7082 + 0.3727 \times 1.8 = 7.3790$ | $+0.031$ |
-| $-20\%$ | $B = 7.2$ | $\sqrt{36} = 6.0000$ | $6.7082 - 0.3727 \times 1.8 = 6.0374$ | $+0.037$ |
-| Cap $b_1 \le 5$ | $b = (5,\,4)$ | $2\sqrt{5}+2 = 6.4721$ | n/a | Cap binds |
-| Ch. 2 dark | $b = (9,\,0)$ | $2\sqrt{9} = 6.0000$ | n/a | Struct. change |
+| Baseline | $B = 9$ | $6.71$ | — | — |
+| $+20\%$ | $B = 10.8$ | $\sqrt{54} = 7.35$ | $6.71 + 0.37\cdot 1.8 = 7.38$ | $+0.03$ |
+| $-20\%$ | $B = 7.2$ | $\sqrt{36} = 6.00$ | $6.71 - 0.37\cdot 1.8 = 6.04$ | $+0.04$ |
+| Cap $b_1 \le 5$ | $b = (5,\,4)$ | $2\sqrt{5}+2 = 6.47$ | n/a | Cap binds |
+| Ch. 2 dark | $b = (9,\,0)$ | $2\sqrt{9} = 6.00$ | n/a | Struct. change |
 
-In the budget-shift rows, the shadow price gives a no-re-solve answer: multiply $\lambda^\star = 0.3727$ by the budget change and add to the baseline. The prediction overshoots in both directions — $7.3790$ versus realized $7.3485$ for an increase, and $6.0374$ versus realized $6.0000$ for a decrease. Because $V^\star(B) = \sqrt{5B}$ is concave, the tangent at $B = 9$ lies above the curve at every other budget; the first-order prediction is an optimistic upper bound for any finite $|\Delta B|$, and the overshoot grows with $(\Delta B)^2$.
+In the budget-shift rows, the shadow price gives a no-re-solve answer: multiply $\lambda^\star = 0.3727$ by the budget change and add to the baseline. The prediction overshoots in both directions — $7.38$ versus realized $7.35$ for an increase, and $6.04$ versus realized $6.00$ for a decrease. Because $V^\star(B) = \sqrt{5B}$ is concave, the tangent at $B = 9$ lies above the curve at every other budget; the first-order prediction is an optimistic upper bound for any finite $|\Delta B|$, and the overshoot grows with $(\Delta B)^2$.
 
 The cap and dark rows cannot be addressed by the single shadow price: both alter the active constraint set. Under the cap $b_1 \le 5$, the $2.2$ budget units the optimizer would have directed to channel 1 spill to channel 2 ($b_2 = 4$), but binding the more efficient channel costs $6.7082 - 6.4721 = 0.2361$ units of response — a structural loss invisible in the first-order predictor. With channel 2 dark, $V = 2\sqrt{9} = 6.0000$: a $10.6\%$ loss relative to the unconstrained optimum, coinciding with the $-20\%$ budget row by a feature of the surrogate's parameters.
 
