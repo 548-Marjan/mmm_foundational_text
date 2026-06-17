@@ -502,7 +502,7 @@ Use the linear structural MMM $Y=\beta X+\gamma Z+\varepsilon$ with endogenous s
 
 ### A -- Applied / Code
 
-**A1.** Extend the Code Tie-in: sweep the confounding strength $\delta$ over a grid (e.g. $-1$ to $2$) and plot the naive bias against $\delta$. Confirm it is linear in $\operatorname{cov}(X,Z)=\delta\,\operatorname{var}(Z)$ and passes through zero at $\delta=0$.
+**A1.** Extend the Code Tie-in: sweep the confounding strength $\delta$ over a grid (e.g. $-1$ to $2$) and plot the naive bias against $\delta$. Show it equals $\gamma\,\delta/(\delta^2+1)$ — zero at $\delta=0$, same sign as $\delta$, and *not* linear in $\delta$ because $\operatorname{var}(X)=\delta^2+1$ grows with the confounding (it peaks at $\delta=1$). Then verify the bias *is* exactly linear in $\operatorname{cov}(X,Z)$ when $\operatorname{var}(X)$ is held fixed.
 
 **A2.** Add a *second* demand driver $Z_2$ that also confounds spend and sales, but adjust for only $Z_1$. Show the residual bias, and that the bias vanishes only when the adjustment set is *complete* (both $Z_1$ and $Z_2$ controlled).
 
