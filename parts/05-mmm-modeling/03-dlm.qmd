@@ -470,8 +470,59 @@ sales series and the recursions derived above.
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** Why is a constant-coefficient MMM a *falsifiable* null rather than a safe default? Name two mechanisms by which a channel's true effectiveness drifts over a campaign.
+
+**C2.** In one sentence, what makes the Kalman update "just" an instance of Gaussian conditioning? What plays the role of the prior, and what of the likelihood?
+
+**C3.** The chapter calls the DLM the book's cleanest conjugacy-vs-MCMC boundary. What is the single modelling change that turns the exact closed-form Kalman posterior into a problem that requires MCMC, and why does it break conjugacy?
+
+**C4.** The filter and the smoother both estimate $\theta_t$. When is the *filtered* estimate the right one to report, and when is the *smoothed* estimate? (Hint: real-time pacing vs. retrospective attribution.)
+
 ### B -- By Hand
+
+**B1.** For the local level with $V = 2$, $W = 1$, find the steady-state Kalman gain. (Set up the fixed-point relation $W(R+V) = R^2$, solve $R^2 - R - 2 = 0$, then $K^\star = R/(R+V)$.)
+
+**B2.** Local level, $V = W = 1$, with prior $m_0 = 0$, $C_0 = 1$. Observe $y_1 = 3$. Carry out one predict–update step: compute $a_1, R_1, f_1, Q_1, A_1, m_1, C_1$.
+
+**B3.** Explain, using the smoother recursion $C_t^s = C_t + B_t(C_{t+1}^s - R_{t+1})B_t^\top$, why the smoothed variance can never exceed the filtered variance $C_t$.
 
 ### P -- Prove It
 
+**P1.** **Derive the RTS smoother backward recursion** (for $G = I$): by conditioning the jointly Gaussian pair $(\theta_t, \theta_{t+1}) \mid y_{1:t}$ — with $\mathrm{Cov}(\theta_t, \theta_{t+1} \mid y_{1:t}) = C_t$, $\mathrm{Var}(\theta_{t+1} \mid y_{1:t}) = R_{t+1}$ — on the smoothed future, obtain $B_t = C_t R_{t+1}^{-1}$, $m_t^s = m_t + B_t(m_{t+1}^s - a_{t+1})$, $C_t^s = C_t + B_t(C_{t+1}^s - R_{t+1})B_t^\top$.
+
+**P2.** Prove the prediction-error decomposition $p(y_{1:T}) = \prod_{t=1}^{T} \mathcal N(y_t; f_t, Q_t)$ for the DLM with known variances, using the chain rule $p(y_{1:T}) = \prod_t p(y_t \mid y_{1:t-1})$ and the one-step forecast from Proof P1.
+
+**P3.** Prove that the local-level steady-state gain at $V = W = 1$ is the golden ratio: show the variance fixed point solves $R^2 - R - 1 = 0$ and conclude $K^\star = (\sqrt5 - 1)/2$.
+
 ### A -- Applied / Code
+
+**A1.** Extend the scalar filter to a **2-D state** (local linear trend: level + slope, with $G = \begin{bmatrix} 1 & 1 \\ 0 & 1 \end{bmatrix}$), simulate a trending series, and plot the smoothed level and slope.
+
+**A2.** Sweep the ratio $W/V$ over several values for the regression DLM and plot filter RMSE and smoother RMSE against $\log(W/V)$. Explain the trade-off the curve reveals.
+
+**A3.** Add a seasonal component (a low-order Fourier pair from Chapter 7) to the state vector and recover both the drifting channel coefficient and the seasonal amplitude jointly.
+
+## Summary
+
+This chapter let the MMM's coefficients move. By promoting the fixed coefficient vector to a latent state that evolves in time, the dynamic linear model captures channel effectiveness that drifts — and it does so while keeping inference exact when the variances are known, and tractable by Gibbs/FFBS when they are not.
+
+**Key concepts**
+
+- **The state-space form** splits the model into an observation equation and a state (evolution) equation; the coefficient vector is a latent state inferred from noisy sales.
+- **The Kalman filter** is exact Gaussian conditioning carried forward one step at a time — predict, then update — and needs no sampling when the variances are known.
+- **The RTS smoother** revisits each state with the whole series and is strictly tighter than the filter; report the filter for real-time pacing, the smoother for retrospective attribution.
+- **FFBS** — "filter forward, sample backward" — draws an exact path from the joint state posterior, and is the state block of a Gibbs sampler.
+- **The conjugacy-vs-MCMC boundary** is the book's sharpest: known variances give a closed-form posterior, unknown variances break conjugacy and require MCMC.
+- **The regression DLM** is the time-varying-coefficient MMM; **BTVC** is the flagged advanced reframing (kernel-smoothed knots, folded-normal positivity, variational inference).
+
+**Key identities**
+
+- **State-space.** $y_t = F_t^\top\theta_t + v_t$ ($V_t$); $\theta_t = G_t\theta_{t-1} + w_t$ ($W_t$).
+- **Predict.** $a_t = G_t m_{t-1}$, $R_t = G_t C_{t-1} G_t^\top + W_t$.
+- **Forecast.** $f_t = F_t^\top a_t$, $Q_t = F_t^\top R_t F_t + V_t$.
+- **Update.** $m_t = a_t + A_t(y_t - f_t)$, $C_t = R_t - A_t Q_t A_t^\top$, $A_t = R_t F_t Q_t^{-1}$.
+- **Smoother.** $B_t = C_t G_{t+1}^\top R_{t+1}^{-1}$, $m_t^s = m_t + B_t(m_{t+1}^s - a_{t+1})$.
+- **Marginal likelihood.** $p(y_{1:T}) = \prod_t \mathcal N(y_t; f_t, Q_t)$.
+- **Local-level steady gain.** $K^\star = \tfrac{\sqrt5 - 1}{2}$ at $V = W = 1$.
+
+The classical filter feeds the causal counterfactuals of Chapter 20; the Bayesian DLM feeds the prior store of Chapter 22.
