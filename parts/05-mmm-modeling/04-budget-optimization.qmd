@@ -12,7 +12,120 @@ The chapter's payoff arc runs in two stages. In the first, plugging the Chapter 
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The first three rungs establish the chapter's analytic spine. Rung 1 states the budgeting problem on a fitted response curve, identifies the key shift that posterior uncertainty introduces, and names the square-root surrogate used for every closed-form result. Rung 2 applies — without re-deriving — the equal-marginal optimality condition from Chapter 12 (Convexity) to recover the Part IV analytic anchor, and observes that the condition holds per posterior draw, inducing a posterior over the optimal allocation. Rung 3 proves the chapter's keystone identity: the shadow price $\lambda^\star$ reported by the optimizer equals the derivative of the value function with respect to the budget, the identity that turns $\lambda^\star$ into the engine of first-order scenario analysis.
+
+### Rung 1 — The budgeting problem on a fitted curve
+
+The goal is to allocate a total budget $B$ across $n$ channels so as to maximise total response:
+
+$$
+\max_{b \ge 0,\ \mathbf{1}^\top b = B}\ V(b;\theta) = \sum_{i=1}^n r_i(b_i;\theta_i),
+$$
+
+where $r_i(b_i;\theta_i)$ is the **fitted MMM response function** for channel $i$ — saturating, post-adstock (Chapter 15, the MMM data-generating process), concave and increasing in $b_i$. The parameter vector $\theta$ collects the adstock decays, saturation curves, and channel coefficients recovered by Chapter 16 (Building & Fitting an MMM). Each $r_i$ is concave in $b_i$, so $V$ is concave over the budget simplex and the problem has a unique global optimum.
+
+**The key shift from Part IV.** In Chapters 12, 13, and 14, $\theta$ was a known input: the response curves were given, and the only task was to find the optimal allocation. Chapter 16 removed that assumption. The parameter vector $\theta$ is now the output of an inference procedure and carries a posterior distribution. As a result, the objective $V(b;\theta)$ is **random**: for a fixed allocation $b$, different draws from the Chapter 16 posterior yield different total-response surfaces, and the allocation optimal for one draw need not be optimal for another. The optimizer is exact in the computational sense; the surface it operates on is uncertain.
+
+**The square-root surrogate.** Every closed-form result in this chapter uses the analytically tractable stand-in
+
+$$
+r_i(b) = a_i\sqrt{b_i},
+$$
+
+with coefficients $a = (2,1)$, budget $B = 9$, and the shorthand $S = \sum_i a_i^2 = 5$. Like the true fitted curve, $r_i$ is concave and saturating; unlike it, every number is checkable by hand. The surrogate matches Part IV's analytic spine exactly, so the numbers $(b^\star, \lambda^\star, V^\star)$ derived below are the same ones Chapters 12, 13, and 14 each reached independently.
+
+### Rung 2 — Equal-marginal allocation, applied
+
+**The condition.** At the optimum, the marginal return of every funded channel must equal the common budget multiplier:
+
+$$
+r_i'(b_i^\star) = \lambda^\star \quad \text{for every funded channel } i.
+$$
+
+This is the **equal-marginal / KKT condition**. Its derivation — stationarity of the Lagrangian $L(b,\lambda) = V(b) + \lambda(B - \mathbf{1}^\top b)$ under the concavity of $V$ — appears in Chapter 12 (Convexity), where it was proved both necessary and sufficient for the unique global optimum. It is not re-derived here.
+
+**Applying it to the surrogate.** The marginal of $r_i(b) = a_i\sqrt{b}$ is $r_i'(b) = a_i/(2\sqrt{b})$. Setting $r_i'(b_i^\star) = \lambda^\star$ gives
+
+$$
+\frac{a_i}{2\sqrt{b_i^\star}} = \lambda^\star \quad\Longrightarrow\quad b_i^\star = \frac{a_i^2}{4(\lambda^\star)^2},
+$$
+
+so $b_i^\star \propto a_i^2$. Summing over channels and applying $\sum_i b_i^\star = B$ determines $\lambda^\star$:
+
+$$
+\sum_i b_i^\star = \frac{S}{4(\lambda^\star)^2} = B \quad\Longrightarrow\quad \lambda^\star = \frac{\sqrt{S}}{2\sqrt{B}},
+$$
+
+and substituting back:
+
+$$
+b_i^\star = \frac{B\,a_i^2}{S}.
+$$
+
+**Analytic anchor.** With $a = (2,1)$, $B = 9$, $S = 5$:
+
+$$
+b_1^\star = \frac{9 \cdot 4}{5} = 7.2, \qquad b_2^\star = \frac{9 \cdot 1}{5} = 1.8, \qquad \lambda^\star = \frac{\sqrt{5}}{6} \approx 0.3727,
+$$
+
+recovering the allocation that Chapters 12, 13, and 14 each reached by an independent route.
+
+**The posterior view.** The equal-marginal condition is a statement about the optimum for a **specific** response curve. When $\theta$ is drawn from the Chapter 16 posterior, the response functions $r_i(\cdot;\theta_i)$ change, and with them the marginals $r_i'$, the optimal allocation $b^\star(\theta)$, and the shadow price $\lambda^\star(\theta)$. The condition holds **per posterior draw** of $\theta$: for each draw the optimizer finds a draw-specific allocation and multiplier. Collecting those over all draws produces a **posterior distribution over $(b^\star, \lambda^\star)$** — the uncertainty in where and how steeply the value surface peaks, propagated through the optimizer into the budget recommendation.
+
+### Rung 3 — Proof P2 (KEYSTONE): the envelope theorem and the shadow price
+
+The shadow price $\lambda^\star$ is not merely an artifact of the Lagrangian; it is the rate at which the maximum achievable response grows as the total budget increases. This identity is the engine of first-order scenario analysis.
+
+**Theorem.** *At the optimum, the marginal value of the budget equals the optimal multiplier:*
+
+$$
+\frac{dV^\star}{dB} = \lambda^\star.
+$$
+
+**Proof.** Write the value function $V^\star(B) = V(b^\star(B))$, where $b^\star(B)$ is the optimal allocation as a function of $B$. Introduce the Lagrangian
+
+$$
+L(b,\lambda) = V(b) + \lambda\bigl(B - \mathbf{1}^\top b\bigr).
+$$
+
+At the optimum $(b^\star,\lambda^\star)$: (i) the stationarity conditions give $\partial L/\partial b_i = r_i'(b_i^\star) - \lambda^\star = 0$ for every funded channel $i$; and (ii) the constraint $\mathbf{1}^\top b^\star = B$ holds, so the constraint term vanishes and $V^\star(B) = L(b^\star(B),\lambda^\star(B))$. Differentiating $L$ with respect to $B$ by the chain rule:
+
+$$
+\begin{aligned}
+\frac{dV^\star}{dB}
+  &= \frac{dL}{dB}\bigg|_{b^\star,\,\lambda^\star} \\[4pt]
+  &= \sum_i \frac{\partial L}{\partial b_i}\bigg|_\star \frac{db_i^\star}{dB}
+     + \frac{\partial L}{\partial \lambda}\bigg|_\star \frac{d\lambda^\star}{dB}
+     + \frac{\partial L}{\partial B}\bigg|_\star \\[4pt]
+  &= \sum_i \bigl(r_i'(b_i^\star) - \lambda^\star\bigr)\frac{db_i^\star}{dB}
+     + \bigl(B - \mathbf{1}^\top b^\star\bigr)\frac{d\lambda^\star}{dB}
+     + \lambda^\star \\[4pt]
+  &= \lambda^\star.
+\end{aligned}
+$$
+
+The $\partial L/\partial b_i\big|_\star$ terms vanish by stationarity and the $\partial L/\partial\lambda\big|_\star = B - \mathbf{1}^\top b^\star$ term vanishes by primal feasibility, so only the **explicit** $B$-dependence of $L$ survives: $\partial L/\partial B = \lambda^\star$. Although $b_i^\star$ changes with $B$, the response is already maximised over $b$ at the optimum, so first-order perturbations of the allocation induced by a budget change do not alter $V$ to first order — this is the **envelope theorem** applied to the constrained Lagrangian. $\blacksquare$
+
+**Analytic anchor.** Substitute $b_i^\star = B\,a_i^2/S$ into $V$:
+
+$$
+\begin{aligned}
+V^\star(B)
+  &= \sum_i a_i\sqrt{b_i^\star}
+   = \sum_i a_i\sqrt{\frac{B\,a_i^2}{S}}
+   = \frac{\sqrt{B}}{\sqrt{S}}\sum_i a_i^2
+   = \frac{S\sqrt{B}}{\sqrt{S}}
+   = \sqrt{BS}.
+\end{aligned}
+$$
+
+So $V^\star(B) = \sqrt{BS}$, and differentiating:
+
+$$
+\frac{dV^\star}{dB} = \frac{\sqrt{S}}{2\sqrt{B}}.
+$$
+
+At $B = 9$, $S = 5$: $dV^\star/dB = \sqrt{5}/6 = \lambda^\star \approx 0.3727$. The shadow price the optimizer reports **is** the budget derivative — not a side product of the Lagrangian algebra but a quantity with a direct economic meaning. A budget increase of $\Delta B$ buys approximately $\lambda^\star \cdot \Delta B$ additional response to first order, and the posterior over $\lambda^\star$ turns that linear approximation into a probability statement. This identity is what the scenario analysis of later rungs will use.
 
 ## Worked Examples
 
