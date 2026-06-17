@@ -472,8 +472,38 @@ The printed output pins the chapter's arithmetic exactly. The naive regression r
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** Explain why a fitted MMM response coefficient is not automatically the causal effect of spend. State the fundamental problem of causal inference in MMM terms — what counterfactual is never observed?
+
+**C2.** A colleague argues that the confounding bias will "wash out" once enough years of data are collected. Explain precisely why this is wrong: what is it about omitted-variable bias that does not shrink with sample size?
+
+**C3.** Define ignorability ($Y(x)\perp X\mid Z$) in words for the spend setting. Why is it usually indefensible in an observational MMM — what kinds of demand drivers would have to be measured for it to hold?
+
+**C4.** Two analysts fit the same MMM; one adds a "seasonality index" control and the other does not. Their spend coefficients differ. Using the back-door criterion, explain when the controlled estimate is the more trustworthy one — and when adding the control could instead do harm (hint: what if the control were a *descendant* of spend?).
+
 ### B -- By Hand
+
+Use the linear structural MMM $Y=\beta X+\gamma Z+\varepsilon$ with endogenous spend $X=\delta Z+\nu$, all noises mean-zero and mutually independent.
+
+**B1.** Derive $\operatorname{plim}\hat\beta_{\text{naive}}=\beta+\gamma\,\operatorname{cov}(X,Z)/\operatorname{var}(X)$ for the regression of $Y$ on $X$ alone. Show each step.
+
+**B2.** For $\beta=2$, $\gamma=3$, $\delta=1$, $\operatorname{var}(Z)=\operatorname{var}(\nu)=1$, evaluate $\operatorname{cov}(X,Z)$, $\operatorname{var}(X)$, the bias, and $\operatorname{plim}\hat\beta_{\text{naive}}$. Confirm the $75\%$ overstatement.
+
+**B3.** Show the bias is exactly zero in two distinct ways: (i) set $\delta=0$ (exogenous spend) and (ii) set $\gamma=0$ ($Z$ does not affect sales). Interpret each in MMM terms.
+
+**B4.** Suppose spend instead *reduces* in high-demand periods ($\delta<0$, e.g. a budget cap kicks in when sales are strong). Determine the sign of the bias and state whether the naive slope now over- or under-states the true $\beta$.
 
 ### P -- Prove It
 
+**P1.** Prove the omitted-variable-bias theorem: for the simple regression of $Y$ on $X$, $\operatorname{plim}\hat\beta_{\text{naive}}=\operatorname{cov}(X,Y)/\operatorname{var}(X)=\beta+\gamma\,\operatorname{cov}(X,Z)/\operatorname{var}(X)$, stating where the orthogonality $\operatorname{cov}(X,\varepsilon)=0$ is used.
+
+**P2.** Prove the back-door adjustment formula $P(Y\mid\mathrm{do}(X=x))=\sum_z P(Y\mid X=x,Z=z)P(Z=z)$ via the truncated factorization, for the fork $X\leftarrow Z\rightarrow Y$ with $X\rightarrow Y$. State where the no-descendant condition is used.
+
+**P3.** Show that for this structural model, the graphical back-door condition (conditioning on $Z$ blocks the path $X\leftarrow Z\rightarrow Y$) is equivalent to the potential-outcomes ignorability $Y(x)\perp X\mid Z$. (Hint: write $Y(x)=\beta x+\gamma Z+\varepsilon$ and $X=\delta Z+\nu$, condition on $Z$, and use $\varepsilon\perp\nu$.)
+
 ### A -- Applied / Code
+
+**A1.** Extend the Code Tie-in: sweep the confounding strength $\delta$ over a grid (e.g. $-1$ to $2$) and plot the naive bias against $\delta$. Confirm it is linear in $\operatorname{cov}(X,Z)=\delta\,\operatorname{var}(Z)$ and passes through zero at $\delta=0$.
+
+**A2.** Add a *second* demand driver $Z_2$ that also confounds spend and sales, but adjust for only $Z_1$. Show the residual bias, and that the bias vanishes only when the adjustment set is *complete* (both $Z_1$ and $Z_2$ controlled).
+
+**A3.** Simulate an **instrument** $W$ that affects spend but not sales except through spend ($X=\delta Z+\theta W+\nu$, $Y=\beta X+\gamma Z+\varepsilon$, $W\perp Z,\varepsilon$). Estimate $\beta$ by the instrumental-variables ratio $\operatorname{cov}(W,Y)/\operatorname{cov}(W,X)$ and show it recovers $\beta=2$ despite $Z$ being unobserved — a preview of Chapter 20 (Quasi-Experimental Designs).
