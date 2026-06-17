@@ -223,7 +223,148 @@ This is the chapter's wound, and it is structural. Observational MMM identifies 
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+Three worked examples carry the chapter's main results into arithmetic — the first closing the Part IV loop by recovering the exact allocation the three optimization chapters each found by an independent route, the second building a scenario table driven by the shadow price and tracing the response frontier to its inverse, and the third making the optimizer's curse and the identifiability wound concrete with numbers.
+
+### WE1 — Closing the Part IV loop
+
+**Setup.**
+
+Square-root surrogate $r_i(b) = a_i\sqrt{b_i}$ with $a = (2,1)$, budget $B = 9$, $S = \sum_i a_i^2 = 5$.
+
+**Equal-marginal allocation.**
+
+Applying the Rung 2 closed-form directly:
+
+$$
+b_1^\star = \frac{B\,a_1^2}{S} = \frac{9 \cdot 4}{5} = 7.2, \qquad b_2^\star = \frac{B\,a_2^2}{S} = \frac{9 \cdot 1}{5} = 1.8.
+$$
+
+**Verifying equal marginals.**
+
+Computing $r_i'(b_i^\star) = a_i/(2\sqrt{b_i^\star})$ at each channel:
+
+$$
+r_1'\!(7.2) = \frac{2}{2\sqrt{7.2}} = \frac{1}{\sqrt{7.2}} \approx 0.3727, \qquad r_2'\!(1.8) = \frac{1}{2\sqrt{1.8}} \approx 0.3727.
+$$
+
+Both equal the Rung 2 formula $\lambda^\star = \sqrt{S}/(2\sqrt{B}) = \sqrt{5}/6 \approx 0.3727$. The equal-marginal condition holds at both channels; the KKT conditions are satisfied and the optimum is confirmed.
+
+**Total response.**
+
+$$
+V^\star = 2\sqrt{7.2} + \sqrt{1.8} = 2(2.6833) + 1.3416 = 6.7082 = \sqrt{45}.
+$$
+
+**Envelope-theorem check.**
+
+The Rung 3 proof established $V^\star(B) = \sqrt{SB}$. Evaluating and differentiating at $B = 9$:
+
+$$
+V^\star(9) = \sqrt{5 \cdot 9} = \sqrt{45} = 6.7082, \qquad \left.\frac{dV^\star}{dB}\right|_{B=9} = \frac{\sqrt{5}}{2\sqrt{9}} = \frac{\sqrt{5}}{6} \approx 0.3727 = \lambda^\star.
+$$
+
+The derivative of the value function with respect to budget equals the Lagrange multiplier: the envelope theorem, made arithmetic.
+
+**The loop closes.**
+
+The numbers $b^\star = (7.2, 1.8)$, $\lambda^\star \approx 0.3727$, and $V^\star = 6.7082$ first appeared in Chapter 12's Lagrangian analysis, reappeared as the dual price of Chapter 13's linear program, and surfaced a third time as the SLSQP multiplier in Chapter 14. They appear here a fourth time, now as the output of the fitted-curve optimizer applied to the Chapter 16 surrogate at its posterior mean. Part IV assumed the response curve was a known input; Part V estimated it from data. This is where the Part IV loop closes.
+
+### WE2 — Scenario analysis via the shadow price
+
+**Setup.**
+
+Same surrogate and baseline optimum as WE1: $B = 9$, $b^\star = (7.2, 1.8)$, $\lambda^\star \approx 0.3727$, $V^\star = 6.7082$. The Rung 6 first-order predictor is $\Delta V \approx \lambda^\star \cdot \Delta B$.
+
+**Scenario table.**
+
+| Scenario | Budget / constraint | Re-optimized $V^\star$ | First-order prediction | Overshoot |
+|:---------|:-------------------:|----------------------:|----------------------:|----------:|
+| Baseline | $B = 9$ | $6.7082$ | — | — |
+| $+20\%$ | $B = 10.8$ | $\sqrt{54} = 7.3485$ | $6.7082 + 0.3727 \times 1.8 = 7.3790$ | $+0.031$ |
+| $-20\%$ | $B = 7.2$ | $\sqrt{36} = 6.0000$ | $6.7082 - 0.3727 \times 1.8 = 6.0374$ | $+0.037$ |
+| Cap $b_1 \le 5$ | $b = (5,\,4)$ | $2\sqrt{5}+2 = 6.4721$ | n/a | Cap binds |
+| Ch. 2 dark | $b = (9,\,0)$ | $2\sqrt{9} = 6.0000$ | n/a | Struct. change |
+
+In the budget-shift rows, the shadow price gives a no-re-solve answer: multiply $\lambda^\star = 0.3727$ by the budget change and add to the baseline. The prediction overshoots in both directions — $7.3790$ versus realized $7.3485$ for an increase, and $6.0374$ versus realized $6.0000$ for a decrease. Because $V^\star(B) = \sqrt{5B}$ is concave, the tangent at $B = 9$ lies above the curve at every other budget; the first-order prediction is an optimistic upper bound for any finite $|\Delta B|$, and the overshoot grows with $(\Delta B)^2$.
+
+The cap and dark rows cannot be addressed by the single shadow price: both alter the active constraint set. Under the cap $b_1 \le 5$, the $2.2$ budget units the optimizer would have directed to channel 1 spill to channel 2 ($b_2 = 4$), but binding the more efficient channel costs $6.7082 - 6.4721 = 0.2361$ units of response — a structural loss invisible in the first-order predictor. With channel 2 dark, $V = 2\sqrt{9} = 6.0000$: a $10.6\%$ loss relative to the unconstrained optimum, coinciding with the $-20\%$ budget row by a feature of the surrogate's parameters.
+
+**The response frontier and its inverse.**
+
+Sweeping $B$ traces the value function and its slope — the campaign's efficiency curve:
+
+$$
+V^\star(B) = \sqrt{5B}, \qquad \lambda^\star(B) = \frac{\sqrt{5}}{2\sqrt{B}}.
+$$
+
+Both are plotted in the Code Tie-in. As $B$ grows, $V^\star$ rises at a declining rate and $\lambda^\star$ falls, the law of diminishing returns visible in the slope. The inverse answers "what budget achieves target response $V_0 = 8$?" Inverting $V^\star(B) = \sqrt{5B}$ and specializing to $V_0 = 8$, $S = 5$:
+
+$$
+B = \frac{V_0^2}{S} = \frac{64}{5} = 12.8, \qquad \lambda^\star(12.8) = \frac{S}{2V_0} = \frac{5}{16} = 0.3125.
+$$
+
+Verification: $\sqrt{5 \times 12.8} = \sqrt{64} = 8.$ $\checkmark$ The shadow price at the required budget, $0.3125$, is below the baseline $0.3727$: pushing response from $6.7082$ to $8.0000$ requires spending into a region of further diminishing returns, exactly as the concave frontier predicts.
+
+### WE3 — The wound
+
+Three parts: a posterior over the optimal allocation, the optimizer's curse in numbers, and two equally-fitted curves that send the optimizer to opposite channels.
+
+**WE3(a) — The allocation posterior.**
+
+The Chapter 16 ridge leaves the attribution split poorly identified. Represent this with a joint posterior on $a = (a_1, a_2)$ that pins the total-response direction $(1,1)$ tightly — the level of response is well identified by the sales series — while placing wide mass on the split direction $(1,-1)$, reflecting near-flat Fisher information in that direction. For each posterior draw $a^{(s)}$, the closed-form equal-marginal rule gives the draw-specific optimal allocation:
+
+$$
+b_1^\star\!\left(a^{(s)}\right) = \frac{B\,\bigl(a_1^{(s)}\bigr)^2}{\bigl(a_1^{(s)}\bigr)^2 + \bigl(a_2^{(s)}\bigr)^2}.
+$$
+
+Propagating a representative posterior — seeded computation in the Code Tie-in — the distribution of $b_1^\star$ has median $\approx 7.2$ but a 5th–95th percentile band of approximately $[4.35,\,8.69]$: more than four budget units out of a total of nine. The confident point estimate $7.2$ is one draw in a wide distribution. Every allocation in that band is equally consistent with the historical sales data; the draws disagree only in the counterfactual spend region the optimizer must extrapolate into.
+
+**WE3(b) — The optimizer's curse, numerically.**
+
+The practitioner who optimizes on the posterior-mean curve $a = (2,1)$, $S = 5$ achieves
+
+$$
+\max_b\,\mathbb{E}_a\!\left[V(b;\,a)\right] = \sqrt{S \cdot B} = \sqrt{5 \cdot 9} = 6.7082.
+$$
+
+An oracle who knows each posterior draw's curve before committing to an allocation achieves
+
+$$
+\mathbb{E}_a\!\left[\max_b V(b;\,a)\right] = \sqrt{B}\,\mathbb{E}_a\!\left[\|a\|\right] \approx 6.8276.
+$$
+
+The gap $6.8276 - 6.7082 \approx 0.1194 \ge 0$ is the optimizer's curse in numbers. The allocation chosen from the estimated curve falls short of the oracle by $\approx 0.12$ response units — roughly $1.8\%$ of total response. Rung 5 proved this gap is non-negative for any uncertain objective; here it equals the **EVPI**: the maximum value of an experiment that resolved the Chapter 16 ridge before the budget decision is made.
+
+**WE3(c) — Identical fit, opposite allocations.**
+
+Place two response curves on the circle $\|a\|^2 = S_0 = 5.0625$, so both achieve the same maximum achievable response
+
+$$
+V^\star = \sqrt{B \cdot S_0} = \sqrt{9 \times 5.0625} = 6.75
+$$
+
+exactly. Parameterize by angle $\theta$:
+
+$$
+a(\theta) = \bigl(\sqrt{S_0}\cos\theta,\; \sqrt{S_0}\sin\theta\bigr) = (2.25\cos\theta,\; 2.25\sin\theta).
+$$
+
+At $\theta = 15^\circ$ (channel 1 dominant), $a \approx (2.173,\,0.582)$ and $a_1^2 \approx 4.722$, $a_2^2 \approx 0.339$. The optimal allocation is
+
+$$
+b^\star \approx \left(\frac{9 \times 4.722}{5.0625},\; \frac{9 \times 0.339}{5.0625}\right) \approx (8.40,\; 0.60).
+$$
+
+At $\theta = 75^\circ$ (channel 2 dominant), $a \approx (0.582,\,2.173)$: the roles of $a_1$ and $a_2$ exchange by symmetry, giving $b^\star \approx (0.60,\,8.40)$.
+
+| Curve | $a_1$ | $a_2$ | Optimal $V^\star$ | $b_1^\star$ | $b_2^\star$ |
+|:------|------:|------:|------------------:|------------:|------------:|
+| $\theta = 15^\circ$ | $2.173$ | $0.582$ | $6.75$ | $8.40$ | $0.60$ |
+| $\theta = 75^\circ$ | $0.582$ | $2.173$ | $6.75$ | $0.60$ | $8.40$ |
+
+The two curves differ along the contrast direction $(1,-1)$ — exactly the direction the Chapter 16 ridge leaves unidentified — so at a balanced historical spend mix they reproduce the sales series equally well, since the in-sample fit depends on $a$ only through $a_1\sqrt{b_1^{\text{hist}}} + a_2\sqrt{b_2^{\text{hist}}} \propto a_1 + a_2$, which is identical for the two mirror-image curves. The data cannot tell them apart. Fixing $\|a\|$ equal (the circle) makes their maximum achievable response identical too, $6.75$, isolating the allocation as the only thing that differs — and it differs maximally: the optimal split depends on the ratio $a_1^2 : a_2^2$, which inverts between the curves, so one sends $93\%$ of the budget to channel 1 and the other $93\%$ to channel 2. A model-selection exercise that chooses between them by goodness of fit alone cannot distinguish them, yet the implied budget decisions are as far apart as they could be.
+
+**Good fit does not imply good decisions.** The response curve's identifiability in the counterfactual direction — the direction the optimizer must extrapolate into — is what determines whether the allocation can be trusted. This is the wound Rung 7 named, and it is left open intentionally: the tools to close it are the subject of Part VI.
 
 ## Code Tie-in
 
