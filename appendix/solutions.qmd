@@ -2697,4 +2697,78 @@ The draws stay positive, seasonal, and in a plausible order of magnitude — the
 
 **A3.** Under confined spend, the posterior for $K$ tracks the prior scale, because the data leave that direction unidentified (Proof P2). Fitting the confined-spend series under half-normal $K$-priors of scale $3, 5, 8$ gives posterior $K$ means near $2.6, 6.4, 9.0$ with standard deviations near $1.3, 2.4, 2.6$ — the posterior slides outward with the prior rather than holding at the true $K = 3$. Where the likelihood is flat, the prior is the posterior.
 
+## Chapter 17 — Dynamic Linear Models & State-Space MMM
+
+**C1.** A constant-$\beta$ model makes the testable claim that a channel's effectiveness is identical in every period; the data can contradict it (a channel strong early and exhausted late produces residual structure a constant coefficient cannot absorb). Two drift mechanisms: creative wear-out (audiences habituate, efficiency decays) and shifting platform inventory / targeting pools (the reachable audience changes period to period).
+
+**C2.** The predict step supplies a Gaussian *prior* over the state, $\theta_t\mid y_{1:t-1}\sim\mathcal N(a_t,R_t)$; the new observation $y_t$ supplies a Gaussian *likelihood* (linear in $\theta_t$ with variance $V_t$); the update is exactly the posterior from conditioning that joint Gaussian on $y_t$ — Bayes' rule for Gaussians, which stays Gaussian.
+
+**C3.** Making the variances $(V,W)$ unknown. With them known, every step is an affine-Gaussian operation and the posterior stays Gaussian (closed form). Unknown variances enter $R_t$ and $Q_t$ nonlinearly and couple to the whole state path, so marginalizing them leaves no recognizable distribution — conjugacy fails and MCMC is required.
+
+**C4.** Report the **filtered** estimate for real-time decisions (budget pacing this week uses only data available now); report the **smoothed** estimate for retrospective attribution (a post-campaign read of effectiveness should use the whole series, and is strictly more precise).
+
+**B1.** Local level, $V=2$, $W=1$. The steady-state variance $R=C^\star+W$ solves $W(R+V)=R^2$, i.e. $R^2 - R - 2 = 0$, with positive root $R=2$. The steady-state Kalman gain is $K^\star = R/(R+V) = 2/(2+2) = 0.5$.
+
+**B2.** Local level, $V=W=1$, $m_0=0$, $C_0=1$, $y_1=3$. Predict: $a_1 = m_0 = 0$, $R_1 = C_0 + W = 2$. Forecast: $f_1 = a_1 = 0$, $Q_1 = R_1 + V = 3$. Update: $A_1 = R_1/Q_1 = 2/3$, $m_1 = a_1 + A_1(y_1 - f_1) = (2/3)\cdot3 = 2$, $C_1 = R_1 - A_1 Q_1 A_1 = 2 - (2/3)(3)(2/3) = 2 - 4/3 = 2/3$.
+
+**B3.** In $C_t^s = C_t + B_t(C_{t+1}^s - R_{t+1})B_t^\top$, the filtered variance $C_{t+1}$ never exceeds the one-step prior variance $R_{t+1}$ (conditioning on $y_{t+1}$ can only reduce it), and the smoothed $C_{t+1}^s \preceq C_{t+1} \preceq R_{t+1}$. Hence $C_{t+1}^s - R_{t+1} \preceq 0$, so $B_t(C_{t+1}^s - R_{t+1})B_t^\top \preceq 0$ and $C_t^s \preceq C_t$: smoothing can only sharpen.
+
+**P1.** Given $y_{1:t}$, the pair $(\theta_t,\theta_{t+1})$ is jointly Gaussian: $\theta_t$ has the filtered law $\mathcal N(m_t,C_t)$, $\theta_{t+1}=\theta_t+w_{t+1}$ (for $G=I$) has the one-step prior law $\mathcal N(a_{t+1},R_{t+1})$, and $\mathrm{Cov}(\theta_t,\theta_{t+1}\mid y_{1:t}) = \mathrm{Cov}(\theta_t,\theta_t+w_{t+1}) = C_t$. Conditioning $\theta_t$ on the (smoothed) value of $\theta_{t+1}$ by the conditional-Gaussian formula gives gain $B_t = C_t R_{t+1}^{-1}$, mean $m_t^s = m_t + B_t(m_{t+1}^s - a_{t+1})$, and covariance $C_t^s = C_t + B_t(C_{t+1}^s - R_{t+1})B_t^\top$. $\blacksquare$
+
+**P2.** By the chain rule, $p(y_{1:T}) = \prod_{t=1}^{T} p(y_t \mid y_{1:t-1})$. Proof P1 shows each one-step-ahead forecast is Gaussian, $y_t \mid y_{1:t-1} \sim \mathcal N(f_t, Q_t)$ with $f_t = F_t^\top a_t$, $Q_t = F_t^\top R_t F_t + V_t$. Substituting, $p(y_{1:T}) = \prod_{t=1}^{T}\mathcal N(y_t; f_t, Q_t)$ — the prediction-error decomposition. $\blacksquare$
+
+**P3.** Local level, $V=W=1$. From P-step/B1's fixed-point relation $W(R+V)=R^2$ with $V=W=1$: $R + 1 = R^2$, i.e. $R^2 - R - 1 = 0$, positive root $R = (1+\sqrt5)/2 = \varphi$. Then $K^\star = R/(R+V) = \varphi/(\varphi+1)$. Since $\varphi+1 = \varphi^2$, $K^\star = \varphi/\varphi^2 = 1/\varphi = \varphi - 1 = (\sqrt5 - 1)/2 \approx 0.618$. $\blacksquare$
+
+**A1.** A 2-D local-linear-trend filter (state = level + slope) and its smoother:
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+G = np.array([[1.0, 1.0], [0.0, 1.0]]); F = np.array([1.0, 0.0]); V = 1.0
+Wm = np.diag([0.01, 0.01])
+rng = np.random.default_rng(3); T = 200
+level = np.zeros(T); slope = np.zeros(T); slope[0] = 0.05
+for t in range(1, T):
+    slope[t] = slope[t-1] + rng.normal(0, 0.01)
+    level[t] = level[t-1] + slope[t-1] + rng.normal(0, 0.01)
+y = level + rng.normal(0, np.sqrt(V), T)
+
+m = np.zeros((T, 2)); Cf = np.zeros((T, 2, 2)); a = np.zeros((T, 2)); Rr = np.zeros((T, 2, 2))
+mt = np.zeros(2); Ct = np.eye(2)*10
+for t in range(T):
+    at = G @ mt; Rt = G @ Ct @ G.T + Wm
+    ft = F @ at; Qt = F @ Rt @ F + V; K = Rt @ F / Qt
+    mt = at + K*(y[t] - ft); Ct = Rt - np.outer(K, F @ Rt)
+    m[t] = mt; Cf[t] = Ct; a[t] = at; Rr[t] = Rt
+
+ms = m.copy()
+for t in range(T-2, -1, -1):
+    B = Cf[t] @ G.T @ np.linalg.inv(Rr[t+1])
+    ms[t] = m[t] + B @ (ms[t+1] - a[t+1])
+
+plt.figure(figsize=(7, 4))
+plt.plot(y, ".", alpha=0.3, label="observations")
+plt.plot(level, "k-", lw=2, label="true level")
+plt.plot(ms[:, 0], "C1-", label="smoothed level")
+plt.xlabel("t"); plt.ylabel("level"); plt.legend(); plt.tight_layout(); plt.show()
+print("smoothed-level RMSE:", round(np.sqrt(np.mean((ms[:, 0] - level)**2)), 3))
+```
+
+The smoothed level filters the observation noise and tracks the trending state; the second state component recovers the slope that drives the trend.
+
+**A2.** Sweeping $W/V$ trades responsiveness against noise: a small ratio anchors the estimate near a constant (low variance, high lag-bias when the truth drifts), a large ratio chases every wiggle (low bias, high variance). Filter and smoother RMSE both fall then rise as $W/V$ passes the value matching the true drift; the smoother curve sits below the filter curve everywhere.
+
+**A3.** Stack a Fourier seasonal pair into the state, $\theta_t = (\beta_t, a_t, b_t)^\top$ with $F_t = (x_t, \cos(2\pi t/s), \sin(2\pi t/s))^\top$ and $G = I$; the filter then separates the drifting channel coefficient from the seasonal amplitudes because the design columns are (near-)orthogonal — the same orthogonality that made the Fourier regression of Chapter 7 well-conditioned.
+
+### Chapter 17 — BTVC mechanics (Advanced / Extensions)
+
+This block collects the mechanics flagged but deferred in the chapter's BTVC section; it is skippable and library-free.
+
+**Kernel-smoothed knots.** Instead of an independent state $\theta_t$ at every one of the $T$ periods, BTVC represents the coefficient trajectory with a small number $J \ll T$ of latent **knots** $b \in \mathbb R^J$ placed across time, and reconstructs the full path by smoothing: $\beta = K b$, where $K \in \mathbb R^{T\times J}$ is a fixed kernel matrix whose entry $K_{tj}$ is a smooth (e.g. Gaussian or cubic) weight of period $t$ on knot $j$. The number of free parameters is $J$, decoupled from the series length $T$ — the structural contrast with the DLM, whose state count grows with $T$. Smoothness is imposed by the kernel rather than by a random-walk variance.
+
+**Folded-normal positivity hierarchy.** Marketing coefficients should be non-negative. BTVC places a two-layer hierarchy on the knots: a global scale draws from a half-normal, and each knot is a **folded normal** (the absolute value of a normal) centered on a shrinkage mean. The folding enforces $\beta \ge 0$ exactly, while the hierarchy shares strength across knots and shrinks small effects toward zero — positivity and regularization in one prior.
+
+**Why variational inference.** With many channels and long histories, FFBS/MCMC over the full posterior is expensive. BTVC fits with **stochastic variational inference**: it posits a parametric family for the posterior and optimizes its parameters to minimize the KL divergence to the true posterior, using minibatch gradients. This trades the DLM's exact recursions for speed and scalability, at the cost of a variational approximation gap — the posterior is approximate, and uncertainty can be understated. The trade is deliberate: BTVC targets production deployment where scalability and built-in positivity outweigh the loss of exactness.
+
 :::
