@@ -507,3 +507,27 @@ Use the linear structural MMM $Y=\beta X+\gamma Z+\varepsilon$ with endogenous s
 **A2.** Add a *second* demand driver $Z_2$ that also confounds spend and sales, but adjust for only $Z_1$. Show the residual bias, and that the bias vanishes only when the adjustment set is *complete* (both $Z_1$ and $Z_2$ controlled).
 
 **A3.** Simulate an **instrument** $W$ that affects spend but not sales except through spend ($X=\delta Z+\theta W+\nu$, $Y=\beta X+\gamma Z+\varepsilon$, $W\perp Z,\varepsilon$). Estimate $\beta$ by the instrumental-variables ratio $\operatorname{cov}(W,Y)/\operatorname{cov}(W,X)$ and show it recovers $\beta=2$ despite $Z$ being unobserved — a preview of Chapter 20 (Quasi-Experimental Designs).
+
+## Summary
+
+This chapter answered the question Chapter 18 (Budget Optimization) left open: *why can't observational MMM pin the response curve?* Because spend is endogenous — managers set it in response to demand drivers that also move sales — the fitted coefficient confounds the causal effect of advertising with the demand it rode in on. The bias is structural, not a sample-size problem, and observational data alone cannot remove it. Naming the conditions under which a fitted coefficient *is* causal — and showing they usually fail in MMM — is what makes the experiments of Chapter 20 and the calibration of Chapter 21 necessary.
+
+**Key concepts**
+
+- **Endogeneity of spend.** Spend is a management decision correlated with demand, not a randomized treatment; this is the root cause of the wound.
+- **Potential outcomes.** The dose–response $\mu(x)=\mathbb E[Y(x)]$ is a counterfactual object; only one potential outcome per period is ever observed (the fundamental problem of causal inference).
+- **Ignorability.** Spend is "as good as random" given the demand state $Z$; under it (plus overlap), adjustment recovers the causal curve.
+- **Confounding / omitted-variable bias.** Omitting a confounder that drives both spend and sales biases the fitted slope by an amount that does not shrink with data.
+- **SCMs, DAGs, and the do-operator.** Intervening severs spend's incoming arrows; $P(Y\mid\mathrm{do}(x))$ differs from $P(Y\mid x)$ exactly when a back-door path is open.
+- **Identification.** Observational MMM recovers the causal curve iff a sufficient adjustment set is observed; in practice the confounders are unobserved, so it does not.
+
+**Key identities**
+
+- **Dose–response:** $\mu(x)=\mathbb E[Y(x)]$, with $Y^{\text{obs}}=Y(X)$.
+- **Ignorability:** $Y(x)\perp X\mid Z$ (equivalently, $Z$ blocks every back-door path).
+- **Adjustment:** $\mu(x)=\mathbb E_Z[\mathbb E[Y\mid X=x,Z]]$.
+- **Omitted-variable bias:** $\operatorname{plim}\hat\beta_{\text{naive}}=\beta+\gamma\,\operatorname{cov}(X,Z)/\operatorname{var}(X)$.
+- **Back-door adjustment:** $P(Y\mid\mathrm{do}(X=x))=\sum_z P(Y\mid X=x,Z=z)P(Z=z)$.
+- **Observation vs intervention:** observational slope $\beta+\text{bias}$ versus interventional slope $\beta$.
+
+The wound this chapter diagnoses is healed in the rest of Part VI: Chapter 20 (Quasi-Experimental Designs) generates spend variation independent of demand, and Chapter 21 (Advanced Calibration) folds those interventional estimates back into the posterior — closing the loop intervene → identify → calibrate → re-optimize.
