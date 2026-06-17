@@ -156,6 +156,111 @@ $$
 
 The naive regression returns $3.5$ for a true causal slope of $\beta = 2$ — a $75\%$ overstatement. These are the running numbers the chapter uses throughout: the Worked Examples and Code Tie-in recover them by simulation and direct regression, and the companion rungs 4–6 show how the do-operator and DAG back-door criterion trace the same bias through the causal graph.
 
+### Rung 4 — Structural causal models, DAGs, and the do-operator
+
+**Structural causal model.** The two structural equations of Rung 3 describe not merely a statistical model but a *generative mechanism* — a causal recipe by which nature produces data. Reading them as an SCM: $Z$ is set by exogenous forces outside the model; $X$ is then determined by the manager's response to $Z$ plus idiosyncratic noise $\nu$; finally $Y$ is produced as a function of $X$, $Z$, and independent noise $\varepsilon$. The independence of the noise terms, together with the causal ordering, defines the **structural causal model (SCM)**:
+
+$$
+\begin{aligned}
+X &= \delta Z + \nu, \\
+Y &= \beta X + \gamma Z + \varepsilon,
+\end{aligned}
+$$
+
+with $\nu \perp Z$, $\varepsilon \perp (X, Z)$, and all noise terms mutually independent. The equations are not symmetric: $Z$ is a cause of $X$, and both $Z$ and $X$ are causes of $Y$. That causal order — not a statistical convention — is what the DAG makes explicit.
+
+**The DAG.** A **directed acyclic graph (DAG)** encodes the causal structure as a graph whose nodes are variables and whose directed edges represent direct mechanisms. For the confounded MMM — spend ($X$), sales ($Y$), demand driver ($Z$) — the DAG has three nodes and three directed edges:
+
+```
+      Z
+     / \
+    /   \
+   X --> Y
+```
+
+Edge $Z \to X$: demand drives budgeting (the manager increases spend when she reads a high-demand signal). Edge $X \to Y$: spend causes sales (the causal effect the optimizer requires). Edge $Z \to Y$: demand elevates baseline sales directly (customers buy more regardless of advertising). The edge $Z \to X$ is the structural source of confounding.
+
+**Back-door path.** A **back-door path** from $X$ to $Y$ is any path in the DAG that begins with an arrow *into* $X$. In the graph above, the path $X \leftarrow Z \rightarrow Y$ is the unique back-door path: it runs backward along the edge $Z \to X$ and then forward along $Z \to Y$. This path is not a causal channel from spend to sales; it is a *non-causal association* carried by the shared demand driver. The fork $X \leftarrow Z \rightarrow Y$ is the archetypal confounding structure: when the back-door path is open — that is, when $Z$ is not conditioned on — an association between $X$ and $Y$ exists even in the absence of any causal $X \to Y$ effect, and the causal effect that does exist is inflated by the non-causal flow through $Z$.
+
+**The do-operator.** Pearl's **do-operator** makes the distinction between observing and intervening precise. The expression
+
+$$
+P\!\left(Y \mid \mathrm{do}(X = x)\right)
+$$
+
+is the distribution of $Y$ in the **mutilated graph** — the DAG in which every arrow into $X$ is deleted and $X$ is held fixed at $x$. Deleting $Z \to X$ severs $Z$'s influence on the level of spend, so in the mutilated graph $X$ and $Z$ are independent: the value of the demand driver no longer predicts how much the manager will spend, because the spending decision has been replaced by an external fiat. The distribution in the mutilated graph is computed by the **truncated factorization**: remove $X$'s mechanism $P(X \mid \mathrm{pa}_X)$ from the observational joint and substitute $X = x$ in every remaining factor. The observational conditional $P(Y \mid X = x)$, by contrast, averages over the demand states that *co-occur* with spend level $x$ in the data — since managers spend more in high-demand periods, periods with $X_i = x$ over-represent high-$Z$ states, and $P(Y \mid X = x)$ absorbs that selection into the conditional mean.
+
+**Observing versus intervening in the MMM.** Under observation the open back-door path $X \leftarrow Z \rightarrow Y$ carries confounding association from $Z$ into the apparent spend–sales relationship. Under $\mathrm{do}(X = x)$ the $Z \to X$ edge is cut; $Z$ retains its marginal distribution $P(Z)$ regardless of the imposed spend level, and no confounding association flows. In the linear-Gaussian SCM of Rung 3 the interventional slope is exactly $\beta = 2$, while the observational regression slope converges to $\beta + 1.5 = 3.5$ — the same gap derived algebraically in Rung 3, now visible as the presence versus absence of the open back-door path. Graph surgery and probability-limit algebra are two routes to the same answer.
+
+### Rung 5 — Proof P2: the back-door adjustment formula and identification
+
+**Theorem (back-door adjustment).** *Let $G$ be a DAG and let $Z$ be a set of observed variables satisfying the **back-door criterion** relative to the ordered pair $(X, Y)$: (i) $Z$ blocks every back-door path from $X$ to $Y$, and (ii) $Z$ contains no descendant of $X$. Then*
+
+$$
+P\!\left(Y \mid \mathrm{do}(X = x)\right)
+= \sum_{z} P(Y \mid X = x,\, Z = z)\, P(Z = z).
+$$
+
+**Proof.** Let $\mathrm{pa}_V$ denote the graph parents of variable $V$. The observational joint factorizes according to the DAG's Markov condition as
+
+$$
+P(X,\, Y,\, Z)
+= P(X \mid \mathrm{pa}_X)\, P(Y \mid \mathrm{pa}_Y)\, P(Z \mid \mathrm{pa}_Z).
+$$
+
+The **truncated factorization** under $\mathrm{do}(X = x)$ removes $X$'s factor $P(X \mid \mathrm{pa}_X)$ from the product and substitutes $X = x$ in every remaining factor:
+
+$$
+P_{\mathrm{do}(x)}(Y,\, Z)
+= \Bigl[\prod_{V \neq X} P(V \mid \mathrm{pa}_V)\Bigr]_{X = x}.
+$$
+
+In the MMM fork ($\mathrm{pa}_X = \{Z\}$, $\mathrm{pa}_Y = \{X, Z\}$, $\mathrm{pa}_Z = \varnothing$) the observational product is $P(Z) \cdot P(X \mid Z) \cdot P(Y \mid X, Z)$. Removing $P(X \mid Z)$ and fixing $X = x$ gives
+
+$$
+P_{\mathrm{do}(x)}(Y,\, Z) = P(Y \mid X = x,\, Z)\, P(Z).
+$$
+
+Because $Z$ is not a descendant of $X$ (condition (ii)), the intervention on $X$ does not alter $Z$ in the mutilated graph: $P(Z \mid \mathrm{do}(X = x)) = P(Z)$, confirming the expression above. Marginalizing over $Z$:
+
+$$
+\begin{aligned}
+P\!\left(Y \mid \mathrm{do}(X = x)\right)
+  &= \sum_{z} P_{\mathrm{do}(x)}(Y,\, Z = z) \\[4pt]
+  &= \sum_{z} P(Y \mid X = x,\, Z = z)\, P(Z = z). \quad \blacksquare
+\end{aligned}
+$$
+
+In the continuous-$Z$ analogue the sum becomes an integral, recovering exactly the adjustment formula $\mu(x) = \mathbb{E}_Z[\mathbb{E}[Y \mid X = x,\, Z]]$ derived in Rung 2.
+
+**Bridge: the two languages coincide.** The back-door criterion and potential-outcomes ignorability are two expressions of the same condition. If $Z$ blocks every back-door path from $X$ to $Y$ (condition (i)) and contains no descendant of $X$ (condition (ii)), then conditioning on $Z$ renders the potential outcomes $Y_i(x)$ independent of the treatment $X_i$. The argument runs through the SCM: with $X = \delta Z + \nu$, once $Z$ is held fixed the remaining variation in $X$ is carried solely by $\nu$, which is independent of $\varepsilon$ by construction; and since $Y_i(x) = \beta x + \gamma Z + \varepsilon$, conditioning on $Z$ gives $Y_i(x) \perp X_i \mid Z_i$ for all $x$. Conversely, if ignorability $Y_i(x) \perp X_i \mid Z_i$ holds, any back-door path left open at fixed $Z$ would sustain a correlation between $X$ and $Y(x)$, contradicting the independence; hence $Z$ must block all back-door paths. The two conditions are equivalent. In the fork $X \leftarrow Z \rightarrow Y$, conditioning on $Z$ closes the unique back-door path — which is exactly why adjusting for $Z$ in Rung 3 removed the bias of $1.5$ and recovered $\beta = 2$.
+
+**Identification conclusion.** The back-door adjustment formula is an **identification** result: it expresses the interventional quantity $P(Y \mid \mathrm{do}(X = x))$ entirely in terms of the observational distribution $P(Y, X, Z)$, which is estimable from data. The conclusion follows:
+
+> An observational MMM recovers the causal dose–response curve **if and only if** there exists an observed covariate set $Z$ satisfying the back-door criterion — equivalently, satisfying ignorability $Y_i(x) \perp X_i \mid Z_i$ — and that set is conditioned on in estimation.
+
+The "only if" direction is the wound: if no observed set satisfies the criterion, the interventional distribution is not identified from observational data alone, and no choice of estimator repairs the gap.
+
+### Rung 6 — The wound, restated causally, and the handoff to Part VI
+
+**The catch.** The identification conclusion of Rung 5 requires an observed, sufficient adjustment set — a covariate set that blocks every back-door path from spend to sales. In a realistic MMM that set is almost never available. The demand driver $Z$ of the running example stands for every unobserved force that simultaneously shapes a marketing manager's spend decisions and moves baseline sales: consumer intent as read from private forward bookings, competitor promotional calendars, macroeconomic confidence signals, pricing moves by category leaders that shift category demand. These drivers are real, they are correlated with spend, and they are rarely if ever measured in the media and sales data an MMM consumes. When $Z$ is unobserved, no back-door path can be blocked. Ignorability fails. No observational estimator — however flexible, however large the dataset, however carefully regularized — recovers $\beta$. The bias of Rung 3 is irreducible: it is a structural property of the joint distribution of $(X, Z)$, not a finite-sample artifact. More data from the same observational regime pins $\operatorname{plim}\hat\beta_{\mathrm{naive}} = 3.5$ with increasing precision; it does not move it toward $\beta = 2$.
+
+**The causal restatement of Chapters 16 and 18.** Chapter 16 (Building & Fitting an MMM) identified the identifiability ridge as the geometric signature of underdetermined observational estimation: a nearly flat direction in the likelihood surface along which many parameter combinations fit the historical series equally well. Chapter 18 (Budget Optimization) quantified the cost as the expected value of perfect information — the EVPI gap between the optimal allocation under full parameter knowledge and the best achievable allocation under posterior uncertainty. Rung 6 names the root cause of both in causal language: the ridge is the posterior manifestation of an open, unblockable back-door path, and the EVPI gap is the optimizer's shadow price on missing interventional variation. Enriching the observational time series lengthens it and narrows individual coefficient posteriors at fixed confounding structure, but it does not compress the ridge or shrink the EVPI. The wound is not a sample-size problem. It is an identification problem.
+
+**The only escape.** Identification requires a data-generating process in which spend variation is, by design or by fortune, independent of the unobserved demand driver — a process that severs the $Z \to X$ edge at source, rather than attempting to condition it away. This is the agenda of Part VI.
+
+**Chapter 20 (Quasi-Experimental Designs)** supplies the interventional identification toolkit. Geo-holdout experiments and matched-market tests assign spend variation across geographic units in a manner orthogonal to local demand trends by construction, replicating the $\delta = 0$ condition of Rung 3 at the level of experimental design. Difference-in-differences estimators and synthetic-control methods extract causal slopes from panels in which treated and control units diverge for reasons unrelated to their underlying demand trajectories. Instrumental-variables methods find a variable that moves spend but is excluded from the sales equation — in DAG terms, a node connected to $Y$ only through the $X \to Y$ edge, sidestepping every back-door path. Each approach produces an estimate of $\beta$ that is identified even when $Z$ is unobserved.
+
+**Chapter 21 (Advanced Calibration)** folds the identified estimates of Chapter 20 back into the observational posterior as likelihood factors on the response coefficients. An identified experiment that recovers $\hat\beta_{\mathrm{geo}}$ with a known standard error supplies a Gaussian likelihood on $\beta$ that, when multiplied into the Chapter 16 posterior, concentrates the distribution around the interventionally validated value. The product posterior compresses the ridge in the optimizer-relevant direction and reduces the EVPI gap that Chapter 18 could only name.
+
+**The loop.** The program of Part VI:
+
+$$
+\textbf{intervene} \;\longrightarrow\; \textbf{identify} \;\longrightarrow\; \textbf{calibrate} \;\longrightarrow\; \textbf{re-optimize.}
+$$
+
+Intervene to generate spend variation that is independent of unobserved demand drivers. Identify the causal slope $\beta$ from that variation. Calibrate the observational posterior against the identified estimate, compressing the ridge. Re-optimize the budget allocation against the compressed posterior. This loop is the answer to the wound Chapter 18 opened: not a better observational model applied to the same confounded data, but a change in the data-generating process that makes causal identification achievable in the first place.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
