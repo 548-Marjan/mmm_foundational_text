@@ -127,6 +127,100 @@ $$
 
 At $B = 9$, $S = 5$: $dV^\star/dB = \sqrt{5}/6 = \lambda^\star \approx 0.3727$. The shadow price the optimizer reports **is** the budget derivative — not a side product of the Lagrangian algebra but a quantity with a direct economic meaning. A budget increase of $\Delta B$ buys approximately $\lambda^\star \cdot \Delta B$ additional response to first order, and the posterior over $\lambda^\star$ turns that linear approximation into a probability statement. This identity is what the scenario analysis of later rungs will use.
 
+### Rung 4 — Propagating curve uncertainty to allocation uncertainty
+
+The equal-marginal analysis of Rung 2 is a statement about one specific response curve: given $\theta$, it finds the allocation $b^\star(\theta)$ and shadow price $\lambda^\star(\theta)$ that are jointly optimal. When $\theta$ is replaced by the Chapter 16 posterior $p(\theta \mid \text{data})$, the same analysis applies draw by draw. For each posterior draw $\theta^{(s)}$, the optimizer finds a draw-specific allocation, multiplier, and peak response:
+
+$$
+b^\star\!\left(\theta^{(s)}\right), \quad \lambda^\star\!\left(\theta^{(s)}\right), \quad V^\star\!\left(\theta^{(s)}\right) = \sqrt{S\!\left(\theta^{(s)}\right) B},
+$$
+
+where $S(\theta^{(s)}) = \sum_i a_i(\theta^{(s)})^2$ varies across draws. Collecting these over all posterior samples yields a **posterior distribution** over the optimal allocation, the shadow price, and the maximum achievable response. The optimizer does not produce one answer; it produces one answer per posterior draw, and the distribution of those answers encodes how much the budgeting decision inherits the parameter uncertainty.
+
+**The identifiability ridge amplifies the width.** Chapter 16 (Building & Fitting an MMM) showed that the Fisher-information geometry of a typical observational campaign is not isotropic: adstock decay and saturation shape are not separately resolved by spend data that was never designed to move them independently. The resulting near-flat directions in the log-posterior form a **ridge** — a family of parameter combinations that reproduce historical spend behavior equally well while disagreeing sharply on the marginal returns the optimizer will encounter in the counterfactual spend region. Two draws from opposite sides of the ridge agree on in-sample fit and disagree on where the budget should go; under a correctly propagated posterior, those disagreements become genuine width in the distribution of $b^\star(\theta^{(s)})$.
+
+**The certainty-equivalent plan.** A practitioner who plugs the posterior mean $\hat\theta$ into the optimizer obtains the **certainty-equivalent (plug-in) allocation**:
+
+$$
+b^\star_{\text{CE}} = b^\star(\hat\theta).
+$$
+
+This is a single, operationally tractable number. It is also a collapse: all the width of the posterior over $b^\star(\theta)$ is discarded in favor of the center, and the resulting allocation is reported with the same confidence one would have if $\theta$ were known. When the ridge is wide, that collapse discards real decision risk — the distribution of $b^\star(\theta^{(s)})$ spans allocations the business would treat as materially different decisions. Rung 5 makes the cost of that collapse precise.
+
+### Rung 5 — Proof P1 (KEYSTONE): the optimizer's curse
+
+**Theorem.** *For an objective $V(b;\theta)$ with uncertain parameters $\theta$,*
+
+$$
+\mathbb{E}_\theta\!\left[\max_b\, V(b;\theta)\right]\ \ge\ \max_b\, \mathbb{E}_\theta\!\left[V(b;\theta)\right].
+$$
+
+**Proof.** Fix any allocation $b'$. For every realization of $\theta$, the optimizer is free to choose $b'$, so the maximum is at least as large as the value at $b'$:
+
+$$
+\max_b\, V(b;\theta)\ \ge\ V(b';\theta) \qquad \text{for every } \theta.
+$$
+
+Taking expectations of both sides preserves the inequality:
+
+$$
+\mathbb{E}_\theta\!\left[\max_b\, V(b;\theta)\right]\ \ge\ \mathbb{E}_\theta\!\bigl[V(b';\theta)\bigr].
+$$
+
+The left side does not depend on $b'$, so this bound holds uniformly for every choice of $b'$. In particular it holds when $b'$ is chosen to maximize the right side, giving
+
+$$
+\mathbb{E}_\theta\!\left[\max_b\, V(b;\theta)\right]\ \ge\ \max_{b'}\,\mathbb{E}_\theta\!\bigl[V(b';\theta)\bigr]. \quad \blacksquare
+$$
+
+No convexity assumption on $V$ in $\theta$ is required; the proof rests only on the trivial pointwise bound that a maximum is at least any particular value. When $V(b;\theta)$ is convex in $\theta$ for each fixed $b$, Jensen's inequality gives the same direction from a different route — convexity in $\theta$ is sufficient for the inequality but not necessary.
+
+**Three readings.**
+
+1. **Over-optimism.** Optimizing on a point estimate $\hat\theta$ and reporting $\max_b V(b;\hat\theta)$ is an **optimistically biased** forecast of the response the chosen plan will actually deliver. The optimizer selects the allocation precisely where the fitted curve looks most favorable, and the fitted curve is most likely to have been bent upward by estimation noise at exactly that point. The response realized out of sample will on average fall short — systematically, not by accident [@smith2006].
+
+2. **Value of information.** Re-read the inequality as a gap. The left side is the expected oracle value: what the optimizer could achieve if it ran with full knowledge of $\theta$ before committing to an allocation. The right side is the best expected response achievable by any fixed allocation chosen without knowing $\theta$. The gap between them is the **expected value of perfect information (EVPI)**: the maximum a decision-maker should pay for an experiment that resolves all uncertainty in $\theta$ before the allocation is set [@gelman2013].
+
+3. **Bridge to Part VI.** The EVPI gap is not uniform across campaigns: it is largest precisely when the Chapter 16 ridge is widest — when observational spend data leave the response curve only weakly identified in the counterfactual spend region the optimizer needs. A confidently-wrong allocation is most costly exactly where the data are least able to adjudicate. The experiments of Part VI — causal foundations, quasi-experimental designs, and calibration — are worth pursuing because they shrink this gap directly, supplying the identification the optimizer requires in the directions the observational data left flat.
+
+### Rung 6 — Scenario analysis, made rigorous by the envelope theorem
+
+The Rung 3 identity $dV^\star/dB = \lambda^\star$ converts the shadow price into a practical calculator. Before re-solving the full allocation problem at a perturbed budget $B + \Delta B$, the envelope theorem supplies the **first-order answer**:
+
+$$
+\Delta V \approx \lambda^\star \cdot \Delta B.
+$$
+
+This is exact in the limit $\Delta B \to 0$ and a useful approximation for moderate perturbations. Re-optimizing at $B + \Delta B$ exposes two sources of departure from the linear prediction. **Curvature**: because $V^\star(B) = \sqrt{SB}$ is concave, the realized gain falls below the tangent — each successive budget dollar buys less than the previous one, so the linear prediction overestimates the gain for finite $\Delta B$. **Binding caps**: when a channel reaches its maximum feasible spend, the active constraint set changes and the shadow price shifts discontinuously — a structural break invisible in the first-order approximation but exposed immediately when the problem is re-solved.
+
+**The response-vs-budget frontier.** Sweeping $B$ from zero upward traces the value function $V^\star(B) = \sqrt{SB}$ with slope $\lambda^\star(B) = \sqrt{S}/(2\sqrt{B})$ — the **efficiency curve** of the campaign. Because $V^\star$ is concave and $\lambda^\star$ is strictly decreasing in $B$, the frontier visualizes the law of diminishing returns at the portfolio level: the marginal value of budget is highest at low spend and falls as the budget grows. Every budget question — "what does a 20% increase buy?", "where does the marginal return fall below my hurdle rate?", "at what budget does the shadow price fall by half?" — is answered by a point on this curve and its slope.
+
+**The inverse scenario.** The practitioner's dual question is: *what total budget is needed to reach a target response $V_0$?* Since $V^\star(B) = \sqrt{SB}$ is strictly increasing and continuously invertible, inverting the value function gives
+
+$$
+V_0 = \sqrt{S B} \quad\Longrightarrow\quad B = \frac{V_0^2}{S},
+$$
+
+and the shadow price at that budget is $\lambda^\star(B) = \sqrt{S}/(2\sqrt{B}) = S/(2V_0)$. The frontier and its inverse are the same identity read in two directions: "what does budget $B$ achieve?" and "what budget achieves $V_0$?" are dual questions, and $\lambda^\star$ is the exchange rate between budget and response in both.
+
+**Analytic anchor.** To reach target response $V_0 = 8$ on the $a = (2,1)$ surrogate ($S = 5$):
+
+$$
+B = \frac{8^2}{5} = \frac{64}{5} = 12.8, \qquad \lambda^\star = \frac{5}{2 \cdot 8} = \frac{5}{16} = 0.3125.
+$$
+
+Verification: $\sqrt{5}/(2\sqrt{12.8}) = 5/16 = 0.3125$. $\checkmark$ Compared to the baseline at $B = 9$ where $\lambda^\star \approx 0.3727$, the shadow price falls to $0.3125$ at $B = 12.8$ — diminishing returns operating exactly as the concave frontier predicts.
+
+### Rung 7 — The wound (closing rung)
+
+Rungs 3 and 6 produce a scenario table that looks crisp and decisive: one value function, one shadow price, one target-budget inversion. That crispness is legitimate when the response curve is known. When the curve comes from the Chapter 16 posterior, the same table is computed per posterior draw and the rows become distributions. Two effects are immediate. First, **scenario rankings overlap**: the allocation that maximizes response under the posterior mean may rank third under a draw from the identifiability ridge, and the scenario that looks clearly best under $\hat\theta$ may be indistinguishable from the second-best under a plausible alternative. Second, the **shadow price carries a wide credible band** — the posterior over $\lambda^\star(\theta)$ propagated from parameter uncertainty through the Rung 3 identity — so the first-order answer to "what does $\Delta B$ buy?" is uncertain in proportion to the posterior width in the saturation-coefficient directions.
+
+The deeper concern is the one the Worked Examples in the following section demonstrate directly: two posterior-plausible response curves can produce nearly identical in-sample fit while sending the optimizer to opposite channels. Both curves pass through the historical spend region; they diverge precisely in the counterfactual spend region the optimizer must extrapolate into, and that divergence sends one curve's optimal allocation heavily toward Channel 1 and the other's toward a more even split. **Good in-sample fit does not imply good budget decisions.** The response curve's identifiability in the counterfactual direction — not its goodness of fit in the historical direction — is what determines whether the optimizer's prescription can be trusted.
+
+This is the chapter's wound, and it is structural. Observational MMM identifies the response curve only in the directions the historical spend data excite; the optimizer needs the curve in the counterfactual directions the historical data left flat. The EVPI gap of Rung 5 is positive here not by bad luck but by the geometry of observational campaigns: spend variation reaches the data in the ranges that were historically funded, not in the counterfactual ranges the optimizer explores. The only route to a narrower allocation posterior — a smaller EVPI gap — is to **intervene and measure**: to move spend deliberately in the directions the observational data left unexcited, generating the identification the optimizer requires.
+
+**Part VI opens that route.** Chapter 19 (Causal Foundations) supplies the formal framework for distinguishing observational from interventional distributions, making precise in causal-graph language what "the data cannot identify" means and why the identifiability ridge is not a modeling artifact but a structural feature of endogenous spend. Chapter 20 (Quasi-Experimental Designs) shows how geo-experiments, holdout regions, and matched-market tests produce the interventional identification that observational MMM cannot — secants and tangents of the response curve pinned by exogenous spend variation rather than estimated from it. Chapter 21 (Advanced Calibration) uses those identified estimates as likelihood factors that compress the Chapter 16 posterior in the ridge direction, directly narrowing the allocation credible region and shrinking the EVPI gap. The wound this chapter names is the gap those three chapters close. This is the wound that ends Part V.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
