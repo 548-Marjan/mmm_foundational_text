@@ -509,8 +509,42 @@ The printed output pins the chapter's arithmetic exactly. The SLSQP solve return
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** A colleague reports that the budget optimizer, run on the fitted MMM, predicts a total response of $6.83$ at its chosen allocation, and proposes to commit to that number in next quarter's plan. Using the optimizer's curse, explain why $6.83$ is an optimistically biased forecast of the response the plan will actually realize, and what the honest forecast should be anchored to instead.
+
+**C2.** Define the expected value of perfect information (EVPI) in the budgeting context, and explain operationally why running an experiment shrinks it. Why does the EVPI gap depend on *which* directions of the response curve the data leaves unidentified, rather than on the overall goodness of fit?
+
+**C3.** Two candidate response curves achieve identical in-sample fit but send the optimizer's budget to opposite channels. Explain why "pick the better-fitting model" cannot resolve the disagreement, and identify what kind of additional information *would*. Connect your answer to why Part V ends on a wound that Part VI is needed to heal.
+
+**C4.** The shadow price $\lambda^\star$ falls from $0.3727$ at $B = 9$ to $0.3125$ at $B = 12.8$. State what $\lambda^\star$ measures, and explain why its decline is the law of diminishing returns expressed at the portfolio level.
+
 ### B -- By Hand
+
+Use the square-root surrogate $r_i(b) = a_i\sqrt{b_i}$ with $a = (2, 1)$, so $S = \sum_i a_i^2 = 5$.
+
+**B1.** Starting from the equal-marginal allocation $b_i^\star = B a_i^2/S$, derive the closed-form value function $V^\star(B) = \sqrt{SB}$. Hence confirm the envelope identity $dV^\star/dB = \lambda^\star = \sqrt{S}/(2\sqrt{B})$, and evaluate both at $B = 9$.
+
+**B2.** Compute the first-order shadow-price prediction of the total response at a $20\%$ budget increase ($B = 10.8$) and compare it to the exact $V^\star(10.8)$. Is the prediction an over- or under-estimate? Explain the sign from the concavity of $V^\star$.
+
+**B3.** Solve the inverse scenario: find the budget $B$ required to reach a target response $V_0 = 8$, and read off the shadow price at that budget. Confirm $B = 12.8$ and $\lambda^\star = 5/16$.
+
+**B4.** Impose the cap $b_1 \le 5$. Show that the cap binds, find the constrained optimum $(b_1, b_2)$ and its total response, and quantify the response lost relative to the uncapped optimum $6.7082$.
 
 ### P -- Prove It
 
+**P1.** Prove the optimizer's curse: for any objective $V(b;\theta)$ with random $\theta$,
+$$
+\mathbb{E}_\theta\!\left[\max_b V(b;\theta)\right] \ge \max_b \mathbb{E}_\theta\!\left[V(b;\theta)\right].
+$$
+Your proof should rest only on the pointwise bound that a maximum is at least any particular value; state clearly where that bound enters and why no convexity assumption on $V$ in $\theta$ is required.
+
+**P2.** Prove the envelope theorem for the equality-constrained budget problem: with Lagrangian $L(b,\lambda) = V(b) + \lambda(B - \mathbf{1}^\top b)$ and optimum $(b^\star(B), \lambda^\star(B))$, show $dV^\star/dB = \lambda^\star$. Account explicitly for the dependence of both $b^\star$ and $\lambda^\star$ on $B$, and identify which terms vanish and why.
+
+**P3.** Let $\theta$ have mean $\bar\theta$ and suppose $V(b;\theta)$ is convex in $\theta$ for each fixed $b$. Show that the certainty-equivalent value $\max_b V(b;\bar\theta)$ is a lower bound for the oracle value $\mathbb{E}_\theta[\max_b V(b;\theta)]$, and explain how this relates to the optimizer's curse of P1. (Hint: combine Jensen's inequality with the result of P1.)
+
 ### A -- Applied / Code
+
+**A1.** Modify the Code Tie-in's ridge posterior by widening the poorly-identified contrast direction (increase the coefficient `0.45` on the $(1,-1)$ component). Show that both the optimizer's-curse gap $\mathbb{E}[\max] - \max\mathbb{E}$ and the width of the $b_1^\star$ posterior band grow as the ridge flattens. Plot the EVPI gap as a function of the contrast standard deviation.
+
+**A2.** Add a minimum-spend floor $b_i \ge f$ (e.g. $f = 2$) to the budget problem and re-solve with SLSQP. Report the constrained optimum and recover the floor's shadow price as the multiplier on the active floor constraint — the response gained per unit the floor is relaxed. Interpret the sign.
+
+**A3.** Extend the optimizer to three channels with coefficients $a = (2, 1.5, 1)$ and budget $B = 12$. Solve for the optimal allocation and shadow price with SLSQP, verify the equal-marginal condition holds across all three funded channels, and confirm the closed-form $V^\star(B) = \sqrt{SB}$ with $S = \sum_i a_i^2$.
