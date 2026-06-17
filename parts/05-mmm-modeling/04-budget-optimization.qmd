@@ -548,3 +548,27 @@ Your proof should rest only on the pointwise bound that a maximum is at least an
 **A2.** Add a minimum-spend floor $b_i \ge f$ (e.g. $f = 2$) to the budget problem and re-solve with SLSQP. Report the constrained optimum and recover the floor's shadow price as the multiplier on the active floor constraint — the response gained per unit the floor is relaxed. Interpret the sign.
 
 **A3.** Extend the optimizer to three channels with coefficients $a = (2, 1.5, 1)$ and budget $B = 12$. Solve for the optimal allocation and shadow price with SLSQP, verify the equal-marginal condition holds across all three funded channels, and confirm the closed-form $V^\star(B) = \sqrt{SB}$ with $S = \sum_i a_i^2$.
+
+## Summary
+
+This chapter joined the two halves of the budgeting problem: Part IV's optimizer and Part V's fitted curve. Run on the posterior mean, the optimizer closes the Part IV loop exactly — the same allocation $(7.2, 1.8)$ and shadow price $0.3727$ from three independent routes. Run on the full posterior, it reveals the wound: optimizing a weakly-identified curve produces a confident-looking allocation that is in fact wide, and an in-sample optimum that overstates the response it will realize. Scenario analysis is the shadow price put to work; the optimizer's curse is the price of treating an estimated curve as known.
+
+**Key concepts**
+
+- **The join.** Part IV optimizes a *known* curve; Part V *estimates* the curve. This chapter runs the optimizer on the fitted, uncertain curve — the objective is now random because its parameters are.
+- **The shadow price** $\lambda^\star = dV^\star/dB$ is the marginal value of a budget dollar, not a byproduct of the Lagrangian. It is the engine of scenario analysis: it answers what a budget change buys to first order, before any re-solve.
+- **Scenario analysis** is the shadow price applied — the response-vs-budget frontier, its inverse (what budget hits a target), and what-if constraints — with curvature and binding caps exposed by re-optimizing.
+- **The optimizer's curse.** Optimizing an estimated curve and reporting that optimum overstates realized performance; the in-sample optimum is selected precisely where estimation noise was most favorable.
+- **EVPI.** The optimizer's-curse gap equals the expected value of perfect information — what an experiment that resolved the parameter uncertainty would be worth.
+- **The wound.** Observational MMM identifies the curve only where historical spend varied; the optimizer needs it in the counterfactual directions the data left flat. Good in-sample fit does not imply a good budget decision.
+
+**Key identities**
+
+- **Equal-marginal optimum.** $r_i'(b_i^\star) = \lambda^\star$ for every funded channel $i$.
+- **Shadow price.** $\lambda^\star = \sqrt{S}/(2\sqrt{B})$, with $S = \sum_i a_i^2$ for the square-root surrogate.
+- **Envelope theorem.** $dV^\star/dB = \lambda^\star$.
+- **Value function.** $V^\star(B) = \sqrt{SB}$.
+- **Inverse scenario.** $B = V_0^2/S$ is the budget that reaches target response $V_0$.
+- **Optimizer's curse.** $\mathbb{E}_\theta[\max_b V(b;\theta)] \ge \max_b \mathbb{E}_\theta[V(b;\theta)]$, the gap equal to the EVPI.
+
+The wound this chapter names is the gap Part VI closes: Chapter 19 (Causal Foundations) makes precise what observational data cannot identify, Chapter 20 (Quasi-Experimental Designs) supplies the interventional identification, and Chapter 21 (Advanced Calibration) folds it back into the posterior — narrowing the allocation and shrinking the EVPI gap that ends Part V.
