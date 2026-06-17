@@ -263,7 +263,120 @@ Intervene to generate spend variation that is independent of unobserved demand d
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+Three worked examples carry the chapter's main results into arithmetic — the first making the confounding bias calculation concrete and showing that controlling for the demand driver restores the truth, the second turning the identification wound into an exact irrecoverable number, and the third splitting the observational slope from the interventional slope and demonstrating by graph surgery that randomizing spend closes the back-door path.
+
+### WE1 — A confounded MMM, and adjustment in action
+
+**Data-generating process.**
+
+The structural model uses the chapter's running anchor values: $\beta = 2$ (true causal slope), $\gamma = 3$ (demand-to-sales coefficient), $\delta = 1$ (demand-to-spend coefficient), all noise variances equal to one.
+
+$$
+\begin{aligned}
+Z &\sim N(0,1), \\
+X &= Z + \nu, \quad \nu \sim N(0,1), \quad \nu \perp Z, \\
+Y &= 2X + 3Z + \varepsilon, \quad \varepsilon \sim N(0,1), \quad \varepsilon \perp (X,Z).
+\end{aligned}
+$$
+
+The demand driver $Z$ inflates both spend (through $\delta = 1$) and baseline sales (through $\gamma = 3$), opening the back-door path $X \leftarrow Z \rightarrow Y$.
+
+**Step (i) — the naive slope.**
+
+From the Rung 3 analytic anchor, $\operatorname{cov}(X,Z) = 1$ and $\operatorname{var}(X) = 2$. The omitted-variable bias is
+
+$$
+\text{Bias} = \gamma\,\frac{\operatorname{cov}(X,Z)}{\operatorname{var}(X)} = 3\cdot\frac{1}{2} = 1.5, \qquad \operatorname{plim}\,\hat\beta_{\mathrm{naive}} = 2 + 1.5 = 3.5.
+$$
+
+Simulating $N = 100{,}000$ draws at seed 19 and regressing $Y$ on $X$ alone returns $\hat\beta_{\mathrm{naive}} \approx 3.50$ — matching the analytic prediction. The seeded code is in the Code Tie-in; the result of interest here is the number and its origin: the naive estimator folds the demand-driven back-door flow into the spend coefficient, inflating the fitted response slope by $1.5$ units above the truth.
+
+**Step (ii) — adjustment recovers the truth.**
+
+Adding $Z$ as an additional regressor closes the unique back-door path $X \leftarrow Z \rightarrow Y$ (Rung 5, back-door adjustment). The partial slope on $X$ in the regression of $Y$ on $(X, Z)$ estimates $\beta$ directly, separating the causal $X \to Y$ channel from the confounding flow through $Z$. The simulation returns $\hat\beta_{\mathrm{adj}} \approx 2.00$ and $\hat\gamma \approx 3.00$, recovering both structural coefficients.
+
+**Summary table.**
+
+| Estimator | Controls $Z$? | Slope on $X$ | Error |
+|:----------|:-------------:|-------------:|------:|
+| Naive OLS | No | $\approx 3.50$ | $+1.50$ |
+| Adjusted OLS | Yes | $\approx 2.00$ | $0.00$ |
+| True $\beta$ | — | $2.00$ | — |
+
+**Lesson.** The naive response curve overstates the true causal lift by $1.5/2.0 = 75\%$. An optimizer consuming a slope of $3.5$ as its causal input directs too much budget to the channel, chasing what is partly demand-cycle baseline rather than advertising-driven return. Adjustment collapses the error to zero — but only because $Z$ was observed. The next example turns on what happens when it is not.
+
+### WE2 — The unobserved confounder (the wound)
+
+**Setup.**
+
+The DGP is identical to WE1: $Z \sim N(0,1)$, $X = Z + \nu$, $Y = 2X + 3Z + \varepsilon$, true $\beta = 2$. The single change is that the analyst does not record $Z$. The dataset contains only $(X, Y)$.
+
+**The only available regression.**
+
+With $Z$ absent from the dataset, the only feasible estimator regresses $Y$ on $X$ alone. By the Rung 3 theorem,
+
+$$
+\operatorname{plim}\,\hat\beta_{\mathrm{naive}} = \beta + \gamma\,\frac{\operatorname{cov}(X,Z)}{\operatorname{var}(X)} = 2 + 1.5 = 3.5.
+$$
+
+The WE1 adjustment is not harder to perform in this scenario — it is unavailable. The back-door formula $\mathbb{E}_Z[\mathbb{E}[Y \mid X = x, Z]]$ requires conditioning on $Z$, and one cannot condition on a variable that was never recorded. No choice of sample size, model flexibility, or regularization moves $\operatorname{plim}\,\hat\beta_{\mathrm{naive}}$ toward $\beta = 2$. More data from the same observational regime pins the biased value $3.5$ with increasing precision; it does not repair the bias.
+
+**Quantifying the irreducible bias.**
+
+The gap between the estimable slope and the true causal slope is $3.5 - 2.0 = 1.5$, a $75\%$ overstatement. An optimizer consuming the naive slope commits $75\%$ more budget on the margin than the true dose–response justifies. This overcommitment does not diminish as data accumulate; the precision of the wrong answer simply improves.
+
+**The causal vocabulary for the wound.**
+
+This is Chapter 18's (Budget Optimization) EVPI gap and Chapter 16's (Building & Fitting an MMM) identifiability ridge, stated in causal language. The ridge is the posterior manifestation of an open, unblockable back-door path $X \leftarrow Z \rightarrow Y$: directions in parameter space that the observational likelihood cannot distinguish correspond exactly to directions the unobserved confounder exploits. The wound is not a finite-sample problem — it is an identification problem. Every observational estimator built from $(X, Y)$ alone inherits the full bias of $1.5$, and Chapter 16's ridge is its posterior shadow.
+
+The only escape is a driver of $X$ that affects $Y$ only through $X$, bypassing the back-door path entirely — an **instrument**. Finding or engineering such variation is the subject of Chapter 20 (Quasi-Experimental Designs): geo-holdout experiments and matched-market tests assign spend variation orthogonal to unobserved demand drivers by construction, producing identification the observational series cannot supply.
+
+### WE3 — Observation versus intervention (the do-operator)
+
+**Two slopes from the same structural model.**
+
+The DGP of WE1 produces two distinct slopes. The **observational slope** is the rate of change of the conditional mean $E[Y \mid X = x]$ with respect to $x$:
+
+$$
+\frac{d}{dx}\,\mathbb{E}[Y \mid X = x] = \operatorname{plim}\,\hat\beta_{\mathrm{naive}} \approx 3.5.
+$$
+
+The **interventional slope** is the rate of change of the do-distribution $E[Y \mid \mathrm{do}(X = x)]$:
+
+$$
+\frac{d}{dx}\,\mathbb{E}[Y \mid \mathrm{do}(X = x)] = \beta = 2.
+$$
+
+The first is what the observational regression reports; the second is what the Chapter 18 (Budget Optimization) optimizer requires. They differ by the OVB of $1.5$, and the gap is the charge the open back-door path levies on every observational estimate.
+
+**Demonstrating the intervention by graph surgery.**
+
+Pearl's do-operator mutilates the DAG by deleting every arrow into $X$. For the running model, deleting $Z \to X$ severs the demand driver's influence on spend. The mutilated structural model is:
+
+$$
+\begin{aligned}
+Z &\sim N(0,1), \\
+X &= \nu, \quad \nu \sim N(0,1), \quad \nu \perp Z, \qquad (\delta = 0{:}\ \text{spend is exogenous}), \\
+Y &= 2X + 3Z + \varepsilon, \quad \varepsilon \sim N(0,1).
+\end{aligned}
+$$
+
+Demand still shifts baseline sales through $\gamma = 3$, but now $X \perp Z$: the back-door path is closed at source. Applying the OVB formula to this mutilated model:
+
+$$
+\operatorname{plim}\,\hat\beta^{\mathrm{sev}}_{\mathrm{naive}} = \beta + \gamma\,\frac{\operatorname{cov}(X,Z)}{\operatorname{var}(X)} = 2 + 3\cdot\frac{0}{1} = 2.
+$$
+
+Even the naive univariate OLS regression of $Y$ on $X$ alone — with $Z$ still unobserved — returns the true causal slope once spend is exogenous. Simulating $N = 100{,}000$ draws of the mutilated model at seed 19 and running the naive regression returns $\hat\beta \approx 2.00$, confirming the analytic result.
+
+**Summary.**
+
+| Data regime | $\operatorname{cov}(X,Z)$ | Naive OLS slope | True $\beta$ |
+|:------------|:-------------------------:|----------------:|-------------:|
+| Observational (endogenous spend) | $1$ | $\approx 3.50$ | $2$ |
+| Interventional (exogenous spend) | $0$ | $\approx 2.00$ | $2$ |
+
+**Lesson.** Randomizing spend — through a geo-holdout, a matched-market test, or any experimental design that assigns spend independently of the demand driver — severs the $Z \to X$ edge by construction, enforcing $\delta = 0$ in the spend equation. This closes the back-door path without measuring $Z$. The naive regression on the randomized data then recovers the true causal slope, requiring no adjustment. This is the mathematical content of "run an experiment": it changes the data-generating process so that $\operatorname{cov}(X,Z) = 0$, eliminating the confound at source rather than conditioning it away. Chapter 20 (Quasi-Experimental Designs) engineers this condition in observational panels through designs that make spend variation orthogonal to unobserved demand drivers — the practical realization of the graph surgery that $\mathrm{do}(X = x)$ performs in the mathematical model.
 
 ## Code Tie-in
 
