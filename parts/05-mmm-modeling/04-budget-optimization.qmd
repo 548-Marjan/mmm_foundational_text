@@ -368,7 +368,142 @@ The two curves differ along the contrast direction $(1,-1)$ — exactly the dire
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The single cell below runs the whole chapter on a live solver — `scipy.optimize.minimize(method="SLSQP")`, the same Chapter 14 routine — with nothing but NumPy and Matplotlib alongside it, so every claim is the few lines of optimization it actually is. It does four things in order. First it solves the square-root budget problem directly and lands on Part IV's allocation $b^\star = (7.2, 1.8)$ with the budget shadow price $\lambda^\star = 0.3727$ recovered as the common marginal return — **closing the loop** on a fitted-curve optimizer. Second it checks the **envelope theorem** numerically, confirming the finite-difference $dV^\star/dB$ equals $\lambda^\star(B)$ along the whole frontier. Third it builds the **scenario table** — budget $\pm 20\%$, a channel cap, a channel dark — printing the first-order shadow-price prediction against the re-optimized truth, and inverts the value function to find the budget that hits a target response. Finally it propagates the **Chapter 16 ridge posterior** through the optimizer: the optimal allocation becomes a wide distribution, and the optimizer's-curse gap $\mathbb{E}[\max] - \max\mathbb{E}$ comes back positive — the EVPI, what an experiment would be worth. One observable carries the chapter: the confident point allocation $7.2$ sits inside a posterior band more than four budget units wide.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
+
+# ----------------------------------------------------------------------
+# The square-root surrogate: r_i(b) = a_i * sqrt(b_i), a = (2, 1), B = 9.
+# S = sum a_i^2 = 5. Known optimum: b* = (7.2, 1.8), lambda* = 0.3727,
+# V* = sqrt(45) = 6.7082. We run it on a live solver, then propagate the
+# Chapter 16 ridge posterior through the optimizer to expose the wound.
+# ----------------------------------------------------------------------
+a = np.array([2.0, 1.0])
+B = 9.0
+S = float((a**2).sum())                      # 5.0
+
+def neg_response(b, coef):
+    return -np.sum(coef * np.sqrt(np.maximum(b, 0.0)))
+
+def solve_budget(coef, budget, ub=None):
+    """Maximize sum coef_i sqrt(b_i) s.t. 1^T b = budget, b >= 0 (optional caps)."""
+    n = len(coef)
+    cons = ({"type": "eq", "fun": lambda b, T=budget: b.sum() - T},)
+    bounds = [(0.0, ub[i] if ub is not None else None) for i in range(n)]
+    res = minimize(neg_response, x0=np.full(n, budget / n), args=(coef,),
+                   method="SLSQP", bounds=bounds, constraints=cons,
+                   options={"ftol": 1e-12, "maxiter": 200})
+    return res
+
+# === 1. Deterministic optimum — closing the Part IV loop on a live solver ===
+res = solve_budget(a, B)
+b_star = res.x
+V_star = -res.fun
+lam = a / (2.0 * np.sqrt(b_star))            # common marginal return = shadow price
+print("1) Deterministic optimum (SLSQP on the fitted curve)")
+print(f"   b*            = {np.round(b_star, 4).tolist()}   (expected [7.2, 1.8])")
+print(f"   total V*      = {V_star:.4f}                  (expected 6.7082)")
+print(f"   marginals a/(2 sqrt b) = {np.round(lam, 4).tolist()}  (equal => shadow price 0.3727)")
+assert np.allclose(b_star, [7.2, 1.8], atol=1e-2)
+assert abs(V_star - 6.7082) < 1e-3
+assert np.allclose(lam, lam[0], atol=1e-3) and abs(lam[0] - 0.3727) < 1e-3
+
+# === 2. Envelope theorem: dV*/dB = lambda*(B) ===
+def V_opt(budget):  return np.sqrt(S * budget)          # analytic value function
+def lam_opt(budget): return np.sqrt(S) / (2 * np.sqrt(budget))
+Bs = np.linspace(2.0, 20.0, 1000)
+fd = np.gradient(V_opt(Bs), Bs)                          # central differences (interior)
+h = 1e-5
+fd9 = (V_opt(B + h) - V_opt(B - h)) / (2 * h)            # exact central diff at B=9
+print("\n2) Envelope theorem  dV*/dB = lambda*(B)")
+print(f"   central diff at B=9 = {fd9:.6f}  vs lambda*(9) = {lam_opt(B):.6f}")
+print(f"   max interior |finite-diff - lambda*(B)| = {np.max(np.abs(fd - lam_opt(Bs))[1:-1]):.2e}")
+assert abs(fd9 - lam_opt(B)) < 1e-6
+assert np.max(np.abs(fd - lam_opt(Bs))[1:-1]) < 1e-3
+
+# === 3. Scenario table + frontier + inverse ===
+print("\n3) Scenario analysis (shadow price + re-solve)")
+lam0 = lam_opt(B)
+for label, Bp in [("+20%", 10.8), ("-20%", 7.2)]:
+    first_order = V_opt(B) + lam0 * (Bp - B)
+    actual = -solve_budget(a, Bp).fun
+    print(f"   {label}: actual V*={actual:.4f}  first-order={first_order:.4f}  overshoot={first_order-actual:+.4f}")
+assert abs(-solve_budget(a, 10.8).fun - np.sqrt(54)) < 1e-3
+assert abs(-solve_budget(a, 7.2).fun - 6.0) < 1e-3
+cap = -solve_budget(a, B, ub=[5.0, np.inf]).fun
+dark = -solve_budget(np.array([2.0, 0.0]), B).fun       # channel 2 dark
+print(f"   cap b1<=5: V*={cap:.4f}  (expected 6.4721)")
+print(f"   ch2 dark : V*={dark:.4f}  (expected 6.0000)")
+assert abs(cap - (2*np.sqrt(5) + 2)) < 1e-3 and abs(dark - 6.0) < 1e-3
+V0 = 8.0
+B_inv = V0**2 / S
+print(f"   inverse: budget to hit V0=8  ->  B={B_inv:.2f}  lambda*={lam_opt(B_inv):.4f}  (5/16=0.3125)")
+assert abs(B_inv - 12.8) < 1e-9 and abs(lam_opt(B_inv) - 0.3125) < 1e-9
+assert abs(V_opt(B_inv) - 8.0) < 1e-9
+
+# === 4. The wound: ridge posterior + optimizer's curse ===
+rng = np.random.default_rng(18)
+abar = np.array([2.0, 1.0])
+u = np.array([1.0, -1.0]) / np.sqrt(2)        # attribution contrast: POORLY identified (ridge)
+v = np.array([1.0,  1.0]) / np.sqrt(2)        # total effect: well identified
+Cov = 0.45**2 * np.outer(u, u) + 0.08**2 * np.outer(v, v)
+N = 200_000
+draws = rng.multivariate_normal(abar, Cov, size=N)
+draws = draws[(draws > 0).all(axis=1)]        # keep positive coefficients
+Sd = (draws**2).sum(axis=1)
+b1_post = B * draws[:, 0]**2 / Sd             # closed-form per-draw optimum
+print("\n4) Ridge posterior propagated through the optimizer")
+print(f"   b1* median            = {np.median(b1_post):.3f}   (point estimate 7.2)")
+print(f"   b1* 5th/95th pct      = [{np.percentile(b1_post,5):.2f}, {np.percentile(b1_post,95):.2f}]")
+Emax = np.sqrt(Sd * B).mean()                 # E[max_b V]  (oracle)
+maxE = np.sqrt(S * B)                          # max_b E[V]  (plug-in at posterior mean)
+print(f"   E[max] = {Emax:.4f},  max E = {maxE:.4f},  optimizer's-curse gap (EVPI) = {Emax-maxE:.4f}")
+assert abs(np.median(b1_post) - 7.2) < 0.1
+assert Emax - maxE > 0.10
+
+# Two equally-fit curves on the response-capacity circle -> opposite optima
+S0 = 5.0625
+for th in (15.0, 75.0):
+    t = np.radians(th)
+    av = np.sqrt(S0) * np.array([np.cos(t), np.sin(t)])
+    bv = B * av**2 / (av**2).sum()
+    print(f"   theta={th:>4.0f}: a={np.round(av,3).tolist()}  V*={np.sqrt(S0*B):.2f}  b*={np.round(bv,3).tolist()}")
+    assert abs(np.sqrt(S0 * B) - 6.75) < 1e-9
+a15 = np.sqrt(S0) * np.array([np.cos(np.radians(15)), np.sin(np.radians(15))])
+b15 = B * a15**2 / (a15**2).sum()
+assert np.allclose(b15, [8.397, 0.603], atol=1e-2)
+
+# ----------------------------------------------------------------------
+# Figures: the efficiency frontier (envelope) and the allocation posterior (wound)
+# ----------------------------------------------------------------------
+fig, ax = plt.subplots(1, 2, figsize=(11, 4))
+ax[0].plot(Bs, V_opt(Bs), color="navy", lw=2, label=r"$V^\star(B)=\sqrt{5B}$")
+tang = V_opt(B) + lam0 * (Bs - B)
+ax[0].plot(Bs, tang, "--", color="crimson", lw=1.2,
+           label=fr"tangent at $B=9$, slope $\lambda^\star={lam0:.4f}$")
+ax[0].scatter([B, B_inv], [V_opt(B), 8.0], color="black", zorder=5)
+ax[0].annotate("optimum", (B, V_opt(B)), textcoords="offset points", xytext=(6, -14))
+ax[0].annotate(r"$V_0=8\to B=12.8$", (B_inv, 8.0), textcoords="offset points", xytext=(-30, 8))
+ax[0].set_xlabel("budget $B$"); ax[0].set_ylabel(r"max response $V^\star$")
+ax[0].set_title("Response-vs-budget frontier (envelope theorem)")
+ax[0].legend(loc="lower right"); ax[0].set_ylim(0, None)
+
+ax[1].hist(b1_post, bins=80, color="steelblue", alpha=0.8, density=True)
+ax[1].axvline(7.2, color="crimson", lw=2, label="point estimate $b_1^\\star=7.2$")
+ax[1].axvline(np.percentile(b1_post, 5), color="black", ls="--", lw=1)
+ax[1].axvline(np.percentile(b1_post, 95), color="black", ls="--", lw=1, label="5th / 95th pct")
+ax[1].set_xlabel(r"optimal spend on channel 1, $b_1^\star$")
+ax[1].set_ylabel("posterior density")
+ax[1].set_title(f"Allocation posterior under the ridge (EVPI = {Emax-maxE:.3f})")
+ax[1].legend(loc="upper left")
+fig.tight_layout()
+plt.show()
+```
+
+The printed output pins the chapter's arithmetic exactly. The SLSQP solve returns $b^\star = (7.2, 1.8)$ with total response $6.7082$ and equal marginal returns $0.3727$ — the shadow price, recovered as the common value of $a_i/(2\sqrt{b_i^\star})$ — closing the Part IV loop on a live solver. The envelope check matches the central-difference $dV^\star/dB$ to $\lambda^\star(9)$ at the sixth decimal and holds across the frontier. The scenario table shows the shadow-price prediction overshooting the re-optimized truth in both budget directions ($7.3790$ vs $7.3485$, $6.0374$ vs $6.0000$) because the value function is concave, while the cap and dark rows require a re-solve; the inverse returns the budget $B = 12.8$ that reaches $V_0 = 8$ with shadow price $0.3125$. Then the wound: propagating the ridge posterior gives an optimal-allocation distribution with median $7.2$ but a 5th–95th band of $[4.35, 8.69]$, and the optimizer's-curse gap $\mathbb{E}[\max] - \max\mathbb{E} = 0.1194$ comes back strictly positive — the EVPI of resolving the ridge. The two equally-fit curves at $\theta = 15^\circ$ and $75^\circ$ return mirror-image optima $(8.40, 0.60)$ and $(0.60, 8.40)$: same fit, opposite decisions. The left figure is the efficiency frontier with its tangent shadow price; the right is the allocation posterior, the point estimate $7.2$ marooned in the middle of a band four budget units wide — the wound, drawn.
 
 ## Exercises
 
