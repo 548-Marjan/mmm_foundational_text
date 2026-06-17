@@ -248,7 +248,123 @@ The trade is direct: BTVC gives up the DLM's exact Kalman recursions in exchange
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+Three worked examples carry the chapter's main results into arithmetic — one tracing the Kalman recursion to its steady-state fixed point and identifying the golden ratio, one demonstrating the filter–smoother gap on a drifting coefficient, and one placing the two inference regimes of Proof P3 side by side on the same series.
+
+### WE1 — Local-level steady-state Kalman gain (the golden ratio)
+
+**Setup.**
+
+Local-level model: $F = G = 1$, $V = W = 1$. Start from $m_0 = 0$, $C_0 = 0$ — a completely uninformative initial condition.
+
+**One predict–update cycle.**
+
+Predict:
+
+$$
+a_1 = G\,m_0 = 0, \qquad R_1 = G\,C_0\,G^\top + W = 0 + 1 = 1.
+$$
+
+Forecast:
+
+$$
+f_1 = F^\top a_1 = 0, \qquad Q_1 = F^\top R_1 F + V = 1 + 1 = 2.
+$$
+
+Kalman gain and updated variance:
+
+$$
+A_1 = R_1\,F\,Q_1^{-1} = \frac{1}{2}, \qquad C_1 = R_1 - A_1\,Q_1\,A_1^\top = 1 - \frac{1}{2}\cdot 2\cdot\frac{1}{2} = \frac{1}{2}.
+$$
+
+The first observation halves the prior variance. Continuing: $R_2 = C_1 + W = 1.5$, $Q_2 = R_2 + V = 2.5$, $A_2 = 0.6$, $C_2 = 1.5 - (0.6)(2.5)(0.6) = 0.6$. The sequence $C_t$ is decreasing and bounded below; it converges to a fixed point.
+
+**The variance recursion and its fixed point.**
+
+The filtered variance satisfies $C_{t+1} = (C_t + W) - (C_t + W)^2/(C_t + W + V)$. Substituting $R = C + W$ for the one-step-ahead variance, at the fixed point $C^* = R^* - W$ the recursion gives
+
+$$
+R^* - W = R^* - \frac{(R^*)^2}{R^* + V} \qquad \Longrightarrow \qquad W(R^* + V) = (R^*)^2.
+$$
+
+With $W = V = 1$:
+
+$$
+(R^*)^2 - R^* - 1 = 0,
+$$
+
+whose positive root is
+
+$$
+R^* = \frac{1 + \sqrt{5}}{2} = \varphi \approx 1.618,
+$$
+
+the golden ratio. The steady-state Kalman gain follows immediately:
+
+$$
+K^\star = \frac{R^*}{R^* + V} = \frac{\varphi}{\varphi + 1} = \frac{\sqrt{5} - 1}{2} \approx 0.6180.
+$$
+
+**Interpretation.**
+
+The steady-state filter is an exponentially-weighted moving average with smoothing constant $K^\star \approx 0.618$: each new observation gets weight $0.618$ and the running estimate gets weight $0.382$. The golden-ratio appearance is not a coincidence — it is the exact consequence of setting $W = V$, which forces the characteristic equation $R^2 - R - 1 = 0$ that defines $\varphi$. As $W/V$ increases (state drifts faster relative to observation noise), $K^\star \to 1$ and the filter discards its history entirely; as $W/V \to 0$ (nearly static level), $K^\star \to 0$ and the estimate barely moves. The ratio $W/V$ is the single free parameter controlling adaptation speed in the local-level model, and the steady-state gain is its closed-form summary.
+
+### WE2 — Regression DLM: recovering a drifting coefficient
+
+**Setup.**
+
+Single channel with a time-varying coefficient $\beta_t$ following a random walk: $\beta_t = \beta_{t-1} + w_t$ with state variance $W = 0.04$. The observation equation is $y_t = x_t \beta_t + v_t$ with observation variance $V = 0.25$, over $T = 600$ weeks.
+
+**Kalman filter: tracking forward.**
+
+Running the Kalman filter forward from a diffuse prior produces, at each $t$, the filtering distribution $\beta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$. The filter has access only to data through the current period — it cannot look ahead. Against the true $\beta_t$ trajectory used to generate the series, the filter achieves RMSE $\approx 0.27$.
+
+**RTS smoother: conditioning on the full series.**
+
+Running the RTS backward recursion from $t = T$ down to $t = 1$ — each step incorporating the information in all future observations through the smoother gain $B_t = C_t R_{t+1}^{-1}$ — produces the smoothing distributions $\beta_t \mid y_{1:T} \sim \mathcal{N}(m_t^s, C_t^s)$. Because the smoother has access to the whole series, $C_t^s \le C_t$ at every interior period: the backward pass can only tighten, never widen, posterior uncertainty. The smoother achieves RMSE $\approx 0.20$, a roughly 25% improvement over the filter.
+
+| Method | RMSE vs. true $\beta_t$ |
+|:-------|------------------------:|
+| Kalman filter | $\approx 0.27$ |
+| RTS smoother | $\approx 0.20$ |
+
+**What $\beta_t$ represents.**
+
+The recovered $\beta_t$ is the channel's time-varying marginal revenue per unit of adstocked spend — its effectiveness curve over the campaign. A constant-$\beta$ model averages over this trajectory and reports a single number that may describe no actual period; the DLM surfaces the full curve. The smoother's estimate, tighter than the filter's, is the right summary quantity for retrospective attribution over a completed campaign; the filter's estimate, available period by period as data arrive, is the right quantity for real-time budget pacing.
+
+### WE3 — The same model, two inference regimes
+
+**Setup.**
+
+Same series as WE2: $T = 600$, $V = 0.25$, $W = 0.04$.
+
+**Regime 1 — Known $(V, W)$: closed-form marginal likelihood.**
+
+With $V$ and $W$ known, Proof P3 Part 1 supplies the exact marginal likelihood via the prediction-error decomposition:
+
+$$
+\log p(y_{1:T}) = \sum_{t=1}^{T} \log \mathcal{N}(y_t;\, f_t,\, Q_t).
+$$
+
+Each term is a Gaussian log-density evaluated at the observed $y_t$, with one-step-ahead mean $f_t = x_t a_t$ and variance $Q_t = x_t^2 R_t + V$ — both available in closed form from the Kalman forward pass. Evaluating this sum on the WE2 series gives $\log p(y_{1:T}) \approx -604$. This scalar is a closed-form function of $(V, W)$: it can be computed in a single forward pass, maximized over a grid, or passed to a numerical optimizer to recover the variance parameters without any sampling.
+
+**Regime 2 — Unknown $(V, W)$: Gibbs/FFBS.**
+
+Assigning weakly-informative inverse-gamma priors to $V$ and $W$, the Gibbs sampler of Proof P3 Part 2 alternates three steps:
+
+1. Draw $\beta_{0:T} \mid V, W, y_{1:T}$ via FFBS — a Kalman forward pass followed by the backward sampling pass of Proof P2, producing an exact joint draw from the smoothing posterior.
+2. Draw $V \mid \beta_{0:T}, y_{1:T}$ from the conjugate inverse-gamma update on the observation residuals $e_t = y_t - x_t \beta_t$.
+3. Draw $W \mid \beta_{0:T}, y_{1:T}$ from the conjugate inverse-gamma update on the state increments $\delta_t = \beta_t - \beta_{t-1}$.
+
+After burn-in, the sampler recovers posterior means close to the true variance parameters:
+
+| Parameter | True | Posterior mean (Gibbs/FFBS) |
+|:----------|-----:|----------------------------:|
+| $V$ | $0.25$ | $\approx 0.25$ |
+| $W$ | $0.04$ | $\approx 0.046$ |
+
+**The boundary, made arithmetic.**
+
+The two regimes run on the same model and the same data. In Regime 1, $(V, W)$ are fixed inputs: the Kalman recursions run once, the log marginal likelihood is a scalar, and no sampling is needed — a closed-form inference that takes milliseconds. In Regime 2, $(V, W)$ are unknowns with prior distributions: the Gibbs/FFBS chain must be run to convergence, incurring the cost of repeated forward-filtering and backward-sampling passes. The marginal likelihood $\approx -604$ from Regime 1 sits inside the Regime 2 sampler as an unnormalized building block, but marginalizing over $\beta_{0:T}$ to isolate the posterior for $(V, W)$ requires integrating a product of Gaussians whose covariances depend nonlinearly on $(V, W)$ — the integral that has no closed form, and that forces the Gibbs alternation. This is Proof P3's boundary, visible in arithmetic: known variances, closed form; unknown variances, Gibbs.
 
 ## Code Tie-in
 
