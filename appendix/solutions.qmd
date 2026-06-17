@@ -2771,4 +2771,50 @@ This block collects the mechanics flagged but deferred in the chapter's BTVC sec
 
 **Why variational inference.** With many channels and long histories, FFBS/MCMC over the full posterior is expensive. BTVC fits with **stochastic variational inference**: it posits a parametric family for the posterior and optimizes its parameters to minimize the KL divergence to the true posterior, using minibatch gradients. This trades the DLM's exact recursions for speed and scalability, at the cost of a variational approximation gap — the posterior is approximate, and uncertainty can be understated. The trade is deliberate: BTVC targets production deployment where scalability and built-in positivity outweigh the loss of exactness.
 
+## Chapter 18 — Budget Optimization & Scenario Analysis
+
+**C1.** The optimizer reported $6.83$ because it selected the allocation that looks best on the *estimated* curve, and the estimate is most likely to have been bent upward by noise exactly where it was selected — the optimizer's curse. Rung 5 gives $\mathbb{E}_\theta[\max_b V] \ge \max_b \mathbb{E}_\theta[V]$, so the in-sample optimum is an upward-biased estimate of realized response. The honest forecast for the committed plan is the response that plan delivers under the full posterior — the certainty-equivalent value $\max_b \mathbb{E}_\theta[V] \approx 6.71$ — and $6.83$ overstates it by the EVPI, $\approx 0.12$.
+
+**C2.** EVPI is the gap $\mathbb{E}_\theta[\max_b V] - \max_b \mathbb{E}_\theta[V]$: the most a decision-maker should pay to learn $\theta$ exactly before allocating. An experiment shrinks it by replacing the flat (ridge) directions of the posterior with data that pins them, collapsing the per-draw optima toward a single allocation. It depends on *which* directions are unidentified because the optimizer only suffers where it must extrapolate: a curve can fit history perfectly yet be flat in the counterfactual spend direction the optimizer explores. Goodness of fit measures the historical direction; EVPI measures the counterfactual one.
+
+**C3.** Goodness of fit ranks models by how well they reproduce historical sales, and two curves on the ridge reproduce it equally — fit cannot separate them. What separates them is identification in the counterfactual spend direction, which requires *interventional* data (deliberately moving spend), not more observational fit. Part V leaves this gap open — the wound — and Part VI supplies the interventional identification (causal foundations, quasi-experimental designs, calibration) that closes it.
+
+**C4.** $\lambda^\star = dV^\star/dB$ is the marginal response per budget dollar at the optimum. It declines with $B$ because the response is concave: each additional dollar is spread by the equal-marginal rule across already-funded channels whose marginal returns are themselves falling. The decline from $0.3727$ at $B = 9$ to $0.3125$ at $B = 12.8$ is the law of diminishing returns aggregated to the portfolio level.
+
+**B1.** Substituting $b_i^\star = B a_i^2/S$:
+$$
+V^\star(B) = \sum_i a_i\sqrt{\tfrac{B a_i^2}{S}} = \sqrt{\tfrac{B}{S}}\sum_i a_i^2 = \sqrt{\tfrac{B}{S}}\,S = \sqrt{SB}.
+$$
+Then $dV^\star/dB = \sqrt{S}/(2\sqrt{B}) = \lambda^\star$. At $B = 9$, $S = 5$: $V^\star = \sqrt{45} = 6.7082$ and $\lambda^\star = \sqrt{5}/6 = 0.3727$.
+
+**B2.** First-order: $V^\star(9) + \lambda^\star \cdot 1.8 = 6.7082 + 0.3727 \cdot 1.8 = 7.3790$. Exact: $V^\star(10.8) = \sqrt{54} = 7.3485$. The prediction *over*-estimates by $0.0305$. Sign: $V^\star(B) = \sqrt{5B}$ is concave, so its tangent at $B = 9$ lies above the curve everywhere; the first-order prediction is an optimistic upper bound for any finite $\Delta B$.
+
+**B3.** Invert $V_0 = \sqrt{SB}$: $B = V_0^2/S = 64/5 = 12.8$. The shadow price there is $\lambda^\star = \sqrt{S}/(2\sqrt{B}) = \sqrt{5}/(2\sqrt{12.8}) = S/(2V_0) = 5/16 = 0.3125$. Check: $\sqrt{5 \cdot 12.8} = \sqrt{64} = 8 = V_0$. ✓
+
+**B4.** The uncapped optimum wants $b_1^\star = 7.2 > 5$, so the cap $b_1 \le 5$ binds: $b_1 = 5$, and the budget spills to $b_2 = 4$. Total response $V = 2\sqrt{5} + \sqrt{4} = 4.4721 + 2 = 6.4721$, a loss of $6.7082 - 6.4721 = 0.2361$ relative to the uncapped optimum. The cap, not the equal-marginal rule, sets $b_1$: at $b_1 = 5$ channel 1's marginal $2/(2\sqrt{5}) = 0.4472$ still exceeds channel 2's $1/(2\sqrt{4}) = 0.25$, so the optimizer would fund channel 1 further if the cap allowed.
+
+**P1.** Fix any allocation $b'$. For every realization of $\theta$, a maximum is at least any particular value:
+$$
+\max_b V(b;\theta) \ge V(b';\theta).
+$$
+This pointwise bound is the only inequality used, and it holds for arbitrary $V$ — no structure in $\theta$ is assumed. Taking $\mathbb{E}_\theta$ of both sides preserves it: $\mathbb{E}_\theta[\max_b V] \ge \mathbb{E}_\theta[V(b';\theta)]$. The left side is independent of $b'$, so it bounds the right side for *every* $b'$; maximizing the right side over $b'$ gives $\mathbb{E}_\theta[\max_b V] \ge \max_{b'} \mathbb{E}_\theta[V(b';\theta)]$. No convexity in $\theta$ is needed because the pointwise max-bound already does all the work. $\blacksquare$
+
+**P2.** At feasibility the constraint term vanishes, so $V^\star(B) = L(b^\star(B), \lambda^\star(B), B)$. Differentiate totally in $B$:
+$$
+\frac{dV^\star}{dB} = \sum_i \frac{\partial L}{\partial b_i}\frac{db_i^\star}{dB} + \frac{\partial L}{\partial \lambda}\frac{d\lambda^\star}{dB} + \frac{\partial L}{\partial B}.
+$$
+At the optimum $\partial L/\partial b_i = r_i'(b_i^\star) - \lambda^\star = 0$ (stationarity) and $\partial L/\partial \lambda = B - \mathbf{1}^\top b^\star = 0$ (primal feasibility), so the $b^\star$ and $\lambda^\star$ derivative terms drop regardless of how $b^\star$ and $\lambda^\star$ move with $B$. Only the explicit term $\partial L/\partial B = \lambda^\star$ survives, giving $dV^\star/dB = \lambda^\star$. $\blacksquare$
+
+**P3.** Since $V(b;\theta)$ is convex in $\theta$, Jensen gives $\mathbb{E}_\theta[V(b;\theta)] \ge V(b;\bar\theta)$ for each fixed $b$. Maximizing both sides over $b$ (a monotone operation) yields $\max_b \mathbb{E}_\theta[V(b;\theta)] \ge \max_b V(b;\bar\theta)$. Chaining with P1:
+$$
+\mathbb{E}_\theta[\max_b V] \ \ge\ \max_b \mathbb{E}_\theta[V] \ \ge\ \max_b V(b;\bar\theta).
+$$
+So the certainty-equivalent value $\max_b V(b;\bar\theta)$ is a lower bound for the oracle value, and the optimizer's-curse gap of P1 is one segment of the total over-optimism separating the oracle from the plug-in plan. $\blacksquare$
+
+**A1.** Widening the contrast direction flattens the ridge. Because $\|a\|$ is convex, a more spread posterior raises $\mathbb{E}\|a\|$ while $\|\bar a\|$ is unchanged, so the gap $\mathrm{EVPI} = \sqrt{B}\,(\mathbb{E}\|a\| - \|\bar a\|)$ grows; meanwhile the per-draw optimum $b_1^\star = B a_1^2/S$ spreads more, widening the allocation band. Plotting the EVPI gap against the contrast standard deviation gives a monotonically increasing curve — the flatter the ridge, the more an experiment is worth and the less the point estimate can be trusted.
+
+**A2.** With a floor $b_i \ge f$, the Lagrangian gains a term $\mu_i(b_i - f)$, $\mu_i \ge 0$, and stationarity becomes $r_i'(b_i) = \lambda^\star - \mu_i$. For an over-funded channel the floor is slack and $\mu_i = 0$; for a channel the optimizer would otherwise starve below $f$, the floor binds and $\mu_i > 0$. The floor's shadow price is $\partial V^\star/\partial f = -\mu_i \le 0$: a binding minimum-spend mandate *costs* $\mu_i$ units of response per unit of floor, because it forces budget away from the optimal split. The sign is non-positive — the mandate can only reduce the unconstrained optimum.
+
+**A3.** With $a = (2, 1.5, 1)$, $B = 12$, $S = \sum_i a_i^2 = 7.25$, the closed form gives $b^\star = (B a_i^2/S) = (6.6207, 3.7241, 1.6552)$, summing to $12$. The common marginal return is $\lambda^\star = \sqrt{S}/(2\sqrt{B}) = \sqrt{7.25}/(2\sqrt{12}) = 0.3886$, equal across all three channels (the equal-marginal condition). The total response is $V^\star = \sqrt{SB} = \sqrt{87} = 9.3274$. SLSQP returns exactly these values, confirming the closed form extends unchanged to any number of channels.
+
 :::
