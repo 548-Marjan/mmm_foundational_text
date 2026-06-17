@@ -368,7 +368,103 @@ The two regimes run on the same model and the same data. In Regime 1, $(V, W)$ a
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+We implement the Kalman filter, the RTS smoother, and FFBS from scratch — no state-space
+library, just the recursions of Proofs P1, P2, and the smoother. The cell first recovers the
+golden-ratio steady-state gain on the local level, then fits a regression DLM with a drifting
+coefficient (variances known) and confirms the smoother beats the filter, and finally samples
+the unknown variances with Gibbs/FFBS. Fixed seeds make the run reproducible.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+def kalman_filter(y, F, V, W, m0, C0):
+    """Regression DLM: y_t = F_t theta_t + v (V); theta_t = theta_{t-1} + w (W). Scalar state."""
+    T = len(y)
+    m = np.zeros(T); C = np.zeros(T); a = np.zeros(T); R = np.zeros(T); f = np.zeros(T); Q = np.zeros(T)
+    mt, Ct = m0, C0
+    for t in range(T):
+        at = mt; Rt = Ct + W                       # predict (G = 1)
+        ft = F[t]*at; Qt = F[t]*Rt*F[t] + V        # one-step forecast
+        A = Rt*F[t]/Qt                             # Kalman gain
+        mt = at + A*(y[t] - ft); Ct = Rt - A*Qt*A  # update (Gaussian conditioning)
+        m[t], C[t], a[t], R[t], f[t], Q[t] = mt, Ct, at, Rt, ft, Qt
+    return m, C, a, R, f, Q
+
+def rts_smoother(m, C, a, R):
+    T = len(m); ms = m.copy(); Cs = C.copy()
+    for t in range(T-2, -1, -1):
+        B = C[t]/R[t+1]                            # G = 1
+        ms[t] = m[t] + B*(ms[t+1] - a[t+1])
+        Cs[t] = C[t] + B*B*(Cs[t+1] - R[t+1])
+    return ms, Cs
+
+def ffbs(y, F, V, W, m0, C0, rng):
+    m, C, a, R, f, Q = kalman_filter(y, F, V, W, m0, C0); T = len(y); th = np.zeros(T)
+    th[-1] = rng.normal(m[-1], np.sqrt(C[-1]))
+    for t in range(T-2, -1, -1):
+        B = C[t]/R[t+1]
+        mean = m[t] + B*(th[t+1] - a[t+1]); var = C[t] - B*B*R[t+1]
+        th[t] = rng.normal(mean, np.sqrt(max(var, 1e-12)))
+    return th
+
+# --- WE1: local-level steady-state Kalman gain = golden ratio ---
+V0 = W0 = 1.0; C = 0.0; gain = 0.0
+for _ in range(60):
+    Rt = C + W0; Qt = Rt + V0; gain = Rt/Qt; C = Rt - gain*Qt*gain
+assert abs(gain - (np.sqrt(5) - 1)/2) < 1e-5
+
+# --- simulate a regression DLM with a drifting coefficient ---
+rng = np.random.default_rng(17)
+T = 600; V_true, W_true = 0.25, 0.04
+x = np.abs(rng.normal(1.0, 0.4, T)) + 0.3
+beta = np.zeros(T); beta[0] = 2.0
+for t in range(1, T):
+    beta[t] = beta[t-1] + rng.normal(0, np.sqrt(W_true))
+y = beta*x + rng.normal(0, np.sqrt(V_true), T)
+
+# --- WE2: filter and smoother (variances known) ---
+m, C, a, R, f, Q = kalman_filter(y, x, V_true, W_true, 0.0, 10.0)
+ms, Cs = rts_smoother(m, C, a, R)
+rmse_f = np.sqrt(np.mean((m - beta)**2)); rmse_s = np.sqrt(np.mean((ms - beta)**2))
+assert rmse_s < rmse_f
+
+# --- WE3: known-variance log marginal likelihood (prediction-error decomposition) ---
+loglik = np.sum(-0.5*np.log(2*np.pi*Q) - 0.5*(y - f)**2/Q)
+
+# --- Bayesian DLM: Gibbs + FFBS recovers unknown (V, W) under weak IG(2, 0.01) priors ---
+gr = np.random.default_rng(18); Vs, Ws = 1.0, 0.1; a0, b0 = 2.0, 0.01; draws = []
+for it in range(4000):
+    th = ffbs(y, x, Vs, Ws, 0.0, 10.0, gr)
+    Vs = 1/gr.gamma(a0 + T/2,     1/(b0 + 0.5*np.sum((y - x*th)**2)))
+    Ws = 1/gr.gamma(a0 + (T-1)/2, 1/(b0 + 0.5*np.sum(np.diff(th)**2)))
+    if it > 1500: draws.append((Vs, Ws))
+draws = np.array(draws); V_hat, W_hat = draws[:, 0].mean(), draws[:, 1].mean()
+assert 0.5*V_true < V_hat < 2*V_true and 0.5*W_true < W_hat < 2*W_true
+
+print(f"WE1 steady-state Kalman gain = {gain:.6f}  (golden ratio = {(np.sqrt(5)-1)/2:.6f})")
+print(f"WE2 filter RMSE = {rmse_f:.4f}   smoother RMSE = {rmse_s:.4f}")
+print(f"WE3 known-variance log marginal likelihood = {loglik:.2f}")
+print(f"     Gibbs recovered V = {V_hat:.3f} (true {V_true}),  W = {W_hat:.4f} (true {W_true})")
+
+fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+ax[0].plot(beta, "k-", lw=2, label="true β_t")
+ax[0].plot(m, "C0-", alpha=0.7, label="filtered")
+ax[0].plot(ms, "C1-", alpha=0.7, label="smoothed")
+ax[0].set_title("time-varying coefficient"); ax[0].set_xlabel("t"); ax[0].legend()
+ax[1].hist(draws[:, 0], bins=40, alpha=0.6, label="V")
+ax[1].hist(draws[:, 1]*5, bins=40, alpha=0.6, label="W×5")
+ax[1].axvline(V_true, color="C0", ls="--"); ax[1].axvline(W_true*5, color="C1", ls="--")
+ax[1].set_title("variance posteriors (Gibbs)"); ax[1].legend()
+plt.tight_layout()
+plt.show()
+```
+
+The left panel shows the recovered time-varying coefficient: the filter (using only the past)
+tracks the drift with a lag, while the smoother (using the whole series) hugs the truth. The
+right panel shows the Gibbs posteriors for the two variances concentrating near the values that
+generated the data — the unknown-variance regime of Proof P3, recovered from nothing but the
+sales series and the recursions derived above.
 
 ## Exercises
 
