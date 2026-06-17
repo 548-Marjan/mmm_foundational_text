@@ -157,6 +157,88 @@ $$
 
 By the MVT, $S'(\xi) = 1/\sqrt{\xi} = 0.4$ implies $\xi = (1/0.4)^2 = 6.25$. The IV number is the tangent slope at $\xi = 6.25$, strictly interior to $(4, 9)$ — and it is **neither** $S'(4) = 0.5$ (the marginal return at the pre-experiment spend) **nor** $S'(9) = 0.3\overline{3}$ (the marginal return at the post-experiment spend). The single IV number is an interval average, not the marginal return at any specific spend level. This cashes the IV teaser from Chapter 19 (Causal Inference Foundations): an IV estimate from a geo experiment cannot be directly inserted as a prior on $S'(x_{\text{current}})$ without a geometric correction for where $x_{\text{current}}$ lies relative to the complier spend interval $[x_0, x_1]$.
 
+### Rung 4 — Synthetic control: a constructed counterfactual (secant)
+
+The synthetic control method addresses the setting in which a single treated unit — one region, one market — undergoes a large-scale intervention, and no single untreated unit constitutes a credible stand-alone counterfactual. The cause is usually scale: a national campaign change or a full-platform spend shift touches every local market simultaneously, leaving no clean control. The solution is to **construct** the counterfactual as a convex combination of never-treated comparison units. Choose weights $w = (w_1, \dots, w_J)$ with $w_j \ge 0$ and $\sum_j w_j = 1$ such that the weighted average of the control units' pre-intervention outcome path matches the treated unit's pre-intervention outcome path as closely as possible:
+
+$$
+w^\star = \arg\min_{w \ge 0,\, \sum_j w_j = 1} \;\Big\| Y^{\text{pre}}_{\text{treated}} - \sum_j w_j\, Y^{\text{pre}}_{j} \Big\|^2.
+$$
+
+The weights are fixed entirely on pre-intervention data. The synthetic control's post-intervention trajectory $\hat{Y}^{\text{post}}_{\text{synth}} = \sum_j w_j^\star Y^{\text{post}}_j$ then serves as the counterfactual — what the treated unit's revenue would have been absent the intervention — and the estimated lift is the post-intervention gap:
+
+$$
+\hat\tau_{\text{SC}} = Y^{\text{post}}_{\text{treated}} - \sum_j w_j^\star\, Y^{\text{post}}_j.
+$$
+
+**Why pre-period fit identifies the counterfactual.** The identifying logic follows from a latent factor model. Suppose each unit's outcome obeys
+
+$$
+Y_{j,t} = \alpha_j + \lambda_t^\top \mu_j + \varepsilon_{j,t},
+$$
+
+where $\alpha_j$ is a unit-specific baseline, $\lambda_t$ is a vector of common time factors, $\mu_j$ is the unit's vector of factor loadings, and $\varepsilon_{j,t}$ is mean-zero noise. If the synthetic weights reproduce the treated unit's pre-intervention trajectory — so $\sum_j w_j^\star Y_{j,t} \approx Y_{\text{treated},t}$ for $t$ in the pre-period — then the weights approximately match the treated unit's factor loadings $\mu_{\text{treated}}$. Under this model, the same factor loadings that tracked the treated unit before the intervention continue to track it into the post period absent treatment, because the common factors $\lambda_t$ evolve the same way for all units. This is the Abadie–Diamond–Hainmueller pre-fit condition: convex-hull weighting combined with close pre-period fit produces an approximately unbiased counterfactual, provided the latent factor structure is stable across the pre and post windows.
+
+**The estimand is a secant.** $\hat\tau_{\text{SC}}$ is a level change — revenue in the treated unit versus the counterfactual weighted average. On the response-curve $S$, this is the lift $S(x_1) - S(x_0)$ over the spend interval the intervention imposed, averaged over the post-intervention window. It is a secant in exactly the same sense as the DiD ATT: an interval-average functional of $S$, not a point derivative.
+
+**The pre-period fit is the identification lever.** If the synthetic control fails to match the treated unit's pre-intervention path — the pre-fit root-mean-squared error is large — the weights do not reliably encode the treated unit's factor loadings, and the post-period counterfactual extrapolation is untrustworthy. Synthetic control analyses always report the pre-fit quality alongside the post-period gap, as an internal credibility check analogous to the pre-trend visual in DiD. A poor pre-fit is not a nuisance — it is evidence that the identifying assumption has failed.
+
+**Anchor.** The treated region has pre-intervention revenue $Y^{\text{pre}}_{\text{treated}} \approx 14$. The synthetic control, constructed from weighted comparison units, matches this level: $\hat{Y}^{\text{post}}_{\text{synth}} \approx 14$. The treated region's post-intervention observed revenue is $Y^{\text{post}}_{\text{treated}} = 16$. The estimated lift is $\hat\tau_{\text{SC}} = 16 - 14 = 2$ — the same secant $S(9) - S(4) = 2$ recovered by DiD in Rung 2, now arrived at through a weighted-control construction rather than a single-control difference.
+
+### Rung 5 — Interrupted time series and BSTS: a state-space counterfactual (secant)
+
+When no comparable control units exist at all — a single time series with one intervention date — the counterfactual cannot be borrowed from other units. It must be **extrapolated forward from the treated unit's own pre-intervention dynamics**. Interrupted time series (ITS) formalizes this: fit a model to the pre-intervention outcome series, project that model past the intervention date, and measure the post-intervention gap between observed outcomes and the projection. The modern Bayesian structural-time-series construction — the "causal impact" approach — builds that extrapolation with the same local-level Kalman filter developed in Chapter 17 (Dynamic Linear Models). The connection is not analogy; the counterfactual in this method is precisely the Kalman filter's forecast of the unobserved level into the post-intervention window.
+
+**The local-level model.** The simplest structural time series adequate to a smoothly evolving revenue level uses the local-level specification from Chapter 17. Writing $y_t$ for observed revenue and $\mu_t$ for the latent level:
+
+$$
+\begin{aligned}
+y_t &= \mu_t + v_t, \quad && v_t \sim N(0,\, V), \\[4pt]
+\mu_t &= \mu_{t-1} + w_t, \quad && w_t \sim N(0,\, W),
+\end{aligned}
+$$
+
+where $V$ is the observation variance and $W$ is the state-evolution (level-drift) variance. Both are estimated from the pre-intervention data. When $W \ll V$ the level is nearly constant and the filter smooths heavily; when $W$ is large the filtered level tracks recent observations closely.
+
+**The Kalman filter as counterfactual.** Running the Kalman filter (Chapter 17) over the pre-intervention series $y_1, \dots, y_{T_0}$ yields the filtered level mean $\hat\mu_{T_0 \mid T_0}$ and variance $P_{T_0 \mid T_0}$ at the final pre-intervention time point. Forecasting into the post-intervention window propagates the state equation forward without incorporating any post-intervention observations:
+
+$$
+\begin{aligned}
+\hat\mu_{T_0 + h \mid T_0} &= \hat\mu_{T_0 \mid T_0}, \\[4pt]
+P_{T_0 + h \mid T_0} &= P_{T_0 \mid T_0} + h\,W,
+\end{aligned}
+$$
+
+for $h = 1, 2, \dots$ steps ahead. The forecast mean $\hat\mu_{T_0+h \mid T_0}$ is the counterfactual revenue trajectory — what the model predicts the level would have been, absent the intervention. The forecast variance $P_{T_0+h \mid T_0} + V$ gives the uncertainty band, which widens with $h$ as accumulated level-drift uncertainty $hW$ compounds the observation noise.
+
+**The causal effect.** The estimated causal effect at post-intervention time $T_0 + h$ is the pointwise gap:
+
+$$
+\hat\tau_h = y_{T_0 + h} - \hat\mu_{T_0 + h \mid T_0},
+$$
+
+where $y_{T_0+h}$ is the observed revenue. The cumulative lift over an $H$-period post-intervention window is $\sum_{h=1}^H \hat\tau_h$, with uncertainty that propagates from the widening forecast cone. Both pointwise and cumulative gaps are **secant** estimands: level changes over the interval defined by the intervention, not point derivatives of $S$.
+
+**Why counterfactual precision governs calibration precision.** The uncertainty on $\hat\tau_h$ is determined by $P_{T_0+h \mid T_0} + V$, which depends on the pre-intervention series length — more observations tighten $P_{T_0 \mid T_0}$ — and on $W$ — smaller level drift narrows the forecast cone. When the resulting lift estimate is passed to Chapter 21 (Advanced Calibration) as a calibration signal, the uncertainty band is carried along as the width of the likelihood constraint: a noisy counterfactual yields a weak constraint on the response-curve parameters, while a precise counterfactual yields a strong one. The quality of the ITS/BSTS pre-period fit therefore sets a floor on the precision of the downstream calibration, making the model selection and diagnostic checks in Chapter 17 directly consequential for budget-decision accuracy.
+
+**Anchor.** The pre-intervention level is $\approx 14$. Running the Kalman filter on the pre-intervention series produces $\hat\mu_{T_0 \mid T_0} \approx 14$ with a tight variance from a well-fit pre-period. Forecasting one step ahead yields the counterfactual $\hat\mu_{T_0+1 \mid T_0} \approx 14$. The observed post-intervention revenue is $y_{T_0+1} = 16$. The estimated lift is $\hat\tau_1 = 16 - 14 = 2$ — the secant $S(9) - S(4) = 2$, recovered this time by a state-space extrapolation of the treated unit's own pre-intervention dynamics rather than by a comparison across regions.
+
+### Rung 6 — The genuine tangent designs (brief), and the handoff to Chapter 21
+
+**What rungs 2–5 have in common.** Every design in rungs 2–5 — difference-in-differences, instrumental variables, synthetic control, interrupted time series — estimates a level change over a finite spend interval. They are all secants of $S$: averages of $S'$ over the range $[x_0, x_1]$ the design traversed. This is not a defect; it is a precise description of what a finite, real-world experiment can identify. The question is whether any design can approach the point-local tangent $S'(x)$ that the Chapter 18 (Budget Optimization) optimizer actually differentiates.
+
+**Regression discontinuity (RDD) and regression kink (RKD).** Two standard designs do approach the genuine tangent:
+
+- **Regression discontinuity (RDD).** When treatment is assigned by a threshold on a continuous running variable $r_i$ — units with $r_i \ge c$ receive treatment, units with $r_i < c$ do not — comparing outcomes just above and just below the cutoff $c$ identifies the local average treatment effect at the cutoff. As the comparison bandwidth shrinks toward zero, the design isolates the causal effect of a marginal unit of treatment at $r_i = c$: a level jump $\delta \to 0$ in the running variable produces a jump in the outcome at $c$, which on $S$ corresponds to the point-local level effect as the interval of averaging collapses to a point. RDD is the closest standard design to identifying $S'$ at a single spend level.
+
+- **Regression kink (RKD).** When the *slope* of the treatment assignment rule changes at a threshold — a kinked assignment — and the *slope* of the outcome changes at the same point, the ratio of those slope changes identifies the curvature of the response function at the kink. The RKD estimand is directly informative about $S''$ at the kink point, making it the only standard design that speaks to the second-order properties of the response surface. For a strictly concave response like $S(x) = 2\sqrt{x}$, a negative estimated kink is consistent evidence of saturation at the tested spend level.
+
+Switchback tests — alternating treatment and control periods within the same unit — and staggered-adoption DiD — in which different units adopt treatment at different calendar times — are variants that narrow the tested spend interval relative to a single-wave experiment, bringing the secant slope closer to a tangent in the limit of a very short treatment window, but neither achieves a $\delta \to 0$ localization in general.
+
+**The handoff to Chapter 21.** Every design in this chapter, once executed, delivers a **taxonomy-tagged functional of $S$** to the downstream calibration step. A geo lift test or IV study tags its output as a secant over $[x_0, x_1]$. A synthetic control or ITS tags its output as a level change over the intervention's implicit spend range — also a secant. An RDD tags its output as a point-local level effect near the cutoff — approaching a tangent. A holdout forecast check tags as a validation quantity, constraining forecast accuracy rather than any parameter of $S$. The tag is precisely the schema that Chapter 21 (Advanced Calibration) requires to fold the estimate into the model as the right kind of likelihood constraint: a secant constrains an interval average of $S'$, a near-tangent constrains a pointwise derivative, and a validation quantity constrains the residual forecast error without anchoring a response-curve parameter.
+
+**Closing the loop.** The full causal calibration arc runs as follows. Chapter 19 (Causal Inference Foundations) proved that observational MMM time series cannot identify the interventional functional $\mathbb{E}[Y(x)]$ when spend is set by decisions correlated with unobserved demand. This chapter showed how quasi-experimental designs generate or exploit variation whose direction and magnitude are independent of contemporaneous demand, yielding identified functionals of $S$ with known estimand classes. Chapter 21 (Advanced Calibration) takes those taxonomy-tagged functionals and uses them as informative constraints on the response-curve parameters, correcting the bias that observational regression alone cannot remove. Chapter 18 (Budget Optimization) then re-runs the equal-marginal allocation on the corrected response surface. The loop is: **intervene** (this chapter) $\to$ **identify the functional** (this chapter) $\to$ **calibrate** (Chapter 21) $\to$ **re-optimize** (Chapter 18). A lift number from an experiment is useful only if it is matched to its estimand class before it is handed to the optimizer. That matching — secant, tangent, or validation, with the spend interval that defines it — is the core discipline this chapter develops.
+
 ## Worked Examples
 
 _Worked numerical example(s)._
