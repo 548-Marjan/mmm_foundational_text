@@ -1,6 +1,6 @@
 # Causal Inference Foundations
 
-*Canonical anchors: Imbens & Rubin 2015; Angrist & Pischke; Pearl.*
+*Canonical anchors: potential outcomes [@imbens2015]; regression causality and instrumental variables [@angrist2009]; structural causal models and the do-calculus [@pearl2009].*
 
 ## Motivation
 
