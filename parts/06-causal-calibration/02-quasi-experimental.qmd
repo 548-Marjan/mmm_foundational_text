@@ -241,7 +241,139 @@ Switchback tests — alternating treatment and control periods within the same u
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+### WE1 — Geo-lift difference-in-differences (secant)
+
+The chapter's geo panel is a two-by-two block. Region $T$ (treated) receives a spend increase from $x_0 = 4$ to $x_1 = 9$ in the post period; region $C$ (control) holds at $x_0 = 4$ throughout. Baseline demand levels are $\alpha_T = 10$ and $\alpha_C = 8$, with revenue $Y_{r,t} = \alpha_r + S(x_{r,t})$ and $S(x) = 2\sqrt{x}$.
+
+| | $Y_T$ | $Y_C$ |
+|:---|---:|---:|
+| Pre | $\alpha_T + S(4) = 10 + 4 = 14$ | $\alpha_C + S(4) = 8 + 4 = 12$ |
+| Post | $\alpha_T + S(9) = 10 + 6 = 16$ | $\alpha_C + S(4) = 8 + 4 = 12$ |
+
+**(i) Naive cross-section estimator.** Compare the two regions in the post period only:
+
+$$
+Y_{T,\text{post}} - Y_{C,\text{post}} = 16 - 12 = 4.
+$$
+
+This overstates the true lift. The post-period gap decomposes as
+
+$$
+\begin{aligned}
+Y_{T,\text{post}} - Y_{C,\text{post}}
+&= \bigl(\alpha_T + S(9)\bigr) - \bigl(\alpha_C + S(4)\bigr) \\[4pt]
+&= \underbrace{S(9) - S(4)}_{\text{true lift}=2}
+   + \underbrace{(\alpha_T - \alpha_C)}_{\text{baseline gap}=2} = 4.
+\end{aligned}
+$$
+
+The naive estimator conflates the media-driven lift $S(9) - S(4) = 2$ with the time-invariant baseline-demand gap $\alpha_T - \alpha_C = 2$ — the Chapter 19 (Causal Inference Foundations) confounder. Because $\alpha_T > \alpha_C$, the treated region was richer before any campaign change, and the cross-section incorrectly credits that pre-existing advantage to spend.
+
+**(ii) Difference-in-differences estimator.** Subtract the control region's period change from the treated region's:
+
+$$
+\begin{aligned}
+\widehat\tau_{\text{DiD}}
+&= (Y_{T,\text{post}} - Y_{T,\text{pre}}) - (Y_{C,\text{post}} - Y_{C,\text{pre}}) \\[4pt]
+&= (16 - 14) - (12 - 12) \\[4pt]
+&= 2 - 0 = 2.
+\end{aligned}
+$$
+
+The baseline gap $\alpha_T - \alpha_C = 2$ is present in both $Y_{T,\text{post}}$ and $Y_{T,\text{pre}}$; first-differencing the treated region removes it entirely, leaving only the response-curve lift. The control's within-period change is $0$ — no spend change, flat baseline — so the second bracket contributes nothing. DiD recovers the true lift $S(9) - S(4) = 2$ exactly.
+
+**(iii) Parallel trends.** Parallel trends requires the treated region's counterfactual (untreated) period change to equal the control's period change. Here both changes are $0$: the control spent $x_0 = 4$ throughout and its revenue was flat, and the treated region's revenue would also have been flat at $x_0 = 4$ absent the intervention (its baseline $\alpha_T$ is time-invariant and there is no common time trend in this example). Parallel trends holds by construction. If the control region had experienced its own demand trend — seasonal growth $\delta > 0$, say — its period change would be $\delta \neq 0$, and the DiD estimand would absorb that trend, biasing the lift estimate. The parallel-trends assumption cannot be tested from the post-period data alone; pre-trend inspection over multiple pre-periods is the standard diagnostic (see Exercise B1).
+
+**(iv) Estimand class.** The DiD number is a level change, not a marginal return. It equals the lift $S(9) - S(4) = 2$, which corresponds to a **secant** of $S$ over the spend interval $[4, 9]$ with slope
+
+$$
+\frac{S(9) - S(4)}{9 - 4} = \frac{2}{5} = 0.4.
+$$
+
+This is the average revenue gain per unit of additional spend across $[4, 9]$, not the point marginal return $S'(x)$ at any single operating spend. The relationship between this secant and the tangent is the subject of WE2.
+
+---
+
+### WE2 — Instrumental variables / Wald estimator (secant in disguise)
+
+A binary instrument $W \in \{0, 1\}$ — for example, a randomized encouragement to increase auction bids, or an exogenous platform-side price shock that makes high spend cheaper in one arm — shifts complier spend from $x_0 = 4$ (when $W = 0$) to $x_1 = 9$ (when $W = 1$). Revenue for a complier with unit baseline $\alpha$ is $Y = \alpha + S(x)$.
+
+**Wald estimate.** By independence of $W$ and $\alpha$ (instrument-validity condition 3, Rung 3), the unit baselines cancel between the two arms, and the Wald ratio reduces to:
+
+$$
+\hat\beta_{\text{IV}}
+= \frac{\mathbb{E}[Y \mid W{=}1] - \mathbb{E}[Y \mid W{=}0]}{\mathbb{E}[X \mid W{=}1] - \mathbb{E}[X \mid W{=}0]}
+= \frac{S(9) - S(4)}{9 - 4}
+= \frac{6 - 4}{5}
+= \frac{2}{5} = 0.4.
+$$
+
+**The IV estimate is a secant, not a tangent.** Applying the fundamental theorem of calculus and the mean value theorem for integrals (Proof P2, Rung 3):
+
+$$
+\hat\beta_{\text{IV}}
+= \frac{1}{9 - 4}\int_4^9 S'(u)\,du
+= S'(\xi) \quad \text{for some } \xi \in (4,\, 9).
+$$
+
+Solving $S'(\xi) = 1/\sqrt{\xi} = 0.4$ gives $\xi = (1/0.4)^2 = 6.25$. The Wald estimate is the tangent slope at $\xi = 6.25$, an interior point of $(4, 9)$, by the mean value theorem — but $\xi = 6.25$ is determined entirely by the geometry of $S$ on $[4, 9]$, not by the practitioner's current operating spend.
+
+**What the IV estimate is not.** The three spend-specific tangent values are:
+
+$$
+S'(4) = \frac{1}{\sqrt{4}} = 0.5, \qquad
+S'(6.25) = \frac{1}{\sqrt{6.25}} = 0.4, \qquad
+S'(9) = \frac{1}{\sqrt{9}} = 0.3\overline{3}.
+$$
+
+The Wald estimate $\hat\beta_{\text{IV}} = 0.4$ equals the tangent at $\xi = 6.25$, but it equals **neither** $S'(4) = 0.5$ (the marginal return at the pre-experiment spend) **nor** $S'(9) = 0.3\overline{3}$ (the marginal return at the post-experiment spend). On a strictly concave curve all three are distinct: the secant lies strictly between the endpoint tangents, at an interior point whose location depends on the shape of the curve.
+
+**Contrast with non-experimental regression.** Chapter 19 (Causal Inference Foundations) showed that an observational regression of revenue on spend — absent any experimental variation — estimates a coefficient that conflates $S'(x)$ with the covariance between spend assignment and unobserved demand. The result is neither the secant over $[4, 9]$ nor the tangent at any specific operating point, but a biased blend that does not shrink with more data. The IV estimate $0.4$ is unbiased for the secant over $[4, 9]$, a genuine improvement; the residual limitation is that it is an interval average, not the point marginal return the Chapter 18 (Budget Optimization) optimizer differentiates at the current spend.
+
+**Practical lesson.** If the current operating spend lies inside $[4, 9]$, the secant $0.4$ is a reasonable approximation of the local marginal return, with the approximation error governed by the curvature of $S$ across the interval. If the current operating spend lies outside $[4, 9]$ — say, a campaign now running at $x = 25$, where $S'(25) = 1/\sqrt{25} = 0.2$ — the IV secant $0.4$ overstates the current marginal return by a factor of two. Inserting a geo-lift or IV number directly as the marginal return for budget reallocation therefore requires knowing where the current spend sits relative to the complier interval $[x_0, x_1]$; Chapter 21 (Advanced Calibration) handles the geometric correction.
+
+---
+
+### WE3 — Synthetic control (constructed counterfactual)
+
+One treated region and three control regions are observed over a pre-intervention period and a post-intervention period. The three controls have different baseline demand levels, so no single control constitutes a credible stand-alone comparison for the treated region.
+
+**Setup.** The treated region has pre-period revenue $Y^{\text{pre}}_{\text{treated}} = 14$. The three controls have pre-period revenues $Y_1^{\text{pre}} = 12$, $Y_2^{\text{pre}} = 13$, $Y_3^{\text{pre}} = 17$, reflecting baselines $\alpha_{C_j} \in \{8, 9, 13\}$ at common pre-period spend $x_0 = 4$ (so $Y_j^{\text{pre}} = \alpha_{C_j} + S(4)$). No individual control pre-period level equals $14$, but the treated unit's level of $14$ lies within the convex hull of the three controls — it can be matched exactly by a weighted combination.
+
+**Constructing the weights.** The synthetic control optimization seeks non-negative weights $w_1 + w_2 + w_3 = 1$ that minimize the pre-period discrepancy:
+
+$$
+\min_{\substack{w \ge 0 \\ \sum_j w_j = 1}}
+\bigl(w_1 \cdot 12 + w_2 \cdot 13 + w_3 \cdot 17 - 14\bigr)^2.
+$$
+
+One exact solution is $w^\star = (0,\; 3/4,\; 1/4)$:
+
+$$
+0 \cdot 12 + \frac{3}{4} \cdot 13 + \frac{1}{4} \cdot 17
+= \frac{39}{4} + \frac{17}{4} = \frac{56}{4} = 14.
+$$
+
+The pre-period fit is exact: the synthetic control matches the treated region's pre-period revenue at $14$. (The Code Tie-in computes the optimal weights from the quadratic program directly; here we verify the construction and read off the resulting gap.)
+
+**Post-period gap.** The control regions hold at baseline — no intervention affects them — so their post-period revenues are unchanged: $Y_1^{\text{post}} = 12$, $Y_2^{\text{post}} = 13$, $Y_3^{\text{post}} = 17$. The synthetic counterfactual in the post period is therefore:
+
+$$
+\hat{Y}^{\text{post}}_{\text{synth}}
+= 0 \cdot 12 + \frac{3}{4} \cdot 13 + \frac{1}{4} \cdot 17 = 14.
+$$
+
+The treated region's post-period observed revenue is $Y^{\text{post}}_{\text{treated}} = 16$. The synthetic control estimate of the lift is:
+
+$$
+\hat\tau_{\text{SC}} = Y^{\text{post}}_{\text{treated}} - \hat{Y}^{\text{post}}_{\text{synth}} = 16 - 14 = 2.
+$$
+
+**The pre-period fit is the identification lever.** The estimate $\hat\tau_{\text{SC}} = 2$ recovers the same lift $S(9) - S(4) = 2$ that DiD and IV computed in WE1 and WE2 through entirely different identification strategies. The estimand is again a **secant** of $S$ over the spend interval $[4, 9]$: a level change, not a point derivative.
+
+The credibility of $\hat\tau_{\text{SC}}$ rests on the pre-period fit. Here the fit is exact by construction ($\text{RMSE} = 0$), so the counterfactual is fully credible. In practice, exact pre-period matching is the exception: if the treated unit's pre-period level lies near the boundary — or outside — the convex hull of the controls' pre-period levels, the best achievable pre-fit error is positive, and the analyst reports it alongside $\hat\tau_{\text{SC}}$ as an internal credibility diagnostic. A large pre-fit RMSE signals that the weights do not faithfully encode the treated unit's factor loadings (in the sense of the Rung 4 latent-factor argument), and the post-period counterfactual extrapolation is correspondingly unreliable. Good pre-fit is the assumption that is doing the causal work — it cannot be verified in the post period, but it can be audited in the pre period, which is why it is always reported.
+
+**Summary across WE1–WE3.** Three designs — geo-lift DiD, IV/Wald, synthetic control — each recover the lift $2$ through a different identification strategy, exploiting a different source of quasi-experimental variation: period differencing of a single control, a two-arm ratio of covariances with an instrument, and a pre-period-matched weighted average of multiple controls. All three yield the same **secant** over $[4, 9]$ with slope $0.4$, not the point-marginal return $S'(x)$ at any specific spend level. Each is passed to Chapter 21 (Advanced Calibration) tagged as a secant over $[x_0, x_1] = [4, 9]$, where it anchors the MMM's response-curve parameters.
 
 ## Code Tie-in
 
