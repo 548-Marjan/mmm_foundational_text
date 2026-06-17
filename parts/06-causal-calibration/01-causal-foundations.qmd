@@ -14,7 +14,147 @@ The chapter's payoff runs through a single worked example that makes the cost of
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The first three rungs build the chapter's causal vocabulary and prove its central bias result. Rung 1 introduces potential outcomes and names the fundamental problem of causal inference — the observability constraint that makes the response curve an inherently counterfactual object. Chapter 16 (Building & Fitting an MMM) estimated the MMM parameters from observational spend data; the question this chapter answers is whether the fitted slopes equal the causal response the Part IV optimizer requires. Rung 2 defines the conditions under which an observational regression recovers a causal estimate, derives the adjustment formula, and names the estimand Chapter 18 (Budget Optimization) consumed. Rung 3 proves the chapter's keystone result: the omitted-variable bias theorem, showing that the naive MMM slope is a biased estimator of the causal response whenever spend is endogenous and the confounder moves sales — and that the bias does not vanish with more data.
+
+### Rung 1 — The causal question in MMM (potential outcomes)
+
+**The potential-outcomes framework.** For each time period $i$ and each possible spend level $x$, define $Y_i(x)$ as the sales period $i$ *would have produced* had spend been set to $x$ — regardless of the spend $X_i$ that was actually observed. The function $x \mapsto Y_i(x)$ is period $i$'s **potential-outcome schedule**: a complete description of how that period's sales respond to every counterfactual spend level. Its population expectation is the **dose–response curve**,
+
+$$
+\mu(x) = \mathbb{E}[Y_i(x)],
+$$
+
+and it is exactly the object Chapter 18 (Budget Optimization) operated on: the equal-marginal allocation, the shadow price $\lambda^\star$, and the envelope-theorem scenario analysis all act on $\mu$ and its slope $d\mu/dx$. A higher slope means a higher marginal return on spend; the Chapter 18 optimizer directs more budget toward the steeper channel. Whether the fitted MMM response curve equals $\mu$ — and therefore whether the Chapter 18 allocation is trustworthy — is the question the present chapter is designed to answer.
+
+**The fundamental problem of causal inference.** At every period $i$, only one potential outcome is ever observed — the one corresponding to the spend that actually occurred:
+
+$$
+Y_i^{\text{obs}} = Y_i(X_i).
+$$
+
+For any $x \neq X_i$ the value $Y_i(x)$ is a counterfactual — it is never directly available in the data. This observability constraint is the **fundamental problem of causal inference**: causal effects are comparisons across potential outcomes, but data supply only one potential outcome per period. The fitted MMM regression of $Y_i^{\text{obs}}$ on $X_i$ returns a slope; whether that slope equals $d\mu/dx$ depends entirely on *why* $X_i$ took the values it did. Chapter 4 (Linear Regression) established that the OLS slope is unbiased only when the regressor is uncorrelated with the residual; in an observational MMM, spend is an endogenous management decision, not a randomized treatment. A manager who increases spend in high-demand periods introduces a structural correlation between the regressor and the error, and the OLS slope absorbs both the causal advertising effect and the elevated baseline demand into a single coefficient. Rung 2 formalizes when that absorption is harmless, and Rung 3 quantifies when it is not.
+
+### Rung 2 — Ignorability and the observational/interventional gap
+
+**Unconfoundedness (ignorability).** Let $Z_i$ denote the vector of demand-state covariates for period $i$. The spend assignment is **unconfounded** (or **ignorable**) given $Z$ if
+
+$$
+Y_i(x) \perp X_i \;\Big|\; Z_i \quad \text{for all } x.
+$$
+
+Read: among periods sharing the same demand state $Z_i = z$, the level of spend $X_i$ is "as good as randomly assigned" — potential outcomes carry no residual dependence on which spend level was chosen once $Z$ is held fixed. Intuitively, $Z$ blocks every back-door pathway by which a manager's anticipation of high demand could simultaneously inflate spend and baseline sales.
+
+**Positivity (overlap).** The companion condition requires that every spend level has positive probability at each demand state:
+
+$$
+P(X_i = x \mid Z_i = z) > 0 \quad \text{for all } x \text{ in the support of } X \text{ and all } z \text{ in the support of } Z.
+$$
+
+Without positivity, no data at covariate value $z$ can inform the conditional mean $\mathbb{E}[Y \mid X = x, Z = z]$ at untested spend levels, and the adjustment formula below is undefined at those cells.
+
+**Recovery of the dose–response by adjustment.** Under ignorability and positivity,
+
+$$
+\mu(x) = \mathbb{E}_Z\bigl[\,\mathbb{E}[Y \mid X = x,\, Z]\,\bigr].
+$$
+
+**Derivation.** Condition on $Z$ and apply ignorability. Since $Y = Y(X)$, conditioning on $X = x$ pins the observed outcome to $Y(x)$:
+
+$$
+\begin{aligned}
+\mathbb{E}[Y \mid X = x,\, Z]
+  &= \mathbb{E}[Y(x) \mid X = x,\, Z] \\[4pt]
+  &= \mathbb{E}[Y(x) \mid Z],
+\end{aligned}
+$$
+
+where the first equality uses $Y = Y(X)$ evaluated at $X = x$, and the second uses ignorability ($Y_i(x) \perp X_i \mid Z_i$), which allows dropping the conditioning on $X = x$. Averaging over $Z$ by the law of iterated expectations:
+
+$$
+\mathbb{E}_Z\bigl[\,\mathbb{E}[Y \mid X = x,\, Z]\,\bigr]
+= \mathbb{E}_Z\bigl[\,\mathbb{E}[Y(x) \mid Z]\,\bigr]
+= \mathbb{E}[Y(x)]
+= \mu(x).
+$$
+
+**The observational/interventional gap.** The adjustment formula marginalizes over $Z$ at each fixed spend level $x$. The naive regression conditional $\mathbb{E}[Y \mid X = x]$ skips that marginalization: it is average sales across periods where spend happened to equal $x$, with demand states appearing in whatever proportions they co-occur with spend level $x$ in the data. When spend and demand are positively correlated — as they are when managers rationally increase spend in high-demand periods — periods with $X_i = x$ over-represent high-$Z$ states, and $\mathbb{E}[Y \mid X = x]$ exceeds the causal $\mu(x)$. The discrepancy is confounding bias, and it is not a sampling artifact: it reflects a structural mismatch between the observational distribution and the interventional distribution the optimizer requires.
+
+**The estimand.** The quantity Chapter 18 (Budget Optimization) needs is the **causal response slope**,
+
+$$
+\frac{d\mu}{dx}
+= \frac{d}{dx}\,\mathbb{E}_Z\bigl[\,\mathbb{E}[Y \mid X = x,\, Z]\,\bigr].
+$$
+
+This is the marginal return on spend in the causal sense: the expected gain in sales from increasing spend by one unit, where spend is set by intervention rather than observed. Rung 3 proves, in a linear structural model, exactly how far the OLS slope deviates from this target when the ignorability condition fails.
+
+### Rung 3 — Proof P1 (KEYSTONE): the omitted-variable / confounding bias theorem
+
+**Structural setup.** The data-generating process is a two-equation structural model. The **outcome equation** encodes the true causal response:
+
+$$
+Y = \beta X + \gamma Z + \varepsilon,
+$$
+
+where $\varepsilon$ is mean-zero and independent of $(X, Z)$. The coefficient $\beta$ is the causal response slope — the parameter the MMM must recover for the Chapter 18 (Budget Optimization) optimizer to be trustworthy. The covariate $Z$ is a demand driver that shifts baseline sales with coefficient $\gamma$. The **spend equation** captures endogenous budgeting:
+
+$$
+X = \delta Z + \nu,
+$$
+
+where $\nu$ is mean-zero and independent of $Z$ (and of $\varepsilon$). When $\delta \neq 0$, spend tracks the demand state, introducing the structural correlation $\operatorname{cov}(X, Z) = \delta\,\operatorname{var}(Z)$ that a regression of $Y$ on $X$ alone cannot separate from the causal effect of spend.
+
+**Theorem.** *The probability limit of the naive least-squares regression of $Y$ on $X$ alone is*
+
+$$
+\operatorname{plim}\,\hat\beta_{\mathrm{naive}}
+= \frac{\operatorname{cov}(X,\,Y)}{\operatorname{var}(X)}
+= \beta + \gamma\,\frac{\operatorname{cov}(X,\,Z)}{\operatorname{var}(X)}.
+$$
+
+**Proof.** By the standard probability-limit form of the OLS slope in a simple regression, $\operatorname{plim}\,\hat\beta_{\mathrm{naive}} = \operatorname{cov}(X,Y)/\operatorname{var}(X)$. Expand the numerator using $Y = \beta X + \gamma Z + \varepsilon$:
+
+$$
+\begin{aligned}
+\operatorname{cov}(X,\,Y)
+  &= \operatorname{cov}(X,\;\beta X + \gamma Z + \varepsilon) \\[4pt]
+  &= \beta\,\operatorname{var}(X)
+     + \gamma\,\operatorname{cov}(X,\,Z)
+     + \operatorname{cov}(X,\,\varepsilon).
+\end{aligned}
+$$
+
+Because $\varepsilon$ is independent of $(X, Z)$ by assumption, $\operatorname{cov}(X, \varepsilon) = 0$. Dividing by $\operatorname{var}(X)$:
+
+$$
+\operatorname{plim}\,\hat\beta_{\mathrm{naive}}
+= \frac{\beta\,\operatorname{var}(X) + \gamma\,\operatorname{cov}(X,\,Z)}{\operatorname{var}(X)}
+= \beta + \gamma\,\frac{\operatorname{cov}(X,\,Z)}{\operatorname{var}(X)}. \quad\blacksquare
+$$
+
+**Reading the bias.** The second term is the **omitted-variable bias (OVB)**:
+
+$$
+\text{Bias} = \gamma\,\frac{\operatorname{cov}(X,\,Z)}{\operatorname{var}(X)}.
+$$
+
+It is zero if and only if $\operatorname{cov}(X,Z) = 0$ (spend exogenous, $\delta = 0$) or $\gamma = 0$ ($Z$ does not affect sales). In the MMM setting both conditions fail structurally: managers rationally track demand ($\delta \neq 0$) and demand genuinely moves sales ($\gamma \neq 0$). Crucially, **the bias does not shrink with sample size** — it is a property of the joint distribution of $(X, Z)$, not of sampling noise. Adding more data pins the biased number $\operatorname{plim}\,\hat\beta_{\mathrm{naive}}$ with greater precision; it does not move it toward the true $\beta$. Chapter 4 (Linear Regression) noted that OLS is unbiased under $\operatorname{cov}(X, \varepsilon) = 0$; endogeneity violates that condition, and the theorem above makes the violation's cost exact. This is the rigorous statement of Chapter 18's wound: not a finite-sample imprecision, but a structural feature of endogenous spend.
+
+**Analytic anchor.** Set $\beta = 2$, $\gamma = 3$, $\delta = 1$, $\operatorname{var}(Z) = 1$, $\operatorname{var}(\nu) = 1$. From the spend equation $X = Z + \nu$:
+
+$$
+\operatorname{cov}(X,\,Z) = \delta\,\operatorname{var}(Z) = 1, \qquad
+\operatorname{var}(X) = \delta^2\,\operatorname{var}(Z) + \operatorname{var}(\nu) = 1 + 1 = 2.
+$$
+
+Therefore
+
+$$
+\text{Bias} = \gamma\,\frac{\operatorname{cov}(X,\,Z)}{\operatorname{var}(X)} = 3 \cdot \frac{1}{2} = 1.5, \qquad
+\operatorname{plim}\,\hat\beta_{\mathrm{naive}} = 2 + 1.5 = 3.5.
+$$
+
+The naive regression returns $3.5$ for a true causal slope of $\beta = 2$ — a $75\%$ overstatement. These are the running numbers the chapter uses throughout: the Worked Examples and Code Tie-in recover them by simulation and direct regression, and the companion rungs 4–6 show how the do-operator and DAG back-door criterion trace the same bias through the causal graph.
 
 ## Worked Examples
 
