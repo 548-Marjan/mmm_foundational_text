@@ -36,8 +36,21 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
+      # TinyTeX installs LaTeX packages on demand during the PDF build via
+      # tlmgr; a transient CTAN/network hiccup (e.g. a failed luatexbase.sty
+      # fetch) hard-stops LuaLaTeX. Retry once so such flakes self-recover.
+      # A genuine content error still fails (just on the second attempt too).
       - name: Render (HTML + PDF)
-        run: quarto render
+        run: |
+          for attempt in 1 2; do
+            echo "::group::quarto render (attempt $attempt)"
+            if quarto render; then echo "::endgroup::"; exit 0; fi
+            echo "::endgroup::"
+            echo "Render attempt $attempt failed; likely a transient TeX package fetch. Retrying in 30s..."
+            sleep 30
+          done
+          echo "Render failed after 2 attempts."
+          exit 1
 
       - name: Upload book artifact
         uses: actions/upload-artifact@v7
