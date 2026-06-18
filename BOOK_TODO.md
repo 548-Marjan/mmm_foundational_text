@@ -5,32 +5,43 @@ captured as an actionable backlog. Reviewed from three perspectives: a PhD-level
 editor (content, pedagogy, proofs), a would-be reader, and a quantitative-marketing
 professional.
 
-**Headline finding:** chapters 1–12 (Parts I–IV — the prerequisite mathematics) are
-fully written and genuinely strong; the proofs hold up under line-by-line scrutiny.
-Chapters 13–26 (Parts V–VIII — the MMM itself, causal calibration, software
-engineering, and the capstone) are ~33-line stubs. Everything that makes this *an MMM
-book* rather than an applied-math book is still scaffolding.
+**Headline finding (updated):** chapters 1–22 are now fully written — Parts I–IV (the
+prerequisite mathematics), Part V (the MMM itself: DGP, building & fitting, DLM /
+state-space, budget optimization), Part VI (causal grounding & calibration: causal
+foundations, quasi-experimental designs, advanced calibration, the prior store), and
+the first chapter of Part VII (CS foundations). The foundations' proofs held up under
+line-by-line scrutiny; the Part V–VI chapters still want the verification pass in P0b.
+What remains unwritten is **chapters 23–26**: Part VII's software-architecture,
+data-engineering, and testing/reliability chapters, and the Part VIII capstone — all
+still ~31–33-line stubs.
 
 ---
 
-## P0 — The book's actual subject is unwritten
+## P0 — Remaining unwritten chapters
 
-- [ ] **Write Part V (Marketing Mix Modeling: Modeling), ch. 14–17.** DGP / adstock /
-      saturation, building & fitting, DLM / state-space, budget optimization. This is
-      the payload the preface promises ("build a full Bayesian MMM end-to-end").
-- [ ] **Write Part VI (Causal Grounding & Calibration), ch. 18–21.** This is the
-      *differentiator* — the "calibration step most treatments skip" and the "where it
-      quietly misleads you" promise. Must confront **identification** (you cannot pin a
-      saturation curve / true incrementality from observational, collinear,
-      seasonally-confounded spend). Ensure the potential-outcomes foundation (QE) and
-      the Kalman-filter derivation (DLM) land at the foundations' rigor standard — your
-      own notes call these a credibility requirement.
-- [ ] **Write Part VII (SWE & CS), ch. 22–25 and Part VIII (Capstone), ch. 26.**
-- [ ] Until the above exist, the preface's "*this preface is a free sample… the
-      complete book is available at [link TBD]*" framing overpromises. Either gate the
-      claim or finish the payload.
+- [x] **Write Part V (Marketing Mix Modeling: Modeling), ch. 14–17.** Done — DGP /
+      adstock / saturation, building & fitting, DLM / state-space, budget optimization.
+      The payload the preface promises ("build a full Bayesian MMM end-to-end").
+- [x] **Write Part VI (Causal Grounding & Calibration), ch. 18–21.** Done — the
+      *differentiator*: potential-outcomes / do-calculus foundations, quasi-experimental
+      designs, advanced calibration, and the prior store / calibration–optimization
+      loop. The **identification** mandate is met (the chapters confront the
+      observational-spend confound head-on). The potential-outcomes foundation and the
+      Kalman-filter derivation still want the foundations'-standard verification pass —
+      tracked under P0b, the credibility requirement your notes flag.
+- [ ] **Write the rest of Part VII (SWE & CS), ch. 23–25, and Part VIII (Capstone),
+      ch. 26.** Ch. 22 (CS foundations) is written; **ch. 23 (software architecture),
+      ch. 24 (data engineering), ch. 25 (testing & reliability)** remain ~33-line stubs,
+      as does the **ch. 26 capstone**. This is the payload that remains.
+- [ ] The preface's end-to-end promise is now substantially met through Part VI;
+      before claiming the *complete* book (and resolving the `[link TBD]` CTA), finish
+      the Part VII SWE chapters and the capstone.
 
 ## P0a — Authoring note: Chapter 16 (DLM / State-Space MMM) — DLM vs. BTVC arc
+
+**Status:** ch. 16 (`parts/05-mmm-modeling/03-dlm.qmd`) is now written (~528 lines).
+The checklist below was the authoring spec; reconcile each item against the shipped
+chapter rather than treating it as open work — most or all has likely been addressed.
 
 Captured from a review session comparing the foundational MMM literature
 (Jin et al. 2017), **BTVC** (Ng, Wang & Dai, Uber 2021,
