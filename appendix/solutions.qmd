@@ -2921,4 +2921,60 @@ So the certainty-equivalent value $\max_b V(b;\bar\theta)$ is a lower bound for 
 
 **A2.** Appending a third, conflicting study raises Cochran's $Q$ (more dispersion than the within-study noise explains), which raises the DerSimonian–Laird $\tau^2$, which lowers every random-effects weight $1/(s_j^2+\tau^2)$ — so the pooled variance *widens* even though a study was added. Because the ridge variance feeding the EVPI no longer falls (the new evidence is spent absorbing conflict rather than adding net precision), the EVPI staircase stalls: it stops descending until the conflict is resolved by further consistent evidence or by down-weighting the discordant study's credibility.
 
+## Chapter 23 — CS Foundations
+
+**C1.** The route `inv(X.T @ X) @ X.T @ y` is doubly bad. Forming $X^\top X$ squares the condition number, $\kappa(X^\top X)=\kappa(X)^2$, doubling the digits lost before anything is even solved; then forming an explicit inverse and multiplying is both more expensive and less stable than solving the system, accumulating extra rounding error and never as accurate as a factorization-based solve. The correct route is to factorize $X$ directly — a QR (or SVD) least-squares solve — which works at the problem's own conditioning $\kappa(X)$, not its square, and never forms $X^\top X$ or an inverse.
+
+**C2.** Machine epsilon for double precision is $\varepsilon_{\text{mach}}=2^{-52}\approx2.22\times10^{-16}$, the gap between $1$ and the next representable number (the unit roundoff $u=2^{-53}$ is half of it). Cancellation is a loss of *relative* accuracy because the *absolute* error carried by the operands stays roughly fixed (about $u$ times their magnitude), while the *difference* being computed shrinks toward zero as the operands approach each other. The absolute error is bounded; the result is not bounded below; so their ratio — the relative error — blows up. The leading digits cancel and the trailing rounding noise is promoted to the front.
+
+**C3.** The ridge is one matrix fact in two languages. Statistically, near-collinear spend columns mean the data cannot identify the contrast between those channels: the likelihood is nearly flat along that contrast direction. Numerically, the same near-collinearity makes the design matrix $X$ nearly singular — its smallest singular value $\sigma_{\min}(X)$ is nearly zero. The single quantity large in both stories is the condition number $\kappa(X)=\sigma_{\max}(X)/\sigma_{\min}(X)$: a tiny $\sigma_{\min}$ makes $\kappa$ enormous, which is simultaneously the flatness of the likelihood ridge and the precision loss of a naive solve.
+
+**B1.** The unit roundoff is $u = 2^{-53} \approx 1.11\times10^{-16}$. Since $\log_{10}(2^{53}) \approx 15.95$, a single floating-point operation delivers about $15$–$16$ correct decimal digits.
+
+**B2.** $\kappa(X) = \sigma_{\max}/\sigma_{\min} = 4 / (4\times10^{-4}) = 10^{4}$. A backward-stable QR solve loses about $\log_{10}\kappa(X) = 4$ decimal digits. Forming the normal equations gives $\kappa(X^\top X) = \kappa(X)^2 = 10^{8}$, so that route loses about $\log_{10}\kappa(X^\top X) = 8$ digits — twice as many.
+
+**B3.** With $x = \{10^6+1,\,10^6+2,\,10^6+3\}$: the one-pass route forms $\overline{x^2} = \tfrac13\big((10^6+1)^2+(10^6+2)^2+(10^6+3)^2\big) \approx 10^{12}$ and $\bar x^2 = (10^6+2)^2 \approx 10^{12}$, then subtracts these two nearly-equal numbers of size $10^{12}$ to extract a variance of order $1$ — catastrophic cancellation. The two-pass route forms $\bar x = 10^6+2$ first, reduces the data to $x-\bar x = \{-1,0,1\}$, and averages their squares to get $\tfrac23$ directly, never forming a large intermediate.
+
+**P1.** Take the singular value decomposition $X = U\Sigma V^\top$ with $U, V$ orthogonal.
+
+Then, using $U^\top U = I$,
+
+$$
+X^\top X = V\Sigma^\top U^\top U \Sigma V^\top = V\Sigma^2 V^\top,
+$$
+
+which is an eigendecomposition of $X^\top X$ (since $V$ is orthogonal), so its singular values are $\sigma_i(X)^2$.
+
+Taking the ratio of largest to smallest,
+
+$$
+\kappa(X^\top X) = \frac{\sigma_{\max}(X)^2}{\sigma_{\min}(X)^2} = \kappa(X)^2 .
+$$
+
+Orthogonality of $U$ is used to collapse $U^\top U = I$; orthogonality of $V$ is used to read $V\Sigma^2 V^\top$ as an eigendecomposition. $\blacksquare$
+
+**P2.** Let $z = x \mathbin{op} y$ be the exact result and $\Delta$ the spacing between representable numbers at magnitude $|z|$.
+
+Round-to-nearest returns the closer representable number, so the absolute error is at most half the spacing:
+
+$$
+|\mathrm{fl}(z) - z| \le \tfrac12\Delta \le u\,|z|,
+$$
+
+since $\Delta/|z| \le 2u$. Writing $\delta = (\mathrm{fl}(z)-z)/z$ gives $\mathrm{fl}(z) = z(1+\delta)$ with $|\delta|\le u$.
+
+For cancellation, let $\hat x = x(1+\delta_x)$ and $\hat y = y(1+\delta_y)$ with $|\delta_x|,|\delta_y|\le u$. The error in the difference is $(\hat x - \hat y) - (x-y) = x\delta_x - y\delta_y$, of magnitude at most $(|x|+|y|)u$.
+
+Dividing by the true difference gives the relative error,
+
+$$
+\frac{\big|(\hat x - \hat y) - (x-y)\big|}{|x-y|} \le \frac{|x|+|y|}{|x-y|}\,u,
+$$
+
+which grows without bound as $x \to y$. $\blacksquare$
+
+**A1.** On log–log axes the realized errors are straight lines in $\kappa(X)$: the QR route rises with slope $1$ (error $\sim \kappa(X)\,u$) and the normal-equations route with slope $2$ (error $\sim \kappa(X)^2\,u$), the two separating by a factor that grows as $\kappa(X)$. The normal-equations line hits the order-one error ceiling (total loss of accuracy) once $\kappa(X)^2 \approx u^{-1}$, i.e. $\kappa(X)\approx10^{8}$, while QR still retains about half its digits there.
+
+**A2.** A rank-one increment to the precision aimed at the ill-conditioned contrast direction adds to the smallest eigenvalue of $X^\top X$ — equivalently it raises $\sigma_{\min}(X)$ — so $\kappa(X) = \sigma_{\max}/\sigma_{\min}$ falls. Both the forward-error bound $\kappa(X)\,u$ and the realized solve error drop with it: the calibration constraint that healed the ridge statistically (by adding information along the flat direction) conditions the problem numerically (by lifting the smallest singular value) — one increment, both cures.
+
 :::
