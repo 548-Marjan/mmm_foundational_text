@@ -92,6 +92,41 @@ code tie-in).
       hierarchical pooling. Flag this as the **Advanced/Extensions track** (ties to
       the P1 "mark the Advanced track" item) — core arc shouldn't depend on it.
 
+## P0b — Pre-publication verification (AI-assisted authorship) & the free-publish decision
+
+This book was authored with heavy AI assistance (spec → plan → subagent cycle). That
+is a legitimate way to write — synthesis, architecture, and exposition are real
+authorial work — but it creates specific obligations that must be cleared before the
+book goes public under an author's name. The method is fine *if the author has
+actually verified it and can defend any page when an expert pushes back*; it is not
+fine as unread output. The items below are the gate.
+
+- [ ] **Spot-check the keystone proofs by hand.** Prioritize the load-bearing
+      results that carry the book's claim to rigor: the omitted-variable-bias theorem
+      and back-door adjustment (ch. 18/19), the DiD-identifies-ATT-under-parallel-trends
+      and IV/Wald-is-a-secant proofs (ch. 19/20), the calibration ridge-compression
+      result (ch. 20), and the monotone-EVPI-decay convergence result (ch. 21). AI math
+      is fluently wrong in hard-to-spot ways; a textbook's implicit promise is that
+      these hold.
+- [ ] **Verify every citation resolves to a real source making the claimed point.**
+      Audit `references.bib` and every "Canonical anchors" line against the in-text use.
+      AI invents or misattributes references; one fabricated citation in a
+      rigor-branded book torches credibility with the exact expert audience. (Overlaps
+      the P1 Perron–Frobenius and Hill cross-reference fixes — fold those in.)
+- [ ] **Render the full build and run every code tie-in; confirm the numbers match.**
+      The prose asserts specific figures (e.g. the 3.5-vs-2.0 confounding result, the
+      EVPI dropping ≈0.12 → ≈0.03). Execute the cells and check the asserts actually
+      pass and produce the quoted values.
+- [ ] **Decide on an AI-assistance disclosure line and resolve author identity.** A
+      one-line note ("drafted with AI assistance, reviewed and verified by the author")
+      raises credibility rather than lowering it and protects against a reader inferring
+      it and feeling misled. Resolve the `"548 / Marjan"` author placeholder (see P1).
+- [ ] **Publish-format decision: lean free + open on the author's site.** The book's
+      real payoff is reputation/discovery in a niche where public material is shallow,
+      not direct sales — free HTML maximizes that, with an optional paid PDF/print or
+      tip jar as a hedge. Free also lowers the stakes on residual imperfection. Gate
+      this decision on the verification items above being cleared, not on format.
+
 ## P1 — Consistency / correctness fixes (mechanical, do now)
 
 - [ ] **README is a structural version behind.** It describes a **7-part** layout
