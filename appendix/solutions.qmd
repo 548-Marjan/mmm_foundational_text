@@ -2967,4 +2967,38 @@ which grows without bound as $x \to y$. $\blacksquare$
 
 **A2.** A rank-one increment to the precision aimed at the ill-conditioned contrast direction adds to the smallest eigenvalue of $X^\top X$ — equivalently it raises $\sigma_{\min}(X)$ — so $\kappa(X) = \sigma_{\max}/\sigma_{\min}$ falls. Both the forward-error bound $\kappa(X)\,u$ and the realized solve error drop with it: the calibration constraint that healed the ridge statistically (by adding information along the flat direction) conditions the problem numerically (by lifting the smallest singular value) — one increment, both cures.
 
+## Chapter 24 — Software Architecture
+
+**C1.** An acyclic graph has a topological order (Rung 3), which is exactly a build/test sequence: each module is constructed and unit-tested against dependencies already in place, so the system can be assembled one module at a time. A module on a cycle cannot: building or testing it requires its dependencies, which (around the cycle) require it — there is no module on the cycle whose dependencies are all already available, so none can be the starting point. Concretely, to instantiate or mock the module you must instantiate or mock something that, transitively, needs the module itself; the unit cannot be isolated.
+
+**C2.** If a volatile module depends on a stable one, changes originate in the volatile module and are absorbed there — the stable module it relies on does not move, so nothing downstream of the stable module is disturbed. If instead a stable module depended on a volatile one, every change in the volatile module would propagate into the stable module and from there into everything that depends on it (which, being stable, is much of the system). The risk is asymmetric: depending on something more stable than yourself confines change; depending on something less stable than yourself amplifies it.
+
+**C3.** It cycles as **data/control flow at runtime**: information circulates over time — the optimizer's uncertainty drives an experiment, calibration tightens the posterior, the store updates, the optimizer runs again. It does **not** cycle as **source-code dependencies**: neither the optimizer nor the calibration module names the other. Both depend on the prior-store interface (the optimizer reads the posterior, calibration writes evidence), and the store depends on neither. The interface lets the data loop while the dependency edges both point to the stable store — an acyclic module graph carrying a cyclic data flow.
+
+**B1.** Edges `a→b`, `a→c`, `b→d`, `c→d`. Fan-out: $a=2$, $b=1$, $c=1$, $d=0$. Fan-in: $a=0$, $b=1$, $c=1$, $d=2$. Instability $I = \text{fan-out}/(\text{fan-in}+\text{fan-out})$: $I(a)=2/2=1.0$, $I(b)=1/2=0.5$, $I(c)=1/2=0.5$, $I(d)=0/2=0.0$. Most stable is `d` ($I=0$); least stable is `a` ($I=1$).
+
+**B2.** Place the only module with no unmet dependencies, repeat. `d` first (depends on nothing); then `b` and `c` (their only dependency `d` is placed); then `a` (depends on `b`, `c`). Order: $d \to b \to c \to a$. The rule at each step is "place a module all of whose dependencies are already placed" — a vertex of remaining out-degree zero (Kahn's algorithm).
+
+**B3.** Add `d→a`. Now every module has an unmet dependency: `a` needs `b`/`c`, `b` and `c` need `d`, and `d` now needs `a`. Kahn's algorithm finds no module of out-degree zero to start, places nothing, and returns an empty order — fewer than the four modules — so no topological order exists. The modules `a, b, c, d` all lie on or downstream of the cycle $a \to b \to d \to a$ (and $a \to c \to d \to a$) and none can be placed.
+
+**P1.** We prove both directions.
+
+($\Rightarrow$) Suppose a topological order exists, so every edge points forward (to a later position). Around any cycle $v_1 \to v_2 \to \cdots \to v_k \to v_1$ the forward edges push the position strictly rightward, but the closing edge $v_k \to v_1$ would point back to an earlier position — impossible if every edge points forward. So no cycle exists; $G$ is acyclic.
+
+($\Leftarrow$) Suppose $G$ is acyclic. At each step a vertex of out-degree zero must exist:
+
+$$
+\text{if every vertex had an outgoing edge, following } v_1 \to v_2 \to \cdots \text{ through finitely many vertices would repeat one, forming a cycle.}
+$$
+
+Place such a vertex, delete it (the remainder is still finite and acyclic), and repeat until none remain. This is Kahn's algorithm; it produces an order in which every module precedes those depending on it, in $O(|V|+|E|)$ time. $\blacksquare$
+
+**P2.** With edges $A \to B$ and $B \to A$ the pair forms a 2-cycle. Replace them by a new node $C$ with $A \to C$ and $B \to C$ and no outgoing edges from $C$.
+
+Suppose, for contradiction, the new graph had a cycle. Any cycle must enter and leave each of its vertices, so every vertex on a cycle has at least one outgoing edge among the cycle's vertices. But $C$ has out-degree zero, so $C$ cannot lie on a cycle; and with the direct edges $A \to B$, $B \to A$ removed, the only remaining edges out of $A$ and $B$ go to $C$, from which there is no path back. Hence neither $A$ nor $B$ lies on a cycle either. No cycle exists — the graph is a DAG. $\blacksquare$
+
+**A1.** Run Kahn's algorithm; if it returns all $|V|$ modules, that is a topological order. If it returns fewer, the unreturned modules are exactly those whose dependencies could never all be placed — the modules on a cycle together with everything transitively depending on them — and the function reports that set as the cycle's footprint. On the MMM graph it returns all eight; with the optimizer–calibration loop edges it returns five and reports `{optimizer, calibration, reporting}` as unplaceable.
+
+**A2.** Compute $I(u)$ for every module, then scan all edges $u \to v$ and collect those with $I(v) > I(u)$ — a dependency pointing from a more stable module toward a less stable one, against the Stable Dependencies Principle. The MMM graph yields an empty list. Adding, say, an edge `store → reporting` (the stable store depending on a volatile leaf) is flagged immediately, since $I(\text{reporting}) = 1.0 > I(\text{store}) = 0.33$.
+
 :::
