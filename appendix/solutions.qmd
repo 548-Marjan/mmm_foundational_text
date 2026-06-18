@@ -3001,4 +3001,40 @@ Suppose, for contradiction, the new graph had a cycle. Any cycle must enter and 
 
 **A2.** Compute $I(u)$ for every module, then scan all edges $u \to v$ and collect those with $I(v) > I(u)$ — a dependency pointing from a more stable module toward a less stable one, against the Stable Dependencies Principle. The MMM graph yields an empty list. Adding, say, an edge `store → reporting` (the stable store depending on a volatile leaf) is flagged immediately, since $I(\text{reporting}) = 1.0 > I(\text{store}) = 0.33$.
 
+## Chapter 25 — Data Engineering
+
+**C1.** Keeping the posterior as a fold over an immutable log buys, first, **auditing**: every number in the live posterior traces to a specific logged experiment with its `event_id`, weight, and timestamp, so the provenance of any belief is recoverable. Second, **recovery / reproducibility**: after a code change or a corrupted cache, the posterior is rebuilt by replaying the log, and any past version is reconstructed by folding a prefix. A stored, mutable posterior has neither — once overwritten it cannot be explained or restored, because the history that produced it was discarded.
+
+**C2.** Commutativity is a consequence of the **model's mathematics**: the calibration update adds a precision term $w s^{-2} c c^\top$, and matrix addition commutes and associates, so reordering the events cannot change the sum (Chapter 22's sequential = batch). Idempotency is **not** a consequence of the model: applying the same factor twice adds its precision twice, $\Lambda_0 + s^{-2}cc^\top + s^{-2}cc^\top \neq \Lambda_0 + s^{-2}cc^\top$, so the update is not idempotent on its own. It has to be imposed by the data layer, through a deduplication key.
+
+**C3.** At-least-once delivery means an event can arrive more than once (a producer retries after a lost acknowledgement). Folded without a dedup key, the duplicate's precision is added again, so the posterior is *sharper* than the evidence justifies — the variance shrinks toward zero as duplicates accumulate. It is dangerous rather than merely imprecise because the error is silent and in the optimistic direction: the optimizer downstream treats the over-tight posterior as real identification and commits to allocations the data do not support, exactly the over-confidence Part VI worked to avoid.
+
+**B1.** Fold: $9 + 7 + 4 = 20$. Standard deviation $1/\sqrt{20} \approx 0.224$.
+
+**B2.** Replay-to-version-1: $9 + 7 = 16$. Reversed fold: $9 + 4 + 7 = 20$. The replay-to-version value changes ($16$ versus the final $20$, since it folds only the first event); the full fold is unchanged by reversal ($20$), by order-independence.
+
+**B3.** Delivering the first event ($+7$) twice: without deduplication $9 + 7 + 7 + 4 = 27$; with deduplication $9 + 7 + 4 = 20$. The deduplicated value $20$ is correct; $27$ double-counts the first experiment.
+
+**P1.** The fold's value is the sum $\Lambda_0 + \sum_{j=1}^{k} w_j s_j^{-2} c_j c_j^\top$.
+
+Each event contributes exactly one term to this sum, and matrix addition is commutative and associative, so for any permutation $\pi$ of the indices,
+
+$$
+\Lambda_0 + \sum_{j=1}^{k} w_j s_j^{-2} c_j c_j^\top = \Lambda_0 + \sum_{j=1}^{k} w_{\pi(j)} s_{\pi(j)}^{-2} c_{\pi(j)} c_{\pi(j)}^\top .
+$$
+
+The result is therefore independent of the order in which events are folded. This is the matrix form of Chapter 22's sequential-equals-batch theorem: folding one event at a time, in any order, equals conditioning on all events at once. $\blacksquare$
+
+**P2.** Let the delivered stream be any sequence of events whose distinct identifiers form the set $S$, with at-least-once delivery so identifiers may repeat. Under deduplication the fold skips any identifier already seen, so each identifier in $S$ is applied exactly once:
+
+$$
+\Lambda = \Lambda_0 + \sum_{\text{id} \in S} w_{\text{id}} s_{\text{id}}^{-2} c_{\text{id}} c_{\text{id}}^\top .
+$$
+
+This depends only on the set $S$, not on how many times or in what order each identifier was delivered — so it equals the exactly-once posterior, in which each event is applied once. Redelivering an identifier already in $S$ adds nothing, so the deduplicated update is idempotent. $\blacksquare$
+
+**A1.** Maintain a list (the append-only log) and a set of seen identifiers; `fold` adds a contribution only for an unseen identifier, and `replay(version)` folds the first `version` events. Appending a late-arriving event in any position yields the same folded posterior (order-independence), and appending a duplicate of an existing `event_id` leaves the posterior unchanged (deduplication), so both operations are invariant — confirmed numerically against the un-perturbed fold.
+
+**A2.** Give events written after the schema change a new optional field, and have the reader supply a default when the field is absent (e.g. `ev.get("weight", 1.0)`). Older events, lacking the field, then fold exactly as before through the default, so the new reader processes the whole log — old and new events alike — without error: forward compatibility of the reader.
+
 :::
