@@ -377,7 +377,132 @@ The credibility of $\hat\tau_{\text{SC}}$ rests on the pre-period fit. Here the 
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The single cell below runs all four designs on the same response curve $S(x)=2\sqrt x$ — nothing but NumPy, SciPy, and Matplotlib, with the regressions and the synthetic-control program written out explicitly. It does four things, each recovering the same lift. **DiD** on a simulated geo panel returns $\approx 2$ while the naive cross-section returns the biased $\approx 4$. **IV / Wald** returns the secant $\approx 0.4$ — printed beside the tangents $S'(4)=0.5$ and $S'(9)=0.333$ to show it is neither. **Synthetic control** solves the convex pre-period matching program with `scipy.optimize.minimize` on the simplex and recovers a post gap $\approx 2$. **ITS** builds its counterfactual with the Chapter 17 local-level Kalman filter — the forecast of the pre-intervention level *is* the counterfactual — and the observed-minus-forecast gap is $\approx 2$. One observable carries the chapter: four designs, four sources of variation, one secant.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
+
+# ----------------------------------------------------------------------
+# One response curve, four designs, one lift. Response S(x) = 2*sqrt(x)
+# (Ch18 surrogate). A spend change 4 -> 9 produces lift S(9)-S(4)=2, a
+# SECANT of slope 2/5 = 0.4 -- neither tangent S'(4)=0.5 nor S'(9)=0.333.
+# DiD, IV, synthetic control, and an ITS/Kalman counterfactual each recover
+# the lift while defeating the baseline-demand confounder of Ch19.
+# ----------------------------------------------------------------------
+rng = np.random.default_rng(20)
+S  = lambda x: 2*np.sqrt(x)
+Sp = lambda x: 1/np.sqrt(x)
+x0, x1 = 4.0, 9.0
+lift_true = S(x1) - S(x0)          # 2.0
+secant    = lift_true/(x1-x0)      # 0.4
+print(f"S(4)={S(x0)}, S(9)={S(x1)}, lift={lift_true}, secant={secant}")
+print(f"tangents S'(4)={Sp(x0):.4f}, S'(9)={Sp(x1):.4f}; MVT xi={(1/secant)**2}")
+
+# === 1. Difference-in-differences (geo panel) ===
+nT, nC = 4000, 4000
+aT = rng.normal(10, 1.0, nT)       # treated baseline demand (higher -> confound)
+aC = rng.normal(8,  1.0, nC)       # control baseline demand
+sd = 0.4
+YT_pre  = aT + S(x0) + rng.normal(0, sd, nT)
+YT_post = aT + S(x1) + rng.normal(0, sd, nT)   # treated spend 4 -> 9
+YC_pre  = aC + S(x0) + rng.normal(0, sd, nC)
+YC_post = aC + S(x0) + rng.normal(0, sd, nC)   # control held at 4
+did   = (YT_post.mean() - YT_pre.mean()) - (YC_post.mean() - YC_pre.mean())
+naive = YT_post.mean() - YC_post.mean()
+print("\n1) DiD")
+print(f"   naive post cross-section = {naive:.3f}  (biased: lift 2 + baseline gap 2)")
+print(f"   DiD                      = {did:.3f}  (recovers lift 2, confound differenced out)")
+assert abs(did - 2.0) < 0.1 and abs(naive - 4.0) < 0.15
+
+# === 2. Instrumental variables / Wald ===
+n = 60_000
+W  = rng.integers(0, 2, n)                       # instrument (randomized)
+Xs = np.where(W == 1, x1, x0)                    # compliers: W shifts spend 4<->9
+aZ = rng.normal(9, 1.0, n)                        # unobserved confounder, independent of W
+Y  = aZ + S(Xs) + rng.normal(0, 0.3, n)
+wald = np.cov(W, Y)[0, 1] / np.cov(W, Xs)[0, 1]
+print("\n2) IV / Wald")
+print(f"   beta_IV = cov(W,Y)/cov(W,X) = {wald:.4f}  (secant {secant};  not S'(4)={Sp(x0):.3f} or S'(9)={Sp(x1):.3f})")
+assert abs(wald - 0.4) < 0.03
+
+# === 3. Synthetic control (convex weights match the treated pre-period) ===
+T0 = 12                                           # pre-intervention periods
+t = np.arange(T0)
+ctrl = np.stack([                                 # three controls, distinct trajectories
+    12 + 0.10*t + rng.normal(0, 0.05, T0),
+    13 - 0.05*t + rng.normal(0, 0.05, T0),
+    11 + 0.20*t + rng.normal(0, 0.05, T0),
+])
+w_true = np.array([0.5, 0.2, 0.3])
+treated_pre = w_true @ ctrl + rng.normal(0, 0.05, T0)     # in the convex hull
+tp = np.arange(T0, T0+4)
+ctrl_post = np.stack([12 + 0.10*tp, 13 - 0.05*tp, 11 + 0.20*tp])
+treated_post = w_true @ ctrl_post + lift_true             # counterfactual + lift 2
+
+def sc_loss(w):                                   # minimize pre-period mismatch on the simplex
+    return np.sum((treated_pre - w @ ctrl)**2)
+cons = ({"type": "eq", "fun": lambda w: w.sum() - 1},)
+res = minimize(sc_loss, np.full(3, 1/3), method="SLSQP", bounds=[(0, 1)]*3,
+               constraints=cons, options={"ftol": 1e-12})
+w_hat = res.x
+synth_post = w_hat @ ctrl_post
+gap_sc = (treated_post - synth_post).mean()
+print("\n3) Synthetic control")
+print(f"   recovered weights = {np.round(w_hat,3).tolist()}  (true {w_true.tolist()})")
+print(f"   pre-fit RMSE      = {np.sqrt(sc_loss(w_hat)/T0):.4f}")
+print(f"   post gap          = {gap_sc:.3f}  (recovers lift 2)")
+assert abs(gap_sc - 2.0) < 0.15
+
+# === 4. ITS / BSTS counterfactual via the Ch17 local-level Kalman ===
+def kalman_local_level(y, V, Wv, m0=0.0, C0=1e4):
+    m, C = m0, C0
+    for yt in y:
+        a, R = m, C + Wv          # predict
+        f, Q = a, R + V           # forecast
+        m = a + (R/Q)*(yt - f)    # update
+        C = R - R*R/Q
+    return m, C                    # filtered level + variance at end of series
+
+pre = 14 + rng.normal(0, 0.1, 60)              # treated pre-period level ~ 14 (flat, stable)
+mT0, CT0 = kalman_local_level(pre, V=0.04, Wv=0.002)
+counterfactual = mT0                            # random-walk forecast is flat
+y_post = 16.0                                   # observed post-intervention revenue
+gap_its = y_post - counterfactual
+print("\n4) ITS / Kalman counterfactual (reuses Ch17 local level)")
+print(f"   filtered pre-level (forecast counterfactual) = {counterfactual:.3f}")
+print(f"   observed post = {y_post};  gap = {gap_its:.3f}  (recovers lift 2)")
+assert abs(gap_its - 2.0) < 0.2
+
+print("\nAll four designs recover the lift ~2 (the secant).  All assertions passed.")
+
+# ----------------------------------------------------------------------
+# Figures: (L) the four recovered lifts; (R) the taxonomy -- secant vs tangents.
+# ----------------------------------------------------------------------
+fig, ax = plt.subplots(1, 2, figsize=(11, 4.2))
+names = ["DiD", "IV (x dx)", "Synth. ctrl", "ITS/Kalman"]
+lifts = [did, wald*(x1-x0), gap_sc, gap_its]     # IV secant x spend-gap is the lift
+ax[0].bar(names, lifts, color="steelblue", alpha=0.85)
+ax[0].axhline(2.0, color="crimson", ls="--", lw=1.5, label="true lift = 2")
+ax[0].set_ylabel("recovered lift"); ax[0].set_ylim(0, 2.6)
+ax[0].set_title("Four designs, one lift"); ax[0].legend()
+
+xx = np.linspace(1, 12, 200)
+ax[1].plot(xx, S(xx), color="navy", lw=2, label=r"$S(x)=2\sqrt{x}$")
+ax[1].plot([x0, x1], [S(x0), S(x1)], color="crimson", lw=2, marker="o",
+           label=f"secant on [4,9], slope {secant}")
+for xp in (x0, x1):
+    ax[1].plot(xx, S(xp) + Sp(xp)*(xx-xp), ls=":", lw=1.2,
+               label=fr"tangent at {xp:.0f}, slope {Sp(xp):.3f}")
+ax[1].set_xlabel("spend $x$"); ax[1].set_ylabel("response $S$")
+ax[1].set_title("Secant (what IV/DiD give) vs tangents")
+ax[1].legend(loc="upper left", fontsize=8); ax[1].set_ylim(0, 8)
+fig.tight_layout()
+plt.show()
+```
+
+The printed output pins the chapter's arithmetic. The DiD returns $\approx 2$ against a naive cross-section of $\approx 4$ — the baseline-demand confounder of Chapter 19 (Causal Inference Foundations) inflates the naive comparison by exactly the baseline gap, and differencing removes it. The Wald estimator returns $\approx 0.4$, the secant slope, printed beside $S'(4)=0.5$ and $S'(9)=0.333$ to make plain it is neither tangent. The synthetic-control program recovers convex weights close to the true generating weights with a near-zero pre-fit RMSE and a post gap $\approx 2$. The ITS counterfactual — the Chapter 17 (Dynamic Linear Models) Kalman filter's forecast of the pre-intervention level — lands at $\approx 14$, and the observed post-intervention revenue of $16$ leaves a gap $\approx 2$. The left figure stacks the four recovered lifts against the true value of $2$; the right figure draws the curve, the secant on $[4,9]$ that every design here estimates, and the two endpoint tangents it is not. Four designs, four kinds of variation, one functional of $S$ — each ready to be tagged and handed to Chapter 21 (Advanced Calibration).
 
 ## Exercises
 
