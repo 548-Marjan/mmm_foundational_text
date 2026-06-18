@@ -2761,16 +2761,6 @@ The smoothed level filters the observation noise and tracks the trending state; 
 
 **A3.** Stack a Fourier seasonal pair into the state, $\theta_t = (\beta_t, a_t, b_t)^\top$ with $F_t = (x_t, \cos(2\pi t/s), \sin(2\pi t/s))^\top$ and $G = I$; the filter then separates the drifting channel coefficient from the seasonal amplitudes because the design columns are (near-)orthogonal — the same orthogonality that made the Fourier regression of Chapter 7 well-conditioned.
 
-### Chapter 17 — BTVC mechanics (Advanced / Extensions)
-
-This block collects the mechanics flagged but deferred in the chapter's BTVC section, following @ng2021btvc; it is skippable and library-free.
-
-**Kernel-smoothed knots.** Instead of an independent state $\theta_t$ at every one of the $T$ periods, BTVC represents the coefficient trajectory with a small number $J \ll T$ of latent **knots** $b \in \mathbb R^J$ placed across time, and reconstructs the full path by smoothing: $\beta = K b$, where $K \in \mathbb R^{T\times J}$ is a fixed kernel matrix whose entry $K_{tj}$ is a smooth (e.g. Gaussian or cubic) weight of period $t$ on knot $j$. The number of free parameters is $J$, decoupled from the series length $T$ — the structural contrast with the DLM, whose state count grows with $T$. Smoothness is imposed by the kernel rather than by a random-walk variance.
-
-**Folded-normal positivity hierarchy.** Marketing coefficients should be non-negative. BTVC places a two-layer hierarchy on the knots: a global scale draws from a half-normal, and each knot is a **folded normal** (the absolute value of a normal) centered on a shrinkage mean. The folding enforces $\beta \ge 0$ exactly, while the hierarchy shares strength across knots and shrinks small effects toward zero — positivity and regularization in one prior.
-
-**Why variational inference.** With many channels and long histories, FFBS/MCMC over the full posterior is expensive. BTVC fits with **stochastic variational inference**: it posits a parametric family for the posterior and optimizes its parameters to minimize the KL divergence to the true posterior, using minibatch gradients. This trades the DLM's exact recursions for speed and scalability, at the cost of a variational approximation gap — the posterior is approximate, and uncertainty can be understated. The trade is deliberate: BTVC targets production deployment where scalability and built-in positivity outweigh the loss of exactness.
-
 ## Chapter 18 — Budget Optimization & Scenario Analysis
 
 **C1.** The optimizer reported $6.83$ because it selected the allocation that looks best on the *estimated* curve, and the estimate is most likely to have been bent upward by noise exactly where it was selected — the optimizer's curse. Rung 5 gives $\mathbb{E}_\theta[\max_b V] \ge \max_b \mathbb{E}_\theta[V]$, so the in-sample optimum is an upward-biased estimate of realized response. The honest forecast for the committed plan is the response that plan delivers under the full posterior — the certainty-equivalent value $\max_b \mathbb{E}_\theta[V] \approx 6.71$ — and $6.83$ overstates it by the EVPI, $\approx 0.12$.
