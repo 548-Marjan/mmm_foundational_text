@@ -57,6 +57,14 @@ jobs:
     needs: render
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Serialize Pages deployments: rapid back-to-back merges to main would
+    # otherwise overlap and GitHub rejects the second with "due to in progress
+    # deployment" (HTTP 400). Queue them instead; let an in-progress production
+    # deploy finish (do not cancel), and only the latest pending run survives.
+    # Scoped to the deploy job so PR render checks stay parallel.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
