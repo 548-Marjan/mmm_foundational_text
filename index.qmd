@@ -14,6 +14,15 @@ works, and the conditions under which it fails. MMM serves as the application th
 motivates and connects the material; the mathematics is developed on its own
 terms.
 
+Where many technical books survey a field — a method per chapter, read in any
+order — this one is a single ascent. Each part assumes the ones before it and
+exists to support the ones after, and one application, marketing mix modeling, runs
+through all of them. The aim is not to catalogue methods but to follow a single
+model the whole way down to its foundations and back up to a system that can be
+run: from the linear algebra and probability beneath it, through inference,
+sampling, and optimization, to causal calibration and the software engineering that
+puts it into production.
+
 ## Who this book is for
 
 The book assumes familiarity with:
@@ -34,6 +43,22 @@ By the end, the reader should be able to derive and build a full Bayesian MMM �
 from the data-generating process, through prior specification and MCMC inference,
 to budget optimization grounded in experiment — and to understand the assumptions
 and limitations of each component.
+
+The formal prerequisites above are the floor, not the ideal starting point.
+Readers who already work comfortably with **regression modeling, constrained
+optimization, and Bayesian statistics** will benefit most quickly: the book
+converges on precisely the intersection of those three, and prior fluency in any of
+them turns a derivation to be learned into one to be recognized. None is required —
+each is an accelerant.
+
+It is also worth saying what this book is not. It is not a survey of
+marketing-analytics methods, nor a manual for any particular software framework, nor
+a deep reference on any single discipline it draws upon — readers who want breadth
+across methods, or the last word on Bayesian computation or convex optimization, are
+better served by the dedicated texts this book builds on and points to. What it
+offers instead is the through-line those sources leave out: one model, derived from
+first principles and carried all the way to a system you can operate. Each borrowed
+field is developed as far as that model requires, and no further.
 
 ## Table of contents
 
