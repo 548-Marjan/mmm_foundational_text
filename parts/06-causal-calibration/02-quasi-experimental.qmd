@@ -508,8 +508,38 @@ The printed output pins the chapter's arithmetic. The DiD returns $\approx 2$ ag
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** Explain why every quasi-experimental estimand in this chapter is a functional of the response curve $S$, and why knowing *which* functional (secant, tangent, or validation) matters before the estimate is used. Give an example of an error that results from treating a secant as a tangent.
+
+**C2.** A geo lift test moves spend from $4$ to $9$ and reports a "marginal ROI." Using the secant/tangent distinction, explain why this number is not the marginal return $S'(x)$ at the current operating spend, and what additional information you would need to convert it into one.
+
+**C3.** State the parallel-trends assumption in words. Describe a realistic scenario in which a geo experiment violates it (so DiD is biased), and explain why the violation cannot be detected from the post-period data alone.
+
+**C4.** Synthetic control and ITS both build a counterfactual, but from different information. Contrast what each uses (control units vs. the treated unit's own history) and what each relies on for credibility (pre-period fit vs. stable pre-intervention dynamics). When would you prefer each?
+
 ### B -- By Hand
+
+Use $S(x) = 2\sqrt{x}$, $S'(x) = 1/\sqrt{x}$ throughout.
+
+**B1.** For the spend interval $[4, 9]$: compute the lift $S(9)-S(4)$ and the secant slope; find the mean-value-theorem point $\xi$ where $S'(\xi)$ equals the secant slope; and confirm $\xi$ lies strictly between $4$ and $9$ while the secant equals neither $S'(4)$ nor $S'(9)$.
+
+**B2.** On the geo panel ($\alpha_T=10$, $\alpha_C=8$, treated spend $4\to9$, control held at $4$): tabulate the four cell values, compute the naive post cross-section and the DiD, and decompose the naive estimate into lift plus baseline gap.
+
+**B3.** Suppose the control region also grows: its spend rises $4\to6.25$ over the same window (so its outcome trend is no longer flat). Recompute the DiD and the bias relative to the true treated lift $2$. Which direction is the bias, and why does it trace to a parallel-trends violation?
+
+**B4.** An instrument shifts complier spend from $x_0=4$ to $x_1=16$ (a wider interval than the worked example). Compute the Wald secant slope and the MVT point $\xi$. Explain why a wider complier interval makes the IV number a worse proxy for $S'$ at any single operating point.
 
 ### P -- Prove It
 
+**P1.** Prove that difference-in-differences identifies the ATT under parallel trends: starting from the DiD estimand, substitute observed for potential outcomes, add and subtract $\mathbb{E}[Y_{T,\text{post}}(0)]$, and apply parallel trends to isolate the ATT.
+
+**P2.** Prove the Wald estimator is a secant: for $Y_i(x)=S(x)+\alpha_i$ with $\alpha_i$ independent of the instrument $W$, show $\hat\beta_{\text{IV}}=\frac{S(x_1)-S(x_0)}{x_1-x_0}=\frac{1}{x_1-x_0}\int_{x_0}^{x_1}S'(u)\,du$. State each of the four instrument-validity conditions where it is used.
+
+**P3.** In the synthetic-control latent-factor model $Y_{j,t}=\alpha_j+\lambda_t^\top\mu_j+\varepsilon_{j,t}$, show that convex weights reproducing the treated unit's pre-period outcomes for all pre-period $t$ approximately match its factor loadings $\mu_{\text{treated}}$, and hence that the synthetic control tracks the treated unit's untreated potential outcome into the post period (assuming the factor structure is stable). Identify exactly where the stability assumption enters.
+
 ### A -- Applied / Code
+
+**A1.** Extend the Code Tie-in: give the control region its own trend (break parallel trends) and show the DiD estimate becomes biased; plot the bias as a function of the control's trend slope.
+
+**A2.** Widen the instrument's complier interval (vary $x_1$ over a grid with $x_0=4$ fixed) and plot the Wald secant slope against $x_1$. Show it drifts away from $S'(4)$ as the interval widens, and that it always equals $S'(\xi)$ for the interval's MVT point.
+
+**A3.** Add a second control region to the synthetic-control example and show that the additional donor improves the pre-period fit (lowers the RMSE) and tightens the recovered lift toward $2$. Then degrade the pre-fit (place the treated pre-level outside the donors' convex hull) and show the counterfactual — and the lift estimate — become unreliable.
