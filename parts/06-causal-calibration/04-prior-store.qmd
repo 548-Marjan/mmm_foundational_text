@@ -2,32 +2,224 @@
 
 *Canonical anchors: power priors (Ibrahim & Chen); cumulative meta-analysis.*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapter 21 folded a single calibration estimate into the posterior and showed it heal the identifiability ridge: one experiment, aimed at the direction the observational data left flat, compressing the allocation posterior and shrinking the Chapter 18 EVPI gap. But a measurement program is never one experiment. An organization running an MMM accumulates geo-lift tests, holdout studies, and matched-market experiments over years — some recent and well-randomized, some stale, some of doubtful design, some measuring the same quantity and disagreeing. The driving question of this chapter is the one that follows directly: *you will run not one experiment but many, over years, of varying quality and freshness. How do you accumulate them correctly — and does the decision actually converge?*
+
+The answer is the **prior store**: an append-only, versioned ledger of calibration likelihood factors, keyed by the secant / tangent / validation taxonomy of Chapters 20 and 21. Each experiment enters as a factor on a functional of the response-curve parameters; the store is the running product of those factors, maintained as evidence arrives. Four mechanisms make the accumulation correct and its payoff provable. Sequential updating equals batch updating, so studies can be appended one at a time without re-fitting. Power-prior discounting and temporal decay down-weight stale or low-credibility studies, so the store tracks a drifting landscape. Hierarchical pooling reconciles studies that conflict, so disagreement inflates uncertainty rather than being compounded into false confidence. And the keystone: as ridge-aimed studies accumulate, the EVPI gap decays **monotonically to zero** — the loop the book has been building provably converges.
+
+The full software-engineering build of the store — storage, schema migrations, governance, the pipeline that re-optimizes whenever a study lands — is the subject of Part VII. This chapter is the **mathematics** of evidence accumulation: the capstone of Part VI, where the calibration–optimization loop is closed and shown to converge.
+
+Throughout, the anchor response curve is again $S(x;\theta) = \theta\sqrt{x}$ with true scale $\theta = 2$, and the ridge is the two-channel coefficient model $(a_1, a_2)$ of Chapters 18 and 21: the attribution-contrast direction $u = (1,-1)/\sqrt{2}$ is the near-flat eigendirection the observational data barely identify, and the direction every calibration study is aimed at.
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The five rungs build from mechanism to payoff. Rung 1 establishes the store as a product of likelihood factors and proves that updating it sequentially equals the batch posterior. Rung 2 adds power-prior discounting and temporal decay, the weights that keep the store current. Rung 3 handles conflict: how to pool studies that disagree beyond their stated noise. Rung 4 is the keystone — the proof that the EVPI gap decays monotonically to zero as the store fills with ridge-aimed evidence. Rung 5 reads the mathematics back as a data-product schema and hands the engineering build to Part VII.
+
+**Rung 1 — The store as a product of likelihood factors (sequential = batch).** The prior store is, mathematically, the running product of calibration factors. Begin with the observational posterior $p_0(\theta) \propto p(\theta)\,L_{\text{obs}}(\theta \mid D)$ and let experiments arrive as a stream $\hat g_1, \dots, \hat g_k$, each contributing a calibration factor $L_j(\hat g_j \mid \theta)$. The store maintains the posterior by the Bayesian recursion $p_j(\theta) \propto p_{j-1}(\theta)\,L_j(\hat g_j \mid \theta)$: each new study multiplies the current posterior by its factor.
+
+**Theorem (cumulative meta-analysis / sequential = batch).** *Unrolling the recursion,*
+
+$$
+p_k(\theta) \;\propto\; p_0(\theta) \prod_{j=1}^{k} L_j(\hat g_j \mid \theta) ,
+$$
+
+*so folding studies in one at a time — sequentially, as the store receives them — yields exactly the batch posterior that conditions on all $k$ experiments at once.*
+
+**Proof.** By induction on $k$. For the base case $k = 1$, the recursion gives $p_1 \propto p_0 L_1$, which is the product form. For the inductive step, assume $p_{k-1} \propto p_0 \prod_{j=1}^{k-1} L_j$; the recursion gives $p_k \propto p_{k-1} L_k \propto p_0 \prod_{j=1}^{k-1} L_j \cdot L_k = p_0 \prod_{j=1}^{k} L_j$, using associativity of multiplication. That the joint experimental likelihood factors as $\prod_j L_j$ is licensed by conditional independence of the experiments given $\theta$: each randomization is a separate data source, so conditioning on the parameters renders the experimental outcomes independent. $\blacksquare$
+
+This is the **correctness guarantee** of an incremental store. Because multiplication commutes and associates, the order in which studies are appended does not change the posterior, and a study can be folded in without re-fitting the model from scratch. The MMM reading is operational: the store is an append-only ledger of likelihood factors, and the live posterior is their product, recomputable at any time by replaying the ledger.
+
+**Rung 2 — Power-prior discounting and temporal decay.** Not every study deserves full weight. A stale study run under a media landscape that no longer holds, or a geo experiment with a suspect randomization, should enter the store down-weighted. The **power prior** formalizes this by raising each calibration factor to a fractional power $L_j^{w_j}$ with $w_j \in [0,1]$, so the accumulated posterior is
+
+$$
+p_k(\theta) \;\propto\; p_0(\theta) \prod_{j=1}^{k} L_j(\hat g_j \mid \theta)^{w_j} .
+$$
+
+The weight is composed as $w_j = (\text{design credibility}) \times \rho^{\,t_{\text{now}} - t_j}$, where the temporal decay factor $\rho^{\,t_{\text{now}} - t_j}$ discounts a study that is $t_{\text{now}} - t_j$ time units old at decay rate $\rho < 1$. A recent, well-designed study has $w$ near $1$ (the standard update); a stale or methodologically weak study has $w$ near $0$; a validation-tier study sets $w = 0$ and never enters the likelihood at all. There is a subtlety, due to Ibrahim & Chen [@ibrahim2000]: raising a likelihood to a power changes its normalizing constant, and when $w$ is itself treated as an unknown to be inferred, that constant must be carried or the posterior over $w$ is distorted. With $w$ fixed by the store's design policy — the case here — the factor is a clean tempered likelihood and no normalization issue arises. The effect of temporal decay is that the store **forgets**: old evidence is continuously down-weighted, so the live posterior tracks a drifting landscape rather than anchoring forever to the first study run.
+
+**Rung 3 — Hierarchical pooling of conflicting studies.** When several studies measure the *same* functional but disagree by more than their stated noise, multiplying their factors is wrong: it compounds the disagreement into false confidence, concentrating the posterior between two estimates that each reject the consensus. Fixed-effect pooling forms the precision-weighted average
+
+$$
+\hat g_{\text{FE}} = \frac{\sum_j w_j \hat g_j}{\sum_j w_j}, \qquad \operatorname{Var}(\hat g_{\text{FE}}) = \frac{1}{\sum_j w_j}, \qquad w_j = 1/s_j^2 ,
+$$
+
+whose variance shrinks with every added study even when the studies contradict one another — overconfident under genuine heterogeneity. Random-effects pooling repairs this by positing a between-study variance $\tau^2$: each study is a noisy draw from a population of study-specific effects scattered around a common mean, so the effective weight becomes $w_j^\star = 1/(s_j^2 + \tau^2)$ and the pooled variance inflates accordingly. The DerSimonian–Laird moment estimator [@dersimonian1986] sets
+
+$$
+\tau^2 = \max\!\left(0,\; \frac{Q - (k-1)}{\sum_j w_j - \sum_j w_j^2 / \sum_j w_j}\right), \qquad Q = \sum_j w_j (\hat g_j - \hat g_{\text{FE}})^2 ,
+$$
+
+where $Q$ is Cochran's heterogeneity statistic, comparing observed dispersion to what the within-study noise alone would produce. This is exactly the partial pooling of Chapter 6: the studies are exchangeable draws around a population functional, $\tau^2$ is the group-level variance, and each study is shrunk toward the consensus by an amount set by its noise relative to $\tau^2$. Conflict detection is the Chapter 21 **validation tier** operationalized: a large $Q$ — heterogeneity beyond the stated within-study noise — is the posterior-predictive alarm that the store's factors are mutually inconsistent and must be **pooled, not multiplied**.
+
+**Rung 4 — Proof P (KEYSTONE): monotone EVPI decay (the loop closes).** In the linear-Gaussian setting, each power-weighted calibration factor on a linear functional $c_j^\top \theta$ contributes precision $w_j s_j^{-2} c_j c_j^\top$ to the posterior, so after $k$ studies the posterior precision is
+
+$$
+\Lambda_k = \Lambda_0 + \sum_{j=1}^{k} w_j\, s_j^{-2}\, c_j c_j^\top \;\succeq\; \Lambda_{k-1} ,
+$$
+
+the inequality holding in the Loewner (positive-semidefinite) order because each increment $w_j s_j^{-2} c_j c_j^\top$ is a nonnegative scalar times a rank-one outer product, hence positive semidefinite.
+
+**Lemma (Loewner monotonicity of the inverse).** *If $\Lambda_k \succeq \Lambda_{k-1} \succ 0$, then $\Sigma_k = \Lambda_k^{-1} \preceq \Lambda_{k-1}^{-1} = \Sigma_{k-1}$, because matrix inversion is operator-antitone on the positive-definite cone. Consequently the posterior variance along every direction $w$, namely $w^\top \Sigma_k w$, is non-increasing in $k$ — deterministically, not merely in expectation.*
+
+**Theorem (monotone EVPI decay and convergence).** *The Chapter 18 EVPI is an increasing function of the ridge-direction variance $\sigma_u^2 = u^\top \Sigma_k u$. Therefore $\mathrm{EVPI}_k$ is non-increasing in $k$; and if studies are repeatedly aimed at the ridge direction $u$ — so that the accumulated ridge precision $\Lambda_{0,u} + \sum_j w_j s_j^{-2} (u^\top c_j)^2 \to \infty$ — then $\sigma_u^2 \to 0$ and $\mathrm{EVPI}_k \to 0$.*
+
+**Proof.** The Lemma gives $\sigma_u^2 = u^\top \Sigma_k u$ non-increasing in $k$. The EVPI is monotone increasing in $\sigma_u^2$: the optimizer's-curse gap $\mathbb{E}[\max_b V] - \max_b \mathbb{E}[V]$ is driven by the spread of the optimal-allocation posterior, which is controlled by the contrast variance along the ridge; as $\sigma_u^2 \to 0$ the curve is pinned along $u$, the optimal-allocation posterior collapses to a point, and the gap closes to zero. Composing, $\mathrm{EVPI}_k$ is non-increasing. For the rate, take equal per-study ridge precision $\bar\kappa = w s^{-2} (u^\top c)^2$; the accumulated ridge precision is then $\Lambda_{0,u} + k\bar\kappa$, so $\sigma_u^2 = 1/(\Lambda_{0,u} + k\bar\kappa) = O(1/k)$ and hence $\mathrm{EVPI}_k = O(1/k) \to 0$. $\blacksquare$
+
+This is the loop closing. Chapter 21 showed one experiment shrinks the EVPI; here the accumulating store drives it to zero. The wound named in Chapter 18 — the optimizer commits to a confidently-wrong allocation because the curve is unidentified along the ridge — and shown structural in Chapter 19 is not merely reduced but eliminated in the limit, provided the store keeps acquiring evidence in the flat direction. The convergence is deterministic in the Gaussian-conjugate setting because precision adds; in a general nonlinear posterior the same statement holds in expectation, since a surprising study can transiently widen the posterior in some direction even as information accrues on average.
+
+**Rung 5 — The store as a data product (brief) and the handoff to Part VII.** The mathematics dictates the schema. Each record in the store carries the estimand class from the Chapter 20/21 taxonomy (secant, tangent, or validation), the target spend interval or operating point — equivalently the constraint direction $c$ — the measurement variance $s^2$, the power weight $w$ (credibility times decay), and a timestamp. The store is **append-only and versioned**: a study is never edited, only superseded, so the live posterior is reproducible from the ledger at any past version by replaying Rung 1's recursion to that point. Records that measure the same functional and conflict are pooled, not multiplied, by Rung 3. The mechanism ends here; the system begins in Part VII. Storage, schema migration, governance over who may add or down-weight a study, and the pipeline that re-runs the Chapter 18 optimizer whenever a record lands are the engineering subject of Chapters 23–26. With this chapter Part VI is complete: the book has travelled from "the optimizer needs a response curve the observational data cannot identify" to "a versioned ledger of experiments drives the decision-relevant uncertainty monotonically to zero." The loop — **intervene** (Chapters 19–20) **→ identify** the functional (Chapter 20) **→ calibrate** (Chapter 21) **→ re-optimize** (Chapter 18), iterated as the store fills — is closed and provably convergent.
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+Three worked examples instantiate the rungs on the same curve and the same Chapter 18 ridge: WE1 shows two studies folding in with sequential equal to batch; WE2 reconciles two conflicting studies; WE3 accumulates ridge-aimed studies and traces the EVPI to zero.
+
+### WE1 — Two studies fold in; sequential equals batch
+
+The scale model is $S(x;\theta) = \theta\sqrt{x}$ with observational posterior $\theta \sim \mathcal N(2, 0.5^2)$, a precision of $4$. Study 1 is a lift over $[4,9]$, measuring $S(9;\theta) - S(4;\theta) = \theta(\sqrt{9} - \sqrt{4}) = \theta$ with experimental std $s_1 = 0.2$ (precision $1/0.04 = 25$); folding it in updates the posterior precision to $4 + 25 = 29$. Study 2 is a lift over $[9,16]$, where $S(16;\theta) - S(9;\theta) = \theta(4 - 3) = \theta$, measured with $s_2 = 0.25$ (precision $1/0.0625 = 16$); folding it in updates the precision to $29 + 16 = 45$. The batch posterior, conditioning on both experiments at once, has precision $4 + 25 + 16 = 45$ — identical to the sequential result. The posterior std is $1/\sqrt{45} \approx 0.149$ and the mean is held at $2.0$, since both studies agree with the prior mean. The store appended Study 2 without re-touching Study 1, and arrived at exactly the posterior it would have computed from both studies together: sequential equals batch, in arithmetic.
+
+### WE2 — Conflicting studies: fixed-effect overconfidence versus random-effects honesty
+
+Two studies measure the scale $\theta$ but disagree: $\hat g_A = 2.0$ and $\hat g_B = 2.8$, each with std $s = 0.2$ (precision $25$). They differ by $0.8$ against a combined std $\sqrt{0.04 + 0.04} = \sqrt{0.08} \approx 0.283$ — a $z \approx 2.83$ conflict, well beyond what their stated noise allows. Fixed-effect pooling gives mean $(25 \cdot 2.0 + 25 \cdot 2.8)/50 = 2.4$ with std $1/\sqrt{50} \approx 0.141$: a tight interval centered in a gap that neither study supports — overconfident. Random-effects pooling restores honesty. Cochran's $Q = 25(2.0 - 2.4)^2 + 25(2.8 - 2.4)^2 = 4 + 4 = 8$ on $k - 1 = 1$ degree of freedom; the DerSimonian–Laird estimator gives $\tau^2 = (8 - 1)/(50 - 1250/50) = 7/25 = 0.28$. The re-weighted per-study precision is $1/(0.04 + 0.28) = 3.125$, so the pooled variance is $1/(2 \cdot 3.125) = 0.16$ and the pooled std is $0.4$ — nearly $3\times$ wider than the fixed-effect interval, honestly reflecting the disagreement. The large $Q$ is the conflict alarm: the store pools these two records rather than multiplying their factors, and the inflated interval propagates the unresolved disagreement forward to the optimizer instead of hiding it.
+
+### WE3 — The EVPI staircase (the loop closes)
+
+Start at the Chapter 18 ridge: the attribution-contrast direction $u = (1,-1)/\sqrt{2}$ has posterior std $0.45$, variance $0.2025$, and precision $\Lambda_{0,u} = 1/0.2025 \approx 4.94$, with Chapter 18 EVPI $\approx 0.12$. Accumulate ridge-aimed calibration studies of equal precision; the ridge variance follows the recursion $\sigma_u^2 = 1/(\Lambda_{0,u} + k\bar\kappa)$ with per-study precision $\bar\kappa \approx 14.8$, so the first study takes the std from $0.45$ to $0.225$ — the same halving Chapter 21 produced — and each subsequent study tightens it further. Propagated through the Chapter 18 optimizer, the EVPI traces a monotone staircase downward over studies $k = 0, 1, \dots, 5$:
+
+$$
+0.119 \;\to\; 0.030 \;\to\; 0.018 \;\to\; 0.013 \;\to\; 0.010 \;\to\; 0.008 ,
+$$
+
+non-increasing and converging toward $0$ at the $O(1/k)$ rate of Rung 4. This is the wound of Chapters 18 and 19 closing as a *limit*: the decision converges on the full-information optimum as the store fills with ridge-aimed evidence. No single experiment closes the gap, but the accumulating ledger does. The assertion-backed computation and the staircase figure are in the Code Tie-in.
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The single cell below runs the chapter's three results on NumPy and Matplotlib, every numeric claim asserted. First it folds two studies into the scale $\theta$ sequentially and confirms the running precision $4 \to 29 \to 45$ equals the batch precision $4 + 25 + 16$. Second it pools two conflicting studies both ways — fixed-effect ($2.4 \pm 0.141$) and random-effects ($2.4 \pm 0.40$ via Cochran's $Q = 8$ and DerSimonian–Laird $\tau^2 = 0.28$) — and checks the random-effects interval is nearly $3\times$ wider. Third it accumulates ridge-aimed studies and traces the EVPI staircase $0.12 \to 0.03 \to \cdots$, asserting it is monotone non-increasing and converging toward zero. The two figures draw the conflict (the two study estimates against both pooled intervals) and the staircase (EVPI against the number of studies, with the $O(1/k)$ envelope).
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(22)
+
+# === 1. Sequential = batch (Rung 1 / WE1): fold two studies into the scale theta ===
+prec0 = 1 / 0.5**2                     # observational precision 4
+prec1 = prec0 + 1 / 0.2**2             # study 1 (s=0.20): + 25 -> 29
+prec2 = prec1 + 1 / 0.25**2            # study 2 (s=0.25): + 16 -> 45
+prec_batch = prec0 + 1 / 0.2**2 + 1 / 0.25**2   # condition on both at once
+print("1) Sequential = batch (WE1)")
+print(f"   sequential precision: {prec0:.0f} -> {prec1:.0f} -> {prec2:.0f}")
+print(f"   batch precision:      {prec_batch:.0f}   std = {1/np.sqrt(prec2):.4f}")
+assert prec2 == prec_batch == 45
+assert abs(1/np.sqrt(prec2) - 0.1491) < 1e-3
+
+# === 2. Random-effects pooling (Rung 3 / WE2): two conflicting studies of theta ===
+y = np.array([2.0, 2.8]); s2 = np.array([0.04, 0.04]); w = 1 / s2
+fe_mean = (w * y).sum() / w.sum()
+fe_std = np.sqrt(1 / w.sum())
+Q = (w * (y - fe_mean)**2).sum()
+df = len(y) - 1
+tau2 = max(0.0, (Q - df) / (w.sum() - (w**2).sum() / w.sum()))
+ws = 1 / (s2 + tau2)
+re_std = np.sqrt(1 / ws.sum())
+print("\n2) Random-effects pooling (WE2)")
+print(f"   fixed-effect: mean {fe_mean:.2f}, std {fe_std:.4f}")
+print(f"   Cochran Q = {Q:.1f} on {df} df,  tau^2 = {tau2:.2f}")
+print(f"   random-effects: std {re_std:.4f}  ({re_std/fe_std:.2f}x wider)")
+assert abs(fe_mean - 2.4) < 1e-9 and abs(fe_std - 0.1414) < 1e-3
+assert abs(Q - 8.0) < 1e-9 and abs(tau2 - 0.28) < 1e-9
+assert abs(re_std - 0.4) < 1e-9 and re_std / fe_std > 2.5
+
+# === 3. Monotone EVPI decay (Rung 4 / WE3): the staircase to zero ===
+u = np.array([1.0, -1.0]) / np.sqrt(2)
+v = np.array([1.0,  1.0]) / np.sqrt(2)
+abar = np.array([2.0, 1.0]); B = 9.0
+
+def evpi(ridge_std, N=400_000):
+    Cov = ridge_std**2 * np.outer(u, u) + 0.08**2 * np.outer(v, v)
+    d = rng.multivariate_normal(abar, Cov, size=N)
+    d = d[(d > 0).all(axis=1)]
+    Sd = (d**2).sum(axis=1)
+    return np.sqrt(Sd * B).mean() - np.sqrt((abar**2).sum() * B)
+
+Lam0_u = 1 / 0.45**2           # ridge precision 4.94
+kappa = 3 * Lam0_u             # per-study ridge precision (first step halves the std)
+ks = np.arange(0, 6)
+ridge_std = np.sqrt(1 / (Lam0_u + ks * kappa))
+staircase = np.array([evpi(sd) for sd in ridge_std])
+print("\n3) Monotone EVPI decay (WE3): the staircase")
+for k, sd, e in zip(ks, ridge_std, staircase):
+    print(f"   study {k}: ridge std {sd:.4f}   EVPI {e:.4f}")
+assert np.all(np.diff(staircase) <= 1e-9)          # non-increasing
+assert staircase[-1] < 0.02                        # converging toward zero
+
+# === Figures ===
+fig, ax = plt.subplots(1, 2, figsize=(11, 4.2))
+ax[0].errorbar([0, 1], y, yerr=np.sqrt(s2), fmt="o", color="gray", capsize=4, label="studies")
+ax[0].axhspan(fe_mean - fe_std, fe_mean + fe_std, color="tab:red", alpha=0.25, label="fixed-effect ±1σ")
+ax[0].axhspan(fe_mean - re_std, fe_mean + re_std, color="tab:blue", alpha=0.15, label="random-effects ±1σ")
+ax[0].set_xticks([0, 1]); ax[0].set_xticklabels(["study A", "study B"])
+ax[0].set_title("Conflicting studies: fixed-effect vs random-effects")
+ax[0].set_ylabel(r"$\hat g$ (scale $\theta$)"); ax[0].legend(fontsize=8)
+
+ax[1].plot(ks, staircase, "-o", color="tab:blue", label="EVPI")
+env = staircase[1] * 1.0 / np.maximum(ks, 1)
+ax[1].plot(ks[1:], env[1:], "--", color="gray", label=r"$O(1/k)$ envelope")
+ax[1].set_title("EVPI staircase: the loop converges")
+ax[1].set_xlabel("number of ridge-aimed studies $k$"); ax[1].set_ylabel("EVPI (response units)")
+ax[1].legend()
+plt.tight_layout()
+plt.show()
+```
+
+The printed output pins the chapter's arithmetic. The sequential precision climbs $4 \to 29 \to 45$ and equals the batch precision $45$ exactly, with posterior std $0.149$ — sequential is batch. The conflicting studies pool to mean $2.4$ either way, but the fixed-effect std $0.141$ ignores the $z \approx 2.83$ disagreement while the random-effects std $0.40$ — built from Cochran's $Q = 8$ and $\tau^2 = 0.28$ — is $2.8\times$ wider, carrying the conflict forward honestly. The EVPI staircase falls $0.119 \to 0.030 \to 0.018 \to 0.013 \to 0.010 \to 0.008$, monotone and tracking the $O(1/k)$ envelope toward zero: the loop closing in numbers. The left figure shows the two study estimates straddled by the tight fixed-effect band and the honest random-effects band; the right shows the EVPI descending to zero as the store fills.
 
 ## Exercises
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** Rung 1 proves the sequential posterior equals the batch posterior. Explain why this equivalence is what makes an *append-only* store correct — in particular, why the order in which studies are added does not matter, and why a new study can be folded in without re-fitting the model from scratch.
+
+**C2.** Two geo experiments measure the same channel's response and disagree by far more than their stated standard errors. Explain why multiplying their likelihood factors (as Rung 1's product would) is the wrong thing to do, and what random-effects pooling does instead. What role does Cochran's $Q$ play in deciding between the two?
+
+**C3.** Explain why temporal decay makes the store track a drifting media landscape rather than anchoring to its first study. Then explain why the EVPI decay of Rung 4 is *deterministically* monotone in the Gaussian-conjugate setting but only monotone *in expectation* for a general nonlinear posterior.
+
 ### B -- By Hand
+
+**B1.** Observational precision on $\theta$ is $4$. Fold in a study of precision $25$, then a study of precision $16$, sequentially. Report the running precision after each, the batch precision conditioning on both at once, and the final posterior standard deviation. Confirm sequential equals batch.
+
+**B2.** Two studies of $\theta$ report $\hat g_A = 2.0$ and $\hat g_B = 2.8$, each with std $0.2$. Compute the fixed-effect pooled mean and std, Cochran's $Q$, the DerSimonian–Laird $\tau^2$, and the random-effects pooled std. State the factor by which the random-effects interval is wider.
+
+**B3.** Using the ridge-variance recursion $\sigma_u^2 = 1/(\Lambda_{0,u} + k\bar\kappa)$ with $\Lambda_{0,u} = 1/0.45^2$ and $\bar\kappa = 3\Lambda_{0,u}$, compute the ridge standard deviation at $k = 0$ and $k = 1$. Confirm the first study halves the std (matching Chapter 21's $0.45 \to 0.225$).
 
 ### P -- Prove It
 
+**P1.** Prove the cumulative meta-analysis identity $p_k(\theta) \propto p_0(\theta) \prod_{j=1}^{k} L_j(\hat g_j \mid \theta)$ by induction on $k$, starting from the recursion $p_j \propto p_{j-1} L_j$. State where conditional independence of the experiments given $\theta$ is used.
+
+**P2.** In the linear-Gaussian setting with precision accumulation $\Lambda_k = \Lambda_{k-1} + w_k s_k^{-2} c_k c_k^\top$, prove that $\Lambda_k \succeq \Lambda_{k-1}$ and hence $\Sigma_k \preceq \Sigma_{k-1}$, so the ridge-direction variance $\sigma_u^2 = u^\top \Sigma_k u$ — and therefore the EVPI — is non-increasing in $k$. Show that under equal per-study ridge precision $\bar\kappa$, $\sigma_u^2 = O(1/k)$ and $\mathrm{EVPI}_k \to 0$.
+
 ### A -- Applied / Code
+
+**A1.** Extend the Code Tie-in: add a *stale* study with power weight $w = \rho^{\Delta t}$ for a decay rate $\rho < 1$ and increasing age $\Delta t$. Show that as $\Delta t$ grows, the study's precision contribution $w \cdot s^{-2}$ vanishes and the live posterior reverts toward the product of the remaining (undecayed) factors.
+
+**A2.** Drive a conflicting study into the store: append a third study of $\theta$ that disagrees with the first two, recompute the random-effects $\tau^2$ and pooled variance, and show that the pooled variance *widens* (rather than shrinking) while the EVPI staircase stalls — the loop stops converging until the conflict is resolved by further evidence or a credibility down-weight.
+
+## Summary
+
+This chapter closed Part VI. Chapter 21 folded one calibration estimate into the posterior; this chapter turned that single step into a system — the prior store — and proved the payoff. The store is the running product of taxonomy-keyed likelihood factors, and updating it sequentially equals the batch posterior, so studies can be appended without re-fitting. Power-prior weights, composed of credibility and temporal decay, keep the store current; random-effects pooling reconciles studies that conflict, inflating uncertainty rather than compounding disagreement into false confidence. The keystone is the convergence result: in the Gaussian setting each calibration factor adds precision, the posterior variance is non-increasing along every direction by Loewner monotonicity, and the Chapter 18 EVPI gap decays monotonically to zero — at rate $O(1/k)$ — as ridge-aimed studies accumulate. The loop **intervene → identify → calibrate → re-optimize** is complete and provably convergent. The store's schema and versioning are sketched here; the engineering build is Part VII.
+
+**Key concepts.**
+
+- **The store as a product of factors.** The prior store is an append-only, versioned ledger of calibration likelihood factors keyed by the secant/tangent/validation taxonomy; the live posterior is their product, recomputable by replaying the ledger.
+- **Sequential = batch.** Folding studies in one at a time yields exactly the posterior that conditions on all at once — the correctness guarantee that makes incremental, order-independent appending valid.
+- **Discounting and decay.** Power-prior weights $w_j \in [0,1]$, composed of design credibility and a temporal decay factor, down-weight stale or low-credibility studies so the store tracks a drifting landscape.
+- **Pool, don't multiply.** Studies that conflict beyond their stated noise are reconciled by random-effects pooling (between-study variance $\tau^2$), not multiplied; a large Cochran's $Q$ is the conflict alarm — the Chapter 21 validation tier operationalized.
+- **The loop closes.** Each ridge-aimed calibration factor adds precision; by Loewner monotonicity the ridge variance is non-increasing, so the EVPI decays monotonically to zero — the wound of Chapters 18–19 eliminated in the limit.
+
+**Key identities.**
+
+- Cumulative posterior: $p_k(\theta) \propto p_0(\theta) \prod_{j=1}^{k} L_j(\hat g_j \mid \theta)^{w_j}$.
+- Power weight: $w_j = (\text{design credibility}) \times \rho^{\,t_{\text{now}} - t_j}$, $\rho < 1$.
+- Random-effects weight: $w_j^\star = 1/(s_j^2 + \tau^2)$ with DerSimonian–Laird $\tau^2 = \max\!\big(0, (Q - (k-1))/(\sum_j w_j - \sum_j w_j^2/\sum_j w_j)\big)$.
+- Precision accumulation: $\Lambda_k = \Lambda_0 + \sum_{j=1}^{k} w_j s_j^{-2} c_j c_j^\top \succeq \Lambda_{k-1}$.
+- Monotone decay: $\mathrm{EVPI}_k$ non-increasing, $\mathrm{EVPI}_k \to 0$ at rate $O(1/k)$ under ridge-aimed studies.
