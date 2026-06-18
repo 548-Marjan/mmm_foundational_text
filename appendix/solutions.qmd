@@ -2763,7 +2763,7 @@ The smoothed level filters the observation noise and tracks the trending state; 
 
 ### Chapter 17 — BTVC mechanics (Advanced / Extensions)
 
-This block collects the mechanics flagged but deferred in the chapter's BTVC section; it is skippable and library-free.
+This block collects the mechanics flagged but deferred in the chapter's BTVC section, following @ng2021btvc; it is skippable and library-free.
 
 **Kernel-smoothed knots.** Instead of an independent state $\theta_t$ at every one of the $T$ periods, BTVC represents the coefficient trajectory with a small number $J \ll T$ of latent **knots** $b \in \mathbb R^J$ placed across time, and reconstructs the full path by smoothing: $\beta = K b$, where $K \in \mathbb R^{T\times J}$ is a fixed kernel matrix whose entry $K_{tj}$ is a smooth (e.g. Gaussian or cubic) weight of period $t$ on knot $j$. The number of free parameters is $J$, decoupled from the series length $T$ — the structural contrast with the DLM, whose state count grows with $T$. Smoothness is imposed by the kernel rather than by a random-walk variance.
 
