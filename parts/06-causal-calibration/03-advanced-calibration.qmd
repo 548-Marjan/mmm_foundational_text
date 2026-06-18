@@ -2,32 +2,291 @@
 
 *Canonical anchors: Bayesian evidence synthesis; informative priors (Gelman et al., BDA3).*
 
-::: {.callout-note appearance="simple"}
-**Stub.** This chapter is scaffolded but not yet written. It will be authored in its Part's spec -> plan -> write cycle, following the chapter template below.
-:::
-
 ## Motivation
 
-_Why this matters, and where it shows up in an MMM._
+Chapter 19 proved that a structural wound underlies observational MMM: when spend is set by decisions that respond to unobserved demand signals, the observational time series cannot identify the response curve $S(x)$. Every coefficient estimator conflates the response function with the selection mechanism, and the resulting bias does not shrink as the dataset grows — it is a property of the data-generating process. Chapter 20 answered by supplying interventional variation through quasi-experimental designs whose identification does not rest on observed confounders, each design producing a functional of $S$ tagged by the secant / tangent / validation taxonomy. The driving question of this chapter is sharpened to its practical point: *you ran the experiment and got a number. How do you put it into the model — and how much does it help?*
+
+The instinctive answer — hand-tune a "prior on ROAS" until the fitted model agrees with the experiment — is both undisciplined and data-corrupting. It is undisciplined because there is no principled stopping rule: two analysts with the same experiment and different priors produce different posteriors, and neither can explain how much weight the experiment received relative to the observational series. It corrupts the data because the same experiment can enter twice — once through the observational likelihood in disguise, as a constraint on the tuned prior, and again if the calibration logic is reviewed later. The disciplined alternative is **Bayesian evidence synthesis**: the experimental estimate enters as an explicit **likelihood factor** on a *functional* of the response-curve parameters, composing with the observational likelihood in the standard probability calculus and carrying its uncertainty forward in the correct units. A functional is precisely what Chapter 20's taxonomy tagged: a secant, a tangent, or a validation quantity. The calibration step is the machine that converts that tag into the right likelihood term.
+
+The payoff is structural and quantitative. The calibration factor compresses the posterior in the direction the observational data left flat — the Chapter 16 identifiability ridge, the near-null eigendirection of the Fisher information matrix that arises because historical spend variation does not excite counterfactual channel contrasts. That compression heals the wound Chapter 18 named but could not close: the optimizer's curse and the EVPI gap are driven by the width of the posterior in precisely the ridge direction, and a calibration factor aimed at that direction shrinks the gap directly. The EVPI of approximately $0.12$ response units that Chapter 18's WE3 computed quantifies what a decision-maker should pay for an experiment resolving that ridge before the allocation is set; this chapter supplies the experiment's output as a likelihood constraint, closing the arc: **intervene** (Chapters 19–20) $\to$ **identify the functional** (Chapter 20) $\to$ **calibrate** (this chapter) $\to$ **re-optimize** (Chapter 18).
+
+Throughout this chapter the anchor response curve is $S(x;\theta) = \theta\sqrt{x}$, the Chapter 18 and 20 surrogate with an explicit scale parameter $\theta$ (true value $\theta = 2$), which allows secant and tangent functionals of $S$ to be expressed as explicit functions of $\theta$. For the ridge analysis — where identification in the attribution-contrast direction is the quantity of interest — the two-channel coefficient model $(a_1, a_2)$ from Chapter 18's WE3 is reused: the ridge runs along the contrast direction $u = (1,-1)/\sqrt{2}$, the direction the observational spend data supply nearly no precision.
 
 ## Theory & Proofs
 
-_Definitions -> theorems -> proofs where high-value (kept concise but useful)._
+The five rungs develop from the most foundational result outward. Rung 1 establishes the calibration likelihood in full generality and keys every term to Chapter 20's taxonomy. Rung 2 proves the keystone compression result: a calibration factor on a linear functional of the parameters is a rank-one precision update, and the variance reduction is largest where the observational precision is smallest — the ridge heals. Rung 3 proves the secant–tangent matching theorem, which governs how a finite lift test's secant is related to the tangent the optimizer needs, and derives the paired-bracketing correction. Rung 4 develops the identification geometry: how many constraints of what types are needed to pin the curve's shape parameters. Rung 5 introduces power-prior down-weighting and connects the accumulated system of weighted calibration factors to the prior store of Chapter 22.
+
+**Rung 1 — The calibration likelihood factor (taxonomy-keyed).** Bayesian evidence synthesis treats an experimental estimate $\hat g$ as a noisy observation of a functional $g(\theta)$ of the response-curve parameters, incorporating it through the standard likelihood factorization. The joint posterior on $\theta$ given both the observational MMM data $D$ and the experimental estimate $\hat g$ is:
+
+$$
+p(\theta \mid D, \hat g) \;\propto\; p(\theta)\,\underbrace{L_{\text{obs}}(\theta\mid D)}_{\text{the MMM fit}}\,\underbrace{L_{\text{exp}}(\hat g \mid \theta)}_{\text{calibration factor}} .
+$$
+
+The observational likelihood $L_{\text{obs}}$ is the standard MMM likelihood — the probability of the observed sales series under the fitted response-curve parameters. The calibration factor $L_{\text{exp}}$ encodes what the experiment learned about the parameters, and its precise form depends on which entry in Chapter 20's taxonomy the experiment produced.
+
+- **Secant:** The experiment measured a lift $\hat\Delta$ over the spend interval $[x, x+\delta]$. Since $S(x+\delta;\theta) - S(x;\theta)$ is the true lift implied by the model, the factor is $\hat\Delta \mid \theta \sim \mathcal N\!\big(S(x{+}\delta;\theta) - S(x;\theta),\, s^2\big)$, where $s^2$ is the experimental variance. When lifts are constrained to be positive a Gamma calibration factor is the practical variant: it respects the positivity boundary while retaining conjugate-like tractability near the mode.
+- **Tangent:** The experiment measured something proportional to the marginal return at a single operating point $x$ — for example, a regression-discontinuity estimate. The factor becomes $\widehat{S'}\cdot\delta \mid \theta \sim \mathcal N\!\big(S'(x;\theta)\,\delta,\, s^2\big)$, matching the marginal scaled by the test displacement.
+- **Validation:** A holdout forecast check or a non-revenue awareness lift that constrains forecast accuracy rather than any parameter of $S$ provides no likelihood term at all. It enters as a posterior-predictive check — a conflict alarm that warns if the observational and experimental distributions are inconsistent, but does not update the response-curve parameters.
+
+The critical observation is that the experiment is information about a *functional* of $\theta$, not about $\theta$ directly. Inserting it as a likelihood factor composes cleanly with the observational likelihood in the product above, exploiting no data twice: $L_{\text{obs}}$ was formed from the time series $D$, and $L_{\text{exp}}$ was formed from a separate randomization. This is the precise sense in which the experimental estimate is cleaner than re-expressing it as a prior on a derived quantity: a prior conflates uncertainty about the functional with uncertainty about everything else, and adjusting the prior to match the experiment collapses the distinction between "the data say" and "I believe."
+
+**Rung 2 — Proof P1 (KEYSTONE): a calibration factor compresses the posterior in the constrained direction (the ridge heals).** Consider the linear-Gaussian setting in which the observational posterior on $\theta \in \mathbb{R}^d$ is $\theta \mid D \sim \mathcal N(m_{\text{obs}}, \Lambda_{\text{obs}}^{-1})$, and a calibration experiment measures a linear functional $c^\top\theta$ with noise: $\hat g \mid \theta \sim \mathcal N(c^\top\theta,\, s^2)$. The following theorem identifies the posterior precision after incorporating the calibration factor.
+
+**Theorem.** *The posterior precision matrix after Bayesian evidence synthesis is*
+
+$$
+\Lambda_{\text{post}} = \Lambda_{\text{obs}} + \tfrac{1}{s^2}\,c\,c^\top .
+$$
+
+**Proof.** The log-posterior is the sum of the observational log-posterior and the calibration log-likelihood:
+
+$$
+\log p(\theta \mid D, \hat g) = -\tfrac{1}{2}(\theta - m_{\text{obs}})^\top \Lambda_{\text{obs}} (\theta - m_{\text{obs}}) - \tfrac{1}{2s^2}(\hat g - c^\top\theta)^2 + \text{const}.
+$$
+
+Expanding the calibration quadratic in $\theta$: $(\hat g - c^\top\theta)^2 = \hat g^2 - 2\hat g\,c^\top\theta + \theta^\top(cc^\top)\theta$. Collecting all second-order terms in $\theta$ across both quadratics, the coefficient of $-\tfrac{1}{2}\theta^\top(\cdot)\theta$ is
+
+$$
+\Lambda_{\text{obs}} + \tfrac{1}{s^2}\,c\,c^\top ,
+$$
+
+which is the posterior precision (the negative Hessian of the log-posterior). The posterior is therefore Gaussian with this precision matrix: $\theta \mid D, \hat g \sim \mathcal N(m_{\text{post}}, \Lambda_{\text{post}}^{-1})$ where $\Lambda_{\text{post}} = \Lambda_{\text{obs}} + \tfrac{1}{s^2}cc^\top$ — a rank-one update, adding a single dyadic $\tfrac{1}{s^2}cc^\top$ to the observational precision. For the variance along the direction $c$: projecting onto the unit vector $\hat c = c/\lVert c\rVert$ and applying the Sherman–Morrison identity, the posterior variance in direction $\hat c$ falls from $(\hat c^\top \Lambda_{\text{obs}} \hat c)^{-1}$ to $(\hat c^\top \Lambda_{\text{obs}} \hat c + \lVert c\rVert^2 / s^2)^{-1}$. Writing the observational precision in direction $\hat c$ as $\Lambda_{\text{obs},c} = \hat c^\top \Lambda_{\text{obs}} \hat c$, the posterior precision in that direction is $\Lambda_{\text{obs},c} + \lVert c\rVert^2/s^2$, a strict increase: the variance is strictly reduced. The relative variance reduction is largest where $\Lambda_{\text{obs},c}$ is smallest — precisely the near-null directions of $\Lambda_{\text{obs}}$, the identifiability ridge. $\blacksquare$
+
+**MMM reading.** The Chapter 16 Fisher-information ridge is the near-flat eigendirection of $\Lambda_{\text{obs}}$: the direction in parameter space that the observational spend data barely excite, because historical spend variation was never designed to isolate counterfactual channel contrasts. A Chapter 20 experiment aimed at that contrast direction supplies precisely the missing precision through the rank-one update, and the Chapter 18 allocation posterior — wide because of the ridge — narrows in direct proportion to the calibration factor's precision. The EVPI gap, measuring the value of resolving parameter uncertainty before committing to an allocation, shrinks accordingly.
+
+**Anchor.** Along the attribution contrast direction $u = (1,-1)/\sqrt{2}$ (so $\lVert c\rVert^2 = 1$), take observational precision $\Lambda_{\text{obs},c} = 1$ (variance $1$, std $1$). A calibration factor with measurement precision $1/s^2 = 3$ gives posterior precision $\Lambda_{\text{obs},c} + \lVert c\rVert^2/s^2 = 1 + 3 = 4$, posterior variance $0.25$, posterior std $0.5$. The ridge standard deviation **halves** (from $1$ to $0.5$) and its variance drops $4\times$ (from $1$ to $0.25$) — the precision ratio $\Lambda_{\text{post}}/\Lambda_{\text{obs}} = 4$ governs the variance reduction directly.
+
+**Rung 3 — Proof P2 (KEYSTONE): the secant–tangent matching relationship.** A finite lift test measures a **secant** — the average slope of $S$ over the tested spend interval. The optimizer of Chapter 18, however, needs the **tangent** $S'(x)$ at the current operating spend. These two quantities are related by the second-order Taylor expansion of $S$, and the mismatch between them is an $O(\delta)$ bias under concavity that a paired bracketing design can correct.
+
+**Theorem (Taylor with remainder).** *For $S \in C^2$, the secant over an interval of length $\delta$ starting at $x$ equals the tangent at $x$ plus a curvature correction:*
+
+$$
+\frac{S(x{+}\delta)-S(x)}{\delta} = S'(x) + \frac{\delta}{2}\,S''(\xi), \qquad \xi\in(x,x{+}\delta) .
+$$
+
+*Under strict concavity ($S'' < 0$), the secant strictly underestimates the lower-endpoint tangent $S'(x)$ by $\tfrac{\delta}{2}|S''(\xi)|$ — a bias of order $O(\delta)$.*
+
+**Corollary (paired bracketing).** *Averaging matched up-test and down-test one-sided secants about $x$ cancels the $O(\delta)$ term and achieves second-order accuracy:*
+
+$$
+\frac{1}{2}\!\left(\frac{S(x{+}\delta)-S(x)}{\delta}+\frac{S(x)-S(x{-}\delta)}{\delta}\right)=S'(x)+O(\delta^2) .
+$$
+
+**Proof.** The first display is Taylor's theorem with Lagrange remainder: $S(x+\delta) = S(x) + \delta S'(x) + \tfrac{\delta^2}{2}S''(\xi)$ for some $\xi \in (x, x+\delta)$; rearranging gives the stated identity. For the corollary, expand both one-sided secants to third order: $S(x \pm \delta) = S(x) \pm \delta S'(x) + \tfrac{\delta^2}{2}S''(x) \pm \tfrac{\delta^3}{6}S'''(x) + O(\delta^4)$. The forward secant is $[S(x+\delta)-S(x)]/\delta = S'(x) + \tfrac{\delta}{2}S''(x) + O(\delta^2)$ and the backward secant is $[S(x)-S(x-\delta)]/\delta = S'(x) - \tfrac{\delta}{2}S''(x) + O(\delta^2)$. Their average is $S'(x) + O(\delta^2)$: the first-order curvature terms $\pm\tfrac{\delta}{2}S''(x)$ cancel by sign symmetry, leaving only the $O(\delta^2)$ residual. $\blacksquare$
+
+**Anchors.** For $S = 2\sqrt{x}$, $x = 4$, $\delta = 5$: secant $[S(9)-S(4)]/5 = 2/5 = 0.4$; tangent $S'(4) = 0.5$; gap $0.4 - 0.5 = -0.1$. The curvature correction satisfies $S''(\xi)\cdot\delta/2 = -0.1$, giving $S''(\xi) = -0.04$; solving $S''(\xi) = -1/(2\xi^{3/2}) = -0.04$ yields $\xi \approx 5.39 \in (4, 9)$, confirming the Lagrange remainder. For the paired bracketing about $x = 9$, $\delta = 4$: the up-secant $[S(13)-S(9)]/4 = (2\sqrt{13}-6)/4 \approx 0.303$, the down-secant $[S(9)-S(5)]/4 = (6-2\sqrt{5})/4 \approx 0.382$, their average $\approx 0.342$ against the tangent $S'(9) = 1/3 \approx 0.333$. Each individual secant is off by approximately $0.04$; the average is off by only $0.009$, demonstrating the second-order accuracy gain from the symmetric design.
+
+**Rung 4 — Identification: test design $\leftrightarrow$ curve shape.** A saturating response curve is generally described by multiple shape parameters. In the Hill form, the general saturating curve is $S(x;\theta,\kappa,\alpha) = \theta \cdot x^\alpha / (\kappa^\alpha + x^\alpha)$, with a scale $\theta$, a half-saturation point $\kappa$, and a shape exponent $\alpha$. One calibration constraint — a single secant or tangent measurement — pins only one functional of $(\theta,\kappa,\alpha)$: a scalar equation in three unknowns. Infinitely many curves pass through a single measured lift. The system is under-identified by a single experiment.
+
+The identification principle follows directly: to pin the *shape* of the response curve, you need a **spread of constraints** — lifts at several distinct spend levels, or a combination of a wide secant and a tangent at a different point — so that the experiments jointly determine $(\theta,\kappa,\alpha)$. Each constraint is a surface in parameter space; identification requires these surfaces to intersect in a compact region that the downstream optimizer can treat as identified. The geometry is exact: $k$ independent constraints reduce the dimension of the feasible manifold by $k$, and three constraints in general position reduce a three-dimensional parameter space to a zero-dimensional intersection — a point.
+
+This geometry is the **active-learning hook** connecting calibration back to the Chapter 18 optimizer. When the optimizer is run on the current posterior, it identifies the high-leverage spend region: the spend level at which the posterior uncertainty in marginal returns is largest, contributing most to the EVPI gap. The next experiment is most valuable if aimed at that region, because a constraint there is most nearly orthogonal to the existing constraints and most nearly eliminates a remaining degree of freedom in the shape. The loop closes: fit the model, compute the EVPI, locate the high-leverage spend region, run the experiment there, incorporate the new calibration factor, and re-optimize. Each iteration compresses the feasible manifold in the direction the previous iteration left most open.
+
+**Rung 5 — Power-prior down-weighting (brief) and the handoff to Chapter 22.** Not every experiment deserves equal weight in the calibration. A stale study conducted under a media landscape that no longer holds, a poorly randomized geo experiment with a suspect parallel-trends check, or a measurement from a different market should enter the calibration at reduced precision. The **power prior** formalizes this intuition by raising the calibration likelihood to a fractional power:
+
+$$
+L_{\text{exp}}(\hat g \mid \theta)^{w}, \qquad w \in [0,1] ,
+$$
+
+where $w = 1$ is full trust (the standard Bayesian update), $w = 0$ means the experiment enters only as a validation-tier check and never modifies the likelihood, and intermediate values interpolate between the two. In practice $w$ is composed as $w = (\text{design credibility}) \times \rho^{\,t_{\text{now}} - t_k}$, where the temporal decay factor $\rho^{\,t_{\text{now}}-t_k}$ discounts studies that are $t_{\text{now}} - t_k$ time units old at decay rate $\rho < 1$ [@ibrahim2000]. A recent, high-quality, well-randomized study receives $w$ near $1$; an old or methodologically suspect study receives $w$ near $0$.
+
+A collection of such weighted factors, accumulated over time and versioned as new experiments are run, constitutes the **prior store**: a data product that systematizes the organization and maintenance of calibration evidence. The prior store's schema — inherited from Chapter 20's taxonomy — records for each study whether its estimand was a secant, a tangent, or a validation quantity; the spend interval or operating point it targeted; the power weight currently assigned; and the posterior update it induced at the time of incorporation. Chapter 22 develops the prior store as a full engineering artifact: sequential update mechanics as new studies arrive, hierarchical pooling of conflicting studies from different markets or time periods, and schema design for the secant / tangent / validation taxonomy. The mechanism is here; the system is there.
+
+The full loop, now closed: **intervene** (Chapters 19–20) to generate exogenous spend variation and identify the interventional functional; **tag the functional** (Chapter 20's taxonomy) so that the estimand class — secant, tangent, or validation — and its spend interval are known; **calibrate** (this chapter) by inserting the tagged estimate as a power-weighted likelihood factor that compresses the posterior in the ridge direction; and **re-optimize** (Chapter 18) on the tightened posterior. The EVPI gap, which Chapter 18 named and could only approximate in magnitude, shrinks at each calibration step in proportion to the precision each experiment supplies in the previously flat direction.
 
 ## Worked Examples
 
-_Worked numerical example(s)._
+Three worked examples instantiate the five rungs on the same response curve and the same Chapter 18 ridge, in order of complexity: WE1 shows a single secant calibration tightening the scale parameter; WE2 analyses the secant–tangent gap and the paired-bracketing fix; WE3 propagates the compression through the Chapter 18 optimizer and closes the wound numerically.
+
+### WE1 — Secant calibration tightens the curve
+
+The scale model is $S(x;\theta) = \theta\sqrt{x}$ with true $\theta = 2$. The observational posterior from the MMM time series is wide: $\theta \mid D \sim \mathcal N(2,\, 0.5^2)$, a precision of $4$ and a standard deviation of $0.5$, reflecting the Chapter 16 ridge's failure to tightly pin the scale. Chapter 20's geo lift test measured $\hat\Delta = 2$ over the spend interval $[4, 9]$. Under this model, $S(9;\theta) - S(4;\theta) = \theta(\sqrt{9} - \sqrt{4}) = \theta$, so the functional measured is simply $g(\theta) = \theta$ and the calibration factor is:
+
+$$
+\hat\Delta \mid \theta \;\sim\; \mathcal N(\theta,\, s^2), \qquad s = 0.2 \;\;(\text{experimental std}),
+$$
+
+with calibration precision $1/s^2 = 1/0.04 = 25$. Applying the Rung 2 rank-one update with $c = 1$ (since $g(\theta) = \theta$ is already linear in $\theta$ with coefficient $1$): the posterior precision is $4 + 25 = 29$, the posterior variance is $1/29 \approx 0.0345$, and the posterior standard deviation is $1/\sqrt{29} \approx 0.186$. The posterior mean is:
+
+$$
+m_{\text{post}} = \frac{m_{\text{obs}}/\sigma_{\text{obs}}^2 + \hat\Delta/s^2}{1/\sigma_{\text{obs}}^2 + 1/s^2} = \frac{2/0.25 + 2/0.04}{29} = \frac{8 + 50}{29} = \frac{58}{29} = 2.0 .
+$$
+
+The lift experiment pins the scale: the posterior mean remains at the truth $\theta = 2$ (the prior and calibration factor agree), while the standard deviation tightens from $0.5$ to $0.186$ — a factor of $2.7$ reduction. The fitted curve $S(x;\theta)$ and its marginal return $S'(x;\theta) = \theta/(2\sqrt{x})$ both tighten with $\theta$: the optimizer's inputs, which depend on $S'$, inherit the precision gain directly. What had been a diffuse posterior over possible marginal returns — wide enough to send the optimizer to materially different allocations — collapses around the calibrated value.
+
+### WE2 — The secant–tangent gap, and paired bracketing
+
+This example quantifies the estimation error that results from treating a secant as a tangent, and demonstrates the paired correction derived in Rung 3. Continue with $S = 2\sqrt{x}$.
+
+A lift test moving spend from $4$ to $9$ returns the secant slope $[S(9)-S(4)]/(9-4) = 2/5 = 0.4$. The optimizer, allocating budget around the current operating spend $x = 4$, needs the tangent $S'(4) = 1/\sqrt{4} = 0.5$. If the secant $0.4$ is inserted directly as if it were the marginal return at $x = 4$, the estimand is biased low by $0.5 - 0.4 = 0.1$. This is exactly the $\tfrac{\delta}{2}|S''(\xi)|$ term from Rung 3: with $\delta = 5$ and $S''(\xi) = -0.04$ at $\xi \approx 5.39$, the bias is $5/2 \times 0.04 = 0.1$. The bias is negative (the secant underestimates the lower-endpoint tangent under concavity) and of order $O(\delta) = O(5)$ — a substantial fraction of the true tangent value.
+
+The paired fix designs the experiment symmetrically about the operating point, cancelling the $O(\delta)$ curvature term. Running a matched pair about $x = 9$ with $\delta = 4$:
+
+- Up-secant: $[S(13) - S(9)]/4 = (2\sqrt{13} - 6)/4 \approx 0.303$.
+- Down-secant: $[S(9) - S(5)]/4 = (6 - 2\sqrt{5})/4 \approx 0.382$.
+- Paired average: $(0.303 + 0.382)/2 \approx 0.342$.
+- Tangent at $x = 9$: $S'(9) = 1/\sqrt{9} = 0.333$.
+
+The paired average $0.342$ is off by only $0.009$ from the tangent $0.333$, while each individual secant is off by approximately $0.04$. The corollary of Rung 3 explains why: the symmetric design cancels the $O(\delta)$ curvature term and leaves only the $O(\delta^2)$ residual. The practical lesson is precise: match the estimand class to the parameter you are calibrating. Using a single secant to calibrate a tangent pays a known-sign, $O(\delta)$ bias — negative under concavity, positive under convexity — that propagates directly into the optimizer's marginal return assumptions. The paired design eliminates it to second order with no additional cost in total spend moved.
+
+### WE3 — Healing the ridge (the wound closes)
+
+This example applies the Rung 2 compression result to the Chapter 18 ridge, propagates the tighter posterior through the optimizer, and computes the resulting EVPI reduction.
+
+Reuse the Chapter 18 WE3 setup: a joint posterior on the channel coefficient vector $a = (a_1, a_2)$ centered at $(2, 1)$. The observational data pin the total-response direction $(1,1)/\sqrt{2}$ tightly — the sales series identifies the overall level of spend response — while the attribution contrast direction $u = (1,-1)/\sqrt{2}$ has posterior standard deviation $0.45$, the ridge. This wide contrast posterior propagates through the equal-marginal optimizer ($b_i^\star \propto a_i^2$, from Chapter 18's closed-form) into a wide distribution of optimal allocations: the posterior over $b_1^\star$ spans combinations the business would treat as materially different decisions, and the resulting Chapter 18 EVPI is approximately $0.12$ response units — the maximum a decision-maker should pay for an experiment that resolves the attribution contrast before committing to an allocation.
+
+A geo lift experiment is now designed to measure the attribution split: it randomizes spend between the two channels across geographic markets, identifying which channel's response drives the observed revenue lift. This estimand is a calibration factor on the contrast direction $c = u = (1,-1)/\sqrt{2}$, aimed precisely at the ridge. Applying the Rung 2 rank-one update with a calibration measurement precise enough to halve the contrast standard deviation — moving $\sigma_{\text{contrast}}$ from $0.45$ to $0.225$, a fourfold increase in precision along $u$ — the posterior in the ridge direction tightens by a factor of $4$ in variance.
+
+Propagating this tighter posterior through the Chapter 18 optimizer: the distribution of draw-specific optimal allocations $b_1^\star(a^{(s)}) = B\,a_1^{(s)2}/(a_1^{(s)2}+a_2^{(s)2})$ narrows in direct proportion to the tightening of the contrast draws. The EVPI, which scales approximately with the variance in the optimal-allocation distribution and hence with the variance in the attribution contrast, falls from approximately $0.12$ to approximately $0.03$ — a reduction of roughly $4\times$, tracking the fourfold variance compression from the calibration. This is the wound of Chapter 18 closing. The wound was structural: observational MMM cannot identify the attribution contrast because the spend variation in the historical series was never designed to excite it independently. The calibration experiment bought back that identification. The EVPI gap, the maximum value of that identification expressed as a response-unit opportunity cost, shrinks from $0.12$ to $0.03$.
 
 ## Code Tie-in
 
-_Minimal, runnable snippet illustrating the concept as it appears in MMM._
+The single cell below runs the chapter's four results on nothing but NumPy and Matplotlib, with every numeric claim asserted. It does four things in order. First it builds an observational precision $\Lambda_{\text{obs}}$ with a flat ridge direction $u=(1,-1)/\sqrt2$ and adds the rank-one calibration precision $\tfrac1{s^2}cc^\top$ of Rung 2, confirming the ridge variance drops exactly $4\times$. Second it does the WE1 conjugate Gaussian update, recovering posterior precision $29$, mean $2.0$, std $0.186$. Third it computes the WE2 secant–tangent gap and the paired-bracketing average, checking the average beats either single secant. Fourth it reruns the Chapter 18 Monte-Carlo EVPI at ridge std $0.45$ then $0.225$, confirming the optimizer's-curse gap shrinks from $\approx0.12$ to $\approx0.03$. The two figures draw the compression directly: the posterior covariance ellipse before and after, and the EVPI as a function of the ridge width with the before/after points marked.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(21)
+
+# === 1. Precision addition (P1): a calibration factor heals the ridge ===
+u = np.array([1.0, -1.0]) / np.sqrt(2)     # attribution contrast: the ridge (flat)
+v = np.array([1.0,  1.0]) / np.sqrt(2)     # total-response: stiff (well identified)
+Lam_obs = 1.0 * np.outer(u, u) + 100.0 * np.outer(v, v)   # eigvals: 1 along u, 100 along v
+c = u                                       # calibration aimed at the ridge
+inv_s2 = 3.0                                # calibration precision 1/s^2
+Lam_post = Lam_obs + inv_s2 * np.outer(c, c)
+
+Sig_obs, Sig_post = np.linalg.inv(Lam_obs), np.linalg.inv(Lam_post)
+var_ridge_before = u @ Sig_obs @ u
+var_ridge_after = u @ Sig_post @ u
+print("1) Precision addition (P1): the ridge heals")
+print(f"   ridge variance before = {var_ridge_before:.4f}  (std {np.sqrt(var_ridge_before):.4f})")
+print(f"   ridge variance after  = {var_ridge_after:.4f}  (std {np.sqrt(var_ridge_after):.4f})")
+print(f"   variance drop factor  = {var_ridge_before/var_ridge_after:.2f}x")
+assert abs(var_ridge_before - 1.0) < 1e-9
+assert abs(var_ridge_after - 0.25) < 1e-9
+assert abs(var_ridge_before / var_ridge_after - 4.0) < 1e-9
+
+# === 2. Secant calibration (WE1): conjugate Gaussian update of the scale theta ===
+m_obs, var_obs = 2.0, 0.5**2          # observational posterior: N(2, 0.5^2), precision 4
+delta_hat, s2 = 2.0, 0.2**2           # lift over [4,9] equals theta; experimental var 0.04
+prec_post = 1/var_obs + 1/s2
+m_post = (m_obs/var_obs + delta_hat/s2) / prec_post
+std_post = np.sqrt(1/prec_post)
+print("\n2) Secant calibration (WE1): the scale tightens")
+print(f"   posterior precision = {prec_post:.0f}  (= 4 + 25)")
+print(f"   posterior mean      = {m_post:.4f}   std = {std_post:.4f}  (from 0.5)")
+assert abs(prec_post - 29.0) < 1e-9
+assert abs(m_post - 2.0) < 1e-9
+assert abs(std_post - 0.18570) < 1e-4
+
+# === 3. Secant vs tangent (WE2): the gap and the paired-bracketing fix ===
+S = lambda x: 2.0 * np.sqrt(x)
+Sp = lambda x: 1.0 / np.sqrt(x)
+secant_49 = (S(9) - S(4)) / (9 - 4)
+tangent_4 = Sp(4)
+up = (S(13) - S(9)) / 4.0
+down = (S(9) - S(5)) / 4.0
+paired = 0.5 * (up + down)
+tangent_9 = Sp(9)
+print("\n3) Secant vs tangent (WE2): paired bracketing")
+print(f"   secant[4->9] = {secant_49:.4f}, tangent S'(4) = {tangent_4:.4f}, gap = {secant_49-tangent_4:+.4f}")
+print(f"   up = {up:.4f}, down = {down:.4f}, paired avg = {paired:.4f}, S'(9) = {tangent_9:.4f}")
+assert abs(secant_49 - 0.4) < 1e-9 and abs(tangent_4 - 0.5) < 1e-9
+assert abs(paired - tangent_9) < abs(up - tangent_9)      # average beats each single secant
+assert abs(paired - tangent_9) < abs(down - tangent_9)
+
+# === 4. EVPI heals (WE3): the Chapter 18 optimizer's-curse gap shrinks ===
+def evpi(ridge_std, B=9.0, abar=np.array([2.0, 1.0]), N=400_000):
+    Cov = ridge_std**2 * np.outer(u, u) + 0.08**2 * np.outer(v, v)
+    draws = rng.multivariate_normal(abar, Cov, size=N)
+    draws = draws[(draws > 0).all(axis=1)]
+    Sd = (draws**2).sum(axis=1)
+    Emax = np.sqrt(Sd * B).mean()          # E[max_b V]  (oracle)
+    maxE = np.sqrt((abar**2).sum() * B)    # max_b E[V]  (plug-in at posterior mean)
+    return Emax - maxE
+
+evpi_before = evpi(0.45)                    # the Chapter 18 ridge
+evpi_after = evpi(0.225)                    # ridge std halved by calibration
+print("\n4) EVPI heals (WE3): the wound closes")
+print(f"   EVPI at ridge std 0.45  = {evpi_before:.4f}")
+print(f"   EVPI at ridge std 0.225 = {evpi_after:.4f}  ({evpi_before/evpi_after:.1f}x smaller)")
+assert abs(evpi_before - 0.12) < 0.02
+assert abs(evpi_after - 0.03) < 0.02
+assert evpi_before / evpi_after > 3.0
+
+# === Figures ===
+fig, ax = plt.subplots(1, 2, figsize=(11, 4.2))
+th = np.linspace(0, 2*np.pi, 200)
+circ = np.array([np.cos(th), np.sin(th)])
+for Sig, lab, col in ((Sig_obs, "before (ridge)", "tab:red"),
+                      (Sig_post, "after calibration", "tab:blue")):
+    L = np.linalg.cholesky(Sig)
+    ell = (np.array([2.0, 1.0])[:, None] + L @ circ)
+    ax[0].plot(ell[0], ell[1], color=col, label=lab)
+ax[0].set_title("Posterior covariance ellipse: the ridge compresses")
+ax[0].set_xlabel(r"$a_1$"); ax[0].set_ylabel(r"$a_2$"); ax[0].legend(); ax[0].set_aspect("equal")
+
+stds = np.linspace(0.1, 0.6, 12)
+curve = [evpi(sd) for sd in stds]
+ax[1].plot(stds, curve, "-o", ms=3, color="gray")
+ax[1].scatter([0.45], [evpi_before], color="tab:red", zorder=5, label="before (0.45)")
+ax[1].scatter([0.225], [evpi_after], color="tab:blue", zorder=5, label="after (0.225)")
+ax[1].set_title("EVPI vs ridge std: calibration shrinks the gap")
+ax[1].set_xlabel("ridge contrast std"); ax[1].set_ylabel("EVPI (response units)"); ax[1].legend()
+plt.tight_layout()
+plt.show()
+```
+
+The printed output pins the chapter's arithmetic. The ridge variance drops from $1.0$ to $0.25$ — exactly the $4\times$ compression the rank-one precision update predicts. The WE1 conjugate update returns posterior precision $29$, mean $2.0$, and standard deviation $0.186$, tightening the scale from its observational $0.5$. The secant–tangent block shows the $0.4$ secant missing the $0.5$ tangent at $x=4$ by $0.1$, while the paired average $0.342$ brackets the $x=9$ tangent $0.333$ to within $0.009$ — closer than either single secant. The EVPI falls from $0.1197$ at ridge std $0.45$ to $0.0310$ at $0.225$, a $3.9\times$ reduction that tracks the variance compression: the Chapter 18 wound closing in numbers. The left figure draws the posterior ellipse collapsing along the ridge after calibration; the right traces the EVPI against the ridge width, the before and after points marking the experiment's value.
 
 ## Exercises
 
 ### C -- Conceptual / Reading Comprehension
 
+**C1.** A colleague proposes to calibrate the MMM by adjusting the prior on each channel's ROAS until the fitted model reproduces the geo-experiment's measured lift, then reporting the resulting posterior. Explain why entering the experiment as a *likelihood factor* on a functional of the response curve is more disciplined than this prior-tuning approach, and what specifically the likelihood-factor view avoids that prior-tuning does not.
+
+**C2.** Rung 2 shows the posterior precision gains a rank-one term $\tfrac1{s^2}cc^\top$ from a calibration constraint aimed in direction $c$. Explain why this constraint reduces the posterior variance *most* (in relative terms) when it is aimed along the identifiability ridge, and least when aimed along an already well-identified direction. Tie your answer to why the EVPI gap, not the overall goodness of fit, is what calibration targets.
+
+**C3.** A single geo lift over $[4,9]$ returns one number. Explain why this one measurement cannot identify the *shape* of a three-parameter saturating curve $S(x;\theta,\kappa,\alpha)$, and describe what additional experiments — and aimed where — would pin the shape. Connect your answer to the active-learning loop with the Chapter 18 optimizer.
+
 ### B -- By Hand
+
+**B1.** On $S = 2\sqrt{x}$, compute the secant slope over $[4,9]$ and the tangent $S'(4)$, and report the gap. Verify the gap equals $\tfrac{\delta}{2}S''(\xi)$ by solving for $\xi$ and checking $\xi \in (4, 9)$.
+
+**B2.** On $S = 2\sqrt{x}$, compute the up-secant over $[9,13]$, the down-secant over $[5,9]$, their paired average, and the tangent $S'(9)$. Report how far the paired average and each single secant fall from the tangent, and state the order of accuracy each achieves.
+
+**B3.** The observational posterior on the scale is $\theta \sim \mathcal N(2, 0.5^2)$ (precision $4$); a lift over $[4,9]$ measures $\hat\Delta = 2$ with experimental std $s = 0.2$ (precision $25$), and under $S = \theta\sqrt{x}$ the lift equals $\theta$. Do the conjugate Gaussian update: report the posterior precision, variance, standard deviation, and mean.
 
 ### P -- Prove It
 
+**P1.** In the linear-Gaussian model $\theta \mid D \sim \mathcal N(m_{\text{obs}}, \Lambda_{\text{obs}}^{-1})$ with a calibration factor $\hat g \mid \theta \sim \mathcal N(c^\top\theta, s^2)$, prove that the posterior precision is $\Lambda_{\text{post}} = \Lambda_{\text{obs}} + \tfrac1{s^2}cc^\top$, and that the posterior variance along the direction $c$ strictly decreases.
+
+**P2.** For $S \in C^2$, prove the secant–tangent relation $\frac{S(x+\delta)-S(x)}{\delta} = S'(x) + \frac{\delta}{2}S''(\xi)$ for some $\xi \in (x, x+\delta)$, and prove that the paired-bracketing average $\tfrac12\big(\frac{S(x+\delta)-S(x)}{\delta}+\frac{S(x)-S(x-\delta)}{\delta}\big)$ equals $S'(x) + O(\delta^2)$.
+
 ### A -- Applied / Code
+
+**A1.** Modify the Code Tie-in to sweep the calibration precision $1/s^2$ over a range (e.g. $0$ to $25$) and plot both the residual ridge variance $1/(\Lambda_{\text{obs},c} + 1/s^2)$ and the resulting EVPI against it. Confirm the residual variance follows the closed form and that the EVPI falls monotonically as the calibration sharpens.
+
+**A2.** Add a *second* calibration constraint at a different spend level to the WE1 setup, calibrating a two-parameter curve (scale plus one saturation parameter) instead of the scale alone. Show numerically that one constraint leaves a one-dimensional curve of parameter solutions while two constraints at distinct spend levels intersect at a point — the shape becomes identified.
+
+## Summary
+
+This chapter is where Part VI pays off. Chapter 19 proved that observational MMM cannot identify the response curve under unobserved confounding; Chapter 20 produced interventional estimands, each tagged a secant, a tangent, or a validation quantity. This chapter folded those estimands into the model as a **calibration likelihood factor** — Bayesian evidence synthesis — and proved the two results that make calibration work: a calibration constraint is a rank-one precision update that compresses the posterior most where the observational data left it flattest (the ridge heals), and a finite lift test measures a secant that misses the optimizer's tangent by a known-sign $O(\delta)$ bias which a paired design corrects to second order. The EVPI gap that Chapter 18 could only name was made to shrink: a calibration aimed at the ridge halved the contrast standard deviation and dropped the optimizer's-curse gap from $\approx0.12$ to $\approx0.03$. The accumulating, weighted collection of such factors is the prior store, built as a data product in Chapter 22.
+
+**Key concepts.**
+
+- **Calibration as evidence synthesis.** An experiment enters the model as a likelihood factor on a *functional* of the response-curve parameters, not as a hand-tuned prior on a derived quantity — composing cleanly with the observational likelihood and never double-counting data.
+- **Taxonomy-keyed factors.** A secant measurement constrains $S(x{+}\delta;\theta)-S(x;\theta)$; a tangent measurement constrains $S'(x;\theta)\delta$; a validation quantity supplies no likelihood term, entering only as a posterior-predictive conflict alarm.
+- **The ridge heals.** A calibration constraint is a rank-one precision update; its relative variance reduction is largest along the near-null eigendirection of the observational information — the Chapter 16 identifiability ridge — directly shrinking the Chapter 18 EVPI gap.
+- **Secant–tangent mismatch.** A finite lift measures a secant; the optimizer needs a tangent; under concavity the secant underestimates the tangent by an $O(\delta)$ bias that a paired up/down design cancels to $O(\delta^2)$.
+- **Identification and weighting.** One constraint pins one functional, under-identifying a multi-parameter shape; a spread of constraints pins the shape. Stale or low-credibility studies enter down-weighted via a power-prior weight, accumulating into the Chapter 22 prior store.
+
+**Key identities.**
+
+- Evidence-synthesis posterior: $p(\theta \mid D, \hat g) \propto p(\theta)\,L_{\text{obs}}(\theta\mid D)\,L_{\text{exp}}(\hat g\mid\theta)$.
+- Secant calibration factor: $\hat\Delta \sim \mathcal N\!\big(S(x{+}\delta;\theta)-S(x;\theta),\,s^2\big)$.
+- Posterior precision addition: $\Lambda_{\text{post}} = \Lambda_{\text{obs}} + \tfrac1{s^2}cc^\top$.
+- Secant–tangent relation: $\frac{S(x+\delta)-S(x)}{\delta} = S'(x) + \frac{\delta}{2}S''(\xi)$, $\xi \in (x, x+\delta)$.
+- Power-prior weighting: $L_{\text{exp}}(\hat g\mid\theta)^{w}$, $w \in [0,1]$.
