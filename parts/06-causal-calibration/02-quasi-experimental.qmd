@@ -543,3 +543,26 @@ Use $S(x) = 2\sqrt{x}$, $S'(x) = 1/\sqrt{x}$ throughout.
 **A2.** Widen the instrument's complier interval (vary $x_1$ over a grid with $x_0=4$ fixed) and plot the Wald secant slope against $x_1$. Show it drifts away from $S'(4)$ as the interval widens, and that it always equals $S'(\xi)$ for the interval's MVT point.
 
 **A3.** Add a second control region to the synthetic-control example and show that the additional donor improves the pre-period fit (lowers the RMSE) and tightens the recovered lift toward $2$. Then degrade the pre-fit (place the treated pre-level outside the donors' convex hull) and show the counterfactual — and the lift estimate — become unreliable.
+
+## Summary
+
+This chapter supplied the interventional identification Chapter 19 (Causal Inference Foundations) proved observational MMM cannot reach. Its organizing idea is that every quasi-experimental design produces an estimand that is a *functional of the response curve* $S$, and the **secant / tangent / validation taxonomy** classifies which. Four designs — geo-lift DiD, instrumental variables, synthetic control, and interrupted time series — each recover the same lift on the same curve, defeating the baseline-demand confounder by a different route. Two results stand out: DiD differences out the very confound Chapter 19 flagged, and an IV/Wald number is a *secant* (an interval-average slope), not the marginal return at any single operating spend.
+
+**Key concepts**
+
+- **The taxonomy.** Every quasi-experimental estimand is a secant (interval-average slope / lift), a tangent (point derivative $S'$ or curvature $S''$), or a validation quantity (not a functional of $S$). Matching the estimand to its class is the discipline that makes an experiment usable.
+- **Difference-in-differences** identifies the ATT under parallel trends and differences out any time-invariant region-level demand confounder — the lift it recovers is a secant.
+- **Instrumental variables / Wald** is a secant in disguise: the average derivative of $S$ over the complier spend interval, not the tangent at the operating point.
+- **Synthetic control** builds a counterfactual from convex-weighted control units matched on the pre-period; the pre-fit is the identification lever.
+- **ITS / BSTS** builds the counterfactual by forecasting the treated unit's own pre-intervention level with the Chapter 17 (Dynamic Linear Models) Kalman filter; the forecast band sets the calibration precision.
+- **RDD / RKD** are the only genuine point-local **tangent** designs (level and curvature at a cutoff, as the bandwidth $\to 0$).
+
+**Key identities**
+
+- **Secant:** $\dfrac{S(x_1)-S(x_0)}{x_1-x_0}$, equivalently the lift $S(x_1)-S(x_0)$.
+- **DiD:** $\bigl(\bar Y_{T,\text{post}}-\bar Y_{T,\text{pre}}\bigr)-\bigl(\bar Y_{C,\text{post}}-\bar Y_{C,\text{pre}}\bigr)$, with parallel trends $\mathbb{E}[Y_{T,\text{post}}(0)-Y_{T,\text{pre}}(0)]=\mathbb{E}[Y_{C,\text{post}}(0)-Y_{C,\text{pre}}(0)]$.
+- **Wald / IV:** $\hat\beta_{\text{IV}}=\dfrac{\Delta Y}{\Delta X}=\dfrac{1}{x_1-x_0}\displaystyle\int_{x_0}^{x_1}S'(u)\,du=S'(\xi)$ for some $\xi\in(x_0,x_1)$.
+- **Synthetic control:** $w^\star=\arg\min_{w\ge0,\,\sum w=1}\lVert Y^{\text{pre}}_{\text{treated}}-\sum_j w_j Y^{\text{pre}}_j\rVert^2$; lift $=Y^{\text{post}}_{\text{treated}}-\sum_j w_j^\star Y^{\text{post}}_j$.
+- **Tangent vs curvature:** $S'(x)$ (RDD, as bandwidth $\to0$) vs $S''(x)$ (RKD).
+
+Each design hands Chapter 21 (Advanced Calibration) a taxonomy-tagged functional of $S$ — the schema the calibration likelihood ingests — closing the loop intervene → identify → calibrate → re-optimize back onto the response curve the Chapter 18 (Budget Optimization) optimizer consumes.
