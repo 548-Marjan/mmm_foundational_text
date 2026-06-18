@@ -61,6 +61,7 @@ book:
       chapters:
         - parts/08-capstone/01-putting-it-together.qmd
   appendices:
+    - appendix/btvc-mechanics.qmd
     - appendix/solutions.qmd
 
 bibliography: references.bib
