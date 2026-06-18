@@ -1,6 +1,6 @@
 # Quasi-Experimental Design
 
-*Canonical anchors: Angrist & Pischke; Abadie, Diamond & Hainmueller (synthetic control); Brodersen et al. (BSTS).*
+*Canonical anchors: difference-in-differences and instrumental variables [@angrist2009]; synthetic control [@abadie2010]; Bayesian structural time series for causal impact [@brodersen2015].*
 
 ## Motivation
 
