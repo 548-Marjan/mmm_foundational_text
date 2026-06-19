@@ -199,8 +199,6 @@ V_g &= \left(\frac{X_g^\top X_g}{\sigma^2} + \Sigma_\beta^{-1}\right)^{-1}\!, \q
 \end{aligned}
 $$
 
-$\blacksquare$
-
 **Full conditional for $\mu_\beta \mid \text{rest}$.** With the $\{\beta_g\}$ observed, the $G$ vectors $\beta_g \overset{\text{iid}}{\sim} \mathcal{N}(\mu_\beta, \Sigma_\beta)$ treat $\mu_\beta$ as a Gaussian location parameter with $G$ observations. By Chapter 5 Rung 3, precisions add across the $G$ groups. Under a flat hyperprior $p(\mu_\beta) \propto 1$, the posterior is
 
 $$
