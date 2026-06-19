@@ -110,13 +110,13 @@ $$
 
 where $\nabla\!\cdot g = \sum_{i=1}^G \partial g_i/\partial z_i$. It suffices to show that $2\sigma^2\,\nabla\!\cdot g + \lVert g\rVert^2 < 0$.
 
-**Computing $\lVert g(z)\rVert^2$.** Since $g(z) = -c\,z$ with scalar $c = (G-2)\sigma^2/\lVert z\rVert^2$,
+*Computing $\lVert g(z)\rVert^2$.* Since $g(z) = -c\,z$ with scalar $c = (G-2)\sigma^2/\lVert z\rVert^2$,
 
 $$
 \lVert g(z)\rVert^2 \;=\; c^2\lVert z\rVert^2 \;=\; \frac{(G-2)^2\sigma^4}{\lVert z\rVert^4}\cdot\lVert z\rVert^2 \;=\; \frac{(G-2)^2\sigma^4}{\lVert z\rVert^2}.
 $$
 
-**Computing $\nabla\!\cdot g$.** Differentiating $g_i(z) = -(G-2)\sigma^2\,z_i/\lVert z\rVert^2$ with respect to $z_i$ gives
+*Computing $\nabla\!\cdot g$.* Differentiating $g_i(z) = -(G-2)\sigma^2\,z_i/\lVert z\rVert^2$ with respect to $z_i$ gives
 
 $$
 \frac{\partial g_i}{\partial z_i} \;=\; -(G-2)\sigma^2\!\left(\frac{1}{\lVert z\rVert^2} - \frac{2z_i^2}{\lVert z\rVert^4}\right).
@@ -128,7 +128,7 @@ $$
 \nabla\!\cdot g \;=\; -(G-2)\sigma^2\!\left(\frac{G}{\lVert z\rVert^2} - \frac{2\lVert z\rVert^2}{\lVert z\rVert^4}\right) \;=\; -(G-2)\sigma^2\cdot\frac{G-2}{\lVert z\rVert^2} \;=\; -\frac{(G-2)^2\sigma^2}{\lVert z\rVert^2}.
 $$
 
-**Combining.** Substituting both pieces into the SURE expression:
+*Combining.* Substituting both pieces into the SURE expression:
 
 $$
 2\sigma^2\,\nabla\!\cdot g + \lVert g\rVert^2 \;=\; -\frac{2(G-2)^2\sigma^4}{\lVert z\rVert^2} + \frac{(G-2)^2\sigma^4}{\lVert z\rVert^2} \;=\; -\frac{(G-2)^2\sigma^4}{\lVert z\rVert^2}.
