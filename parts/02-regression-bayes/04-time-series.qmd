@@ -52,7 +52,7 @@ Conditions 1 and 3 together say that shifting the time window by any integer num
 
 **Proposition P1.** *Let $\{y_t\}$ be a covariance-stationary series with autocovariance function $\gamma_k$ and autocorrelation function $\rho_k = \gamma_k/\gamma_0$. Then: (i) $\gamma_k = \gamma_{-k}$ for all $k$; (ii) $\rho_0 = 1$; (iii) $|\rho_k| \le 1$ for all $k$; and (iv) for any finite collection of times $t_1,\ldots,t_m$ and weights $a_1,\ldots,a_m \in \mathbb{R}$, the $m \times m$ matrix $\Gamma$ with $(i,j)$-entry $\gamma_{|t_i - t_j|}$ is positive-semidefinite.*
 
-**Proof.** **(i) Even symmetry.** Covariance is symmetric in its two arguments:
+**Proof.** *(i) Even symmetry.* Covariance is symmetric in its two arguments:
 
 $$
 \gamma_k = \mathrm{Cov}(y_t,\, y_{t+k}) = \mathrm{Cov}(y_{t+k},\, y_t).
@@ -60,9 +60,9 @@ $$
 
 Now relabel the time index by setting $s = t + k$, so the right-hand side becomes $\mathrm{Cov}(y_s,\, y_{s-k})$. By covariance-stationarity, this quantity depends only on the lag, which is $-k$, giving $\mathrm{Cov}(y_s,\, y_{s-k}) = \gamma_{-k}$. Therefore $\gamma_k = \gamma_{-k}$: the autocovariance function is even in the lag. Plotting the ACF for negative lags adds no information; by convention, only $k \ge 0$ is displayed.
 
-**(ii) Normalization.** Setting $k = 0$ in the definition: $\rho_0 = \gamma_0/\gamma_0 = 1$. A series has perfect correlation with itself at zero lag.
+*(ii) Normalization.* Setting $k = 0$ in the definition: $\rho_0 = \gamma_0/\gamma_0 = 1$. A series has perfect correlation with itself at zero lag.
 
-**(iii) Boundedness.** The Cauchy–Schwarz inequality for covariance states $|\mathrm{Cov}(U,\,V)| \le \sqrt{\mathrm{Var}(U)}\,\sqrt{\mathrm{Var}(V)}$ for any square-integrable random variables $U$ and $V$. Applying this with $U = y_t$ and $V = y_{t+k}$:
+*(iii) Boundedness.* The Cauchy–Schwarz inequality for covariance states $|\mathrm{Cov}(U,\,V)| \le \sqrt{\mathrm{Var}(U)}\,\sqrt{\mathrm{Var}(V)}$ for any square-integrable random variables $U$ and $V$. Applying this with $U = y_t$ and $V = y_{t+k}$:
 
 $$
 |\gamma_k| = |\mathrm{Cov}(y_t,\, y_{t+k})| \le \sqrt{\mathrm{Var}(y_t)}\,\sqrt{\mathrm{Var}(y_{t+k})} = \sqrt{\gamma_0}\,\sqrt{\gamma_0} = \gamma_0,
@@ -70,7 +70,7 @@ $$
 
 where the final equality uses the constant-variance condition of covariance-stationarity. Dividing both sides by $\gamma_0 > 0$ yields $|\rho_k| \le 1$.
 
-**(iv) Positive-semidefiniteness.** The variance of any real-valued random variable is non-negative. For arbitrary times $t_1,\ldots,t_m$ and real weights $a_1,\ldots,a_m$, form the linear combination $Z = \sum_{i=1}^{m} a_i\, y_{t_i}$. By bilinearity of covariance:
+*(iv) Positive-semidefiniteness.* The variance of any real-valued random variable is non-negative. For arbitrary times $t_1,\ldots,t_m$ and real weights $a_1,\ldots,a_m$, form the linear combination $Z = \sum_{i=1}^{m} a_i\, y_{t_i}$. By bilinearity of covariance:
 
 $$
 \begin{aligned}
@@ -79,7 +79,7 @@ $$
 \end{aligned}
 $$
 
-By covariance-stationarity, $\mathrm{Cov}(y_{t_i},\, y_{t_j}) = \gamma_{|t_i - t_j|}$, so $\mathrm{Var}(Z) = \sum_{i,j} a_i\, a_j\, \gamma_{|t_i - t_j|} \ge 0$. Since this holds for every choice of $m$, times, and weights, the matrix $[\gamma_{|t_i - t_j|}]$ is positive-semidefinite. The implication is not merely algebraic: not every symmetric bounded sequence is a valid autocovariance function. Positive-semidefiniteness constrains which functions $k \mapsto \gamma_k$ can arise from any real stochastic process, and it rules out many candidate functions that look superficially reasonable. $\square$
+By covariance-stationarity, $\mathrm{Cov}(y_{t_i},\, y_{t_j}) = \gamma_{|t_i - t_j|}$, so $\mathrm{Var}(Z) = \sum_{i,j} a_i\, a_j\, \gamma_{|t_i - t_j|} \ge 0$. Since this holds for every choice of $m$, times, and weights, the matrix $[\gamma_{|t_i - t_j|}]$ is positive-semidefinite. The implication is not merely algebraic: not every symmetric bounded sequence is a valid autocovariance function. Positive-semidefiniteness constrains which functions $k \mapsto \gamma_k$ can arise from any real stochastic process, and it rules out many candidate functions that look superficially reasonable. $\blacksquare$
 
 ### Rung 3 — The AR(1) model
 
@@ -105,13 +105,13 @@ $$
 
 **Proof.**
 
-**MA($\infty$) form.** Unrolling the AR(1) recursion one step at a time yields
+*MA($\infty$) form.* Unrolling the AR(1) recursion one step at a time yields
 
 $$
 \begin{aligned}
-y_t &= \phi\, y_{t-1} + \varepsilon_t \\
-    &= \phi(\phi\, y_{t-2} + \varepsilon_{t-1}) + \varepsilon_t \\
-    &= \phi^2 y_{t-2} + \phi\, \varepsilon_{t-1} + \varepsilon_t.
+y_t &= \phi\, y_{t-1} + \varepsilon_t                       && \text{(AR(1) recursion)} \\
+    &= \phi(\phi\, y_{t-2} + \varepsilon_{t-1}) + \varepsilon_t && \text{(substitute $y_{t-1}$)} \\
+    &= \phi^2 y_{t-2} + \phi\, \varepsilon_{t-1} + \varepsilon_t && \text{(expand).}
 \end{aligned}
 $$
 
@@ -123,7 +123,7 @@ $$
 
 The infinite sum converges in mean square because $\sum_{j=0}^{\infty} \phi^{2j} = 1/(1 - \phi^2) < \infty$ whenever $|\phi| < 1$.
 
-**Mean.** Taking expectations term by term (justified by mean-square convergence):
+*Mean.* Taking expectations term by term (justified by mean-square convergence):
 
 $$
 \mathbb{E}[y_t] = \sum_{j=0}^{\infty} \phi^j\, \mathbb{E}[\varepsilon_{t-j}] = 0,
@@ -131,7 +131,7 @@ $$
 
 since each innovation has mean zero by assumption. The mean is zero and does not depend on $t$.
 
-**Variance.** Because the innovations $\varepsilon_{t-j}$ are independent and each has variance $\sigma^2$, the variance of the MA($\infty$) sum is the sum of the variances:
+*Variance.* Because the innovations $\varepsilon_{t-j}$ are independent and each has variance $\sigma^2$, the variance of the MA($\infty$) sum is the sum of the variances:
 
 $$
 \gamma_0 = \mathrm{Var}(y_t) = \sigma^2 \sum_{j=0}^{\infty} \phi^{2j} = \frac{\sigma^2}{1 - \phi^2}.
@@ -139,7 +139,7 @@ $$
 
 This is finite, positive, and independent of $t$.
 
-**Autocovariance.** For lag $k \ge 1$, write the future value $y_{t+k}$ by applying the AR(1) recursion $k$ times forward from $y_t$:
+*Autocovariance.* For lag $k \ge 1$, write the future value $y_{t+k}$ by applying the AR(1) recursion $k$ times forward from $y_t$:
 
 $$
 y_{t+k} = \phi^k y_t + \sum_{j=0}^{k-1} \phi^j\, \varepsilon_{t+k-j}.
@@ -149,10 +149,10 @@ The second sum collects innovations dated $t+1, t+2, \ldots, t+k$ — all strict
 
 $$
 \begin{aligned}
-\gamma_k &= \mathbb{E}[y_t\, y_{t+k}] \\
-         &= \mathbb{E}\!\left[y_t\!\left(\phi^k y_t + \sum_{j=0}^{k-1} \phi^j\, \varepsilon_{t+k-j}\right)\right] \\
-         &= \phi^k\, \mathbb{E}[y_t^2] + 0 \\
-         &= \phi^k\, \gamma_0.
+\gamma_k &= \mathbb{E}[y_t\, y_{t+k}]                                                              && (\mu = 0) \\
+         &= \mathbb{E}\!\left[y_t\!\left(\phi^k y_t + \sum_{j=0}^{k-1} \phi^j\, \varepsilon_{t+k-j}\right)\right] && \text{(forward recursion)} \\
+         &= \phi^k\, \mathbb{E}[y_t^2] + 0                                                          && \text{(future shocks $\perp y_t$)} \\
+         &= \phi^k\, \gamma_0.                                                                      && (\gamma_0 = \mathbb{E}[y_t^2])
 \end{aligned}
 $$
 
@@ -162,7 +162,7 @@ $$
 \rho_k = \frac{\gamma_k}{\gamma_0} = \phi^k.
 $$
 
-Because $\mu = 0$, $\gamma_0 < \infty$, and $\gamma_k = \phi^k \gamma_0$ depend only on $k$ and not on $t$, the process satisfies all three conditions of covariance-stationarity (Rung 2). $\square$
+Because $\mu = 0$, $\gamma_0 < \infty$, and $\gamma_k = \phi^k \gamma_0$ depend only on $k$ and not on $t$, the process satisfies all three conditions of covariance-stationarity (Rung 2). $\blacksquare$
 
 **Numerical anchor.** At $\phi = 0.7$: $\rho_1 = 0.7$, $\rho_2 = 0.49$, $\rho_3 = 0.343$, and the variance inflation factor is $1/(1 - 0.49) \approx 1.9608$. Roughly speaking, autocorrelation alone nearly doubles the variance of observations relative to the white-noise baseline $\sigma^2$.
 
@@ -212,7 +212,7 @@ $$
 
 **Proof.**
 
-**Root-of-unity identity.** Define $\omega = e^{2\pi i/s}$, a primitive $s$-th root of unity, and set
+*Root-of-unity identity.* Define $\omega = e^{2\pi i/s}$, a primitive $s$-th root of unity, and set
 
 $$
 S(m) = \sum_{t=0}^{s-1} \omega^{mt} = \sum_{t=0}^{s-1} e^{2\pi i m t / s}
@@ -235,7 +235,7 @@ $$
 
 Because $S(m)$ is real for all integers $m$ (every value is either $0$ or $s$), the identity $S(-m) = S(m)$ holds for all $m$.
 
-**Applying Euler's formula.** The complex exponential decompositions are
+*Applying Euler's formula.* The complex exponential decompositions are
 
 $$
 \cos\theta = \tfrac{1}{2}\!\left(e^{i\theta} + e^{-i\theta}\right), \qquad \sin\theta = \tfrac{1}{2i}\!\left(e^{i\theta} - e^{-i\theta}\right).
@@ -298,7 +298,7 @@ Second, completeness: taking $K = \lfloor s/2 \rfloor$ harmonics yields $s$ orth
 
 Third, truncating to $K < \lfloor s/2 \rfloor$ harmonics produces the **orthogonal projection** of the full period-$s$ signal onto the subspace spanned by the leading $2K$ sinusoids. By the projection theorem from the linear-algebra chapter, this projection is the least-squares best approximation: no other choice of $2K$ sinusoidal parameters fits the seasonal component more closely in sum-of-squares terms.
 
-Fourth — and most consequential for regression practice — the orthogonality means the Fourier design columns are uncorrelated with each other and with the constant column. Adding or removing a harmonic does not alter the least-squares estimates of the harmonics already included: the seasonal coefficients $\{a_j, b_j\}$ are estimable independently, with no collinearity among the Fourier features. Model selection over $K$ becomes a sequence of clean nested comparisons rather than a tangle of confounded effects. $\square$
+Fourth — and most consequential for regression practice — the orthogonality means the Fourier design columns are uncorrelated with each other and with the constant column. Adding or removing a harmonic does not alter the least-squares estimates of the harmonics already included: the seasonal coefficients $\{a_j, b_j\}$ are estimable independently, with no collinearity among the Fourier features. Model selection over $K$ becomes a sequence of clean nested comparisons rather than a tangle of confounded effects. $\blacksquare$
 
 ## Worked Examples
 

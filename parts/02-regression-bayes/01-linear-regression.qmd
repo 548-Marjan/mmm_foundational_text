@@ -58,7 +58,7 @@ The previous result assumed normality. Remarkably, the optimality of OLS does no
 
 **Theorem (Gauss–Markov).** Assume only $\mathbb{E}[\varepsilon] = 0$ and $\operatorname{Cov}(\varepsilon) = \sigma^2 I$ (no normality required). Among all linear unbiased estimators $\tilde\beta = Cy$, the OLS estimator $\hat\beta$ has the smallest covariance: $\operatorname{Cov}(\tilde\beta) - \operatorname{Cov}(\hat\beta) \succeq 0$.
 
-**Proof.** Consider any *linear* estimator, i.e. $\tilde\beta = Cy$ for some fixed matrix $C \in \mathbb{R}^{p \times n}$ not depending on $y$. For it to be *unbiased* for every possible $\beta$ we need
+**Proof.** *Unbiasedness constrains the estimator.* Consider any *linear* estimator, i.e. $\tilde\beta = Cy$ for some fixed matrix $C \in \mathbb{R}^{p \times n}$ not depending on $y$. For it to be *unbiased* for every possible $\beta$ we need
 
 $$
 \mathbb{E}[Cy] = \mathbb{E}[C(X\beta + \varepsilon)] = CX\beta = \beta \quad \text{for all } \beta,
@@ -66,7 +66,7 @@ $$
 
 which forces the constraint $CX = I$.
 
-Now decompose $C$ around the OLS operator by writing
+*Decompose around the OLS operator.* Write
 
 $$
 C = (X^\top X)^{-1} X^\top + D,
@@ -74,7 +74,7 @@ $$
 
 which simply *defines* $D$ as the difference. Substituting into $CX = I$ and using $(X^\top X)^{-1} X^\top X = I$ gives $I + DX = I$, hence the orthogonality condition $DX = 0$.
 
-Next compute the covariance. Since $\operatorname{Cov}(y) = \sigma^2 I$, the transformation identity gives $\operatorname{Cov}(\tilde\beta) = \sigma^2 C C^\top$. Expanding $C C^\top$:
+*Compare covariances.* Since $\operatorname{Cov}(y) = \sigma^2 I$, the transformation identity gives $\operatorname{Cov}(\tilde\beta) = \sigma^2 C C^\top$. Expanding $C C^\top$:
 
 $$
 \begin{aligned}
@@ -190,19 +190,17 @@ Escaping this requires admitting biased estimators, which calls for the right ya
 
 **Proposition.** $\operatorname{MSE}(\hat\theta) = \mathbb{E}\big[(\hat\theta - \theta)^2\big] = \operatorname{Var}(\hat\theta) + \big(\mathbb{E}[\hat\theta] - \theta\big)^2$ — variance plus bias squared.
 
-**Proof.** Write $\mu = \mathbb{E}[\hat\theta]$ and add and subtract it inside the square:
+**Proof.** Write $\mu = \mathbb{E}[\hat\theta]$. Adding and subtracting $\mu$ inside the square and expanding,
 
 $$
-\mathbb{E}\big[(\hat\theta - \theta)^2\big] = \mathbb{E}\big[(\hat\theta - \mu)^2\big] + 2(\mu - \theta)\,\mathbb{E}[\hat\theta - \mu] + (\mu - \theta)^2 .
+\begin{aligned}
+\operatorname{MSE}(\hat\theta)
+  &= \mathbb{E}\big[(\hat\theta - \mu)^2\big] + 2(\mu - \theta)\,\mathbb{E}[\hat\theta - \mu] + (\mu - \theta)^2 && \text{(add and subtract $\mu$)} \\
+  &= \operatorname{Var}(\hat\theta) + (\mu - \theta)^2 && \text{($\mathbb{E}[\hat\theta - \mu] = 0$),}
+\end{aligned}
 $$
 
-The middle term vanishes because $\mathbb{E}[\hat\theta - \mu] = \mu - \mu = 0$, leaving
-
-$$
-\operatorname{MSE}(\hat\theta) = \operatorname{Var}(\hat\theta) + (\mu - \theta)^2 = \text{variance} + \text{bias}^2 .
-$$
-
-$\blacksquare$
+the variance plus the squared bias. $\blacksquare$
 
 Gauss–Markov (rung 2) makes OLS the minimum-variance estimator among the *unbiased* ones, but the proposition shows that a *biased* estimator with much smaller variance can have lower MSE. Under severe collinearity OLS variance is enormous, so accepting a little bias to buy a large variance reduction is a highly favorable trade — exactly the bargain ridge regression (rung 7) walks through next.
 

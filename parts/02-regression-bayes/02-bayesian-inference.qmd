@@ -170,9 +170,9 @@ Substituting into $\mu_{\text{post}} = A^{-1}\,X^\top y/\sigma^2$:
 
 $$
 \begin{aligned}
-\mu_{\text{post}} &= \left[\frac{1}{\sigma^2}(X^\top X + \lambda I)\right]^{-1}\frac{X^\top y}{\sigma^2} \\[4pt]
-&= \sigma^2(X^\top X + \lambda I)^{-1}\cdot\frac{X^\top y}{\sigma^2} \\[4pt]
-&= (X^\top X + \lambda I)^{-1}X^\top y.
+\mu_{\text{post}} &= \left[\frac{1}{\sigma^2}(X^\top X + \lambda I)\right]^{-1}\frac{X^\top y}{\sigma^2} && \text{(substitute $A$)} \\[4pt]
+&= \sigma^2(X^\top X + \lambda I)^{-1}\cdot\frac{X^\top y}{\sigma^2} && \text{(factor out $\sigma^{-2}$)} \\[4pt]
+&= (X^\top X + \lambda I)^{-1}X^\top y && \text{($\sigma^2$ cancels).}
 \end{aligned}
 $$
 
