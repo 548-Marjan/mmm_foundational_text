@@ -43,7 +43,6 @@ D_u f(\beta) = \lim_{h\to 0}\frac{f(\beta+hu)-f(\beta)}{h}
              = \nabla f(\beta)^\top u .
 $$
 
-::: {.callout-note appearance="simple"}
 **Theorem (steepest ascent).** Among all unit directions $u$, the directional
 derivative $D_u f(\beta)=\nabla f(\beta)^\top u$ is largest when $u$ points
 along $\nabla f(\beta)$, and the level set of $f$ through $\beta$ is orthogonal
@@ -59,7 +58,6 @@ $\gamma(0)=\beta$. Then $f(\gamma(t))$ is constant, so differentiating and
 using the chain rule, $0=\tfrac{d}{dt}f(\gamma(t))\big|_{0}
 =\nabla f(\beta)^\top\gamma'(0)$. Hence $\nabla f(\beta)$ is orthogonal to every
 tangent direction of the level set. $\qquad\blacksquare$
-:::
 
 So the negative gradient is the locally steepest *downhill* direction — the
 fact every gradient-based fitting method in this book exploits.
@@ -108,16 +106,13 @@ $$
 constant in $\beta$ — and *exactly* the symmetric PSD matrix Chapter 1 used to
 diagnose collinearity. Its eigenvalues are the curvatures of the bowl $L$.
 
-::: {.callout-note appearance="simple"}
 **Theorem (first-order necessary condition).** If $\beta^\star$ is an interior
 local minimizer of a differentiable $f$, then $\nabla f(\beta^\star)=0$.
 
 **Proof.** Fix any direction $u$. The scalar $\phi(t)=f(\beta^\star+tu)$ has a
 local minimum at $t=0$, so $\phi'(0)=\nabla f(\beta^\star)^\top u=0$. As $u$ was
 arbitrary, every component of $\nabla f(\beta^\star)$ vanishes. $\qquad\blacksquare$
-:::
 
-::: {.callout-note appearance="simple"}
 **Theorem (second-order sufficient condition).** If $\nabla f(\beta^\star)=0$
 and $\nabla^2 f(\beta^\star)$ is positive definite, then $\beta^\star$ is a
 strict local minimizer.
@@ -133,14 +128,12 @@ $$
 For $\lVert\delta\rVert$ small enough the right side is positive, so
 $f(\beta^\star+\delta)>f(\beta^\star)$ for all small $\delta\neq 0$.
 $\qquad\blacksquare$
-:::
 
 ### Convexity and the global guarantee
 
 A function $f$ is **convex** if for all $x,z$ and $t\in[0,1]$,
 $f(tx+(1-t)z)\le t f(x)+(1-t)f(z)$.
 
-::: {.callout-note appearance="simple"}
 **Theorem (second-order characterization).** A $C^2$ function $f$ on an open
 convex domain is convex if and only if $\nabla^2 f(x)\succeq 0$ (positive
 semidefinite) for every $x$.
@@ -153,7 +146,6 @@ exactly the convexity inequality for $f$ along the segment.
 eigenvector $v$, then $\psi(t)=f(x_0+tv)$ would satisfy $\psi''(0)=v^\top
 \nabla^2 f(x_0)v<0$, making $\psi$ strictly concave near $0$ and violating
 convexity along that segment. $\qquad\blacksquare$
-:::
 
 Apply this to the loss. Since $\nabla^2 L(\beta)=2X^\top X$ and
 $v^\top X^\top X v=\lVert Xv\rVert^2\ge 0$ for all $v$, the Hessian is PSD

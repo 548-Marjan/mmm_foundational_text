@@ -42,7 +42,7 @@ $$
 
 ### Proposition — Non-conjugacy
 
-> **Proposition (Non-conjugacy).** The posterior $p(\theta \mid y_{1:T})$ has no closed form: no standard conjugate prior family closes the Gaussian likelihood of Rung 1 under multiplication.
+**Proposition (Non-conjugacy).** The posterior $p(\theta \mid y_{1:T})$ has no closed form: no standard conjugate prior family closes the Gaussian likelihood of Rung 1 under multiplication.
 
 **Proof (sketch).** Conjugacy requires that the prior and likelihood share a functional form such that their product is the kernel of a distribution from the same family. For parameters entering the likelihood *linearly* — such as $\beta_i$ in the large-$K$ limit where $g \approx x/K$ is nearly linear — a Gaussian or half-normal prior on $\beta_i$ closes under the Gaussian likelihood, yielding a Gaussian posterior. The closure fails for $(K_i, n_i, \lambda_i)$. The likelihood's dependence on these parameters enters through $g(a_\lambda(x_{i,t});\, K_i, n_i) = a_\lambda(x_{i,t})^{n_i}/(K_i^{n_i} + a_\lambda(x_{i,t})^{n_i})$ — a rational power function — and through the adstock weights $\lambda_i^k$, powers of $\lambda_i$ summed over all lags. Multiplying the Gaussian likelihood by any standard prior on $(K_i, n_i, \lambda_i)$ — Beta, Gamma, half-normal, log-normal — does not produce the kernel of a recognized distribution: no functional identity collapses the product into a named family, and the normalizing constant $\int p(y_{1:T} \mid \theta)\, p(\theta)\, d\theta$ has no closed-form expression. We must therefore either approximate the posterior (MAP estimation combined with a Laplace approximation around the mode) or sample it directly (MCMC). The remainder of this chapter uses the latter. $\blacksquare$
 
@@ -68,11 +68,11 @@ The identification ridge that Chapter 15 traced in parameter space does not vani
 
 ### Proof P1 — Local identifiability via Fisher information
 
-> **Proposition P1.** For the model $y_t \sim \mathcal{N}(\mu_t(\theta), \sigma^2)$ (independent across $t$), the parameter $\theta$ is locally identified at $\theta_0$ if and only if the Fisher information matrix
-> $$
-> I(\theta_0) = \frac{1}{\sigma^2}\sum_{t=1}^{T} \nabla_\theta\mu_t(\theta_0)\,\nabla_\theta\mu_t(\theta_0)^\top
-> $$
-> is nonsingular.
+**Proposition P1.** For the model $y_t \sim \mathcal{N}(\mu_t(\theta), \sigma^2)$ (independent across $t$), the parameter $\theta$ is locally identified at $\theta_0$ if and only if the Fisher information matrix
+$$
+I(\theta_0) = \frac{1}{\sigma^2}\sum_{t=1}^{T} \nabla_\theta\mu_t(\theta_0)\,\nabla_\theta\mu_t(\theta_0)^\top
+$$
+is nonsingular.
 
 **Proof.** We work through four steps: derive the Fisher information for this model; show that singularity of $I(\theta_0)$ is equivalent to the existence of a direction along which the likelihood is flat; apply that equivalence to the MMM mean function; and read off the answer to Chapter 15's open question.
 
@@ -138,7 +138,7 @@ Bayesian inference for the MMM follows five stages in disciplined sequence, each
 
 ### Proof P2 — Prior dominates the unidentified ridge
 
-> **Proposition P2.** Suppose the log-likelihood is flat along a direction $d$ at $\theta_0$: $\ell(\theta_0 + s\,d) = \ell(\theta_0)$ for all $s$ in a neighborhood of $0$. Then along that ridge the posterior is proportional to the prior: $p(\theta_0 + s\,d \mid y) \propto p(\theta_0 + s\,d)$, and the conditional posterior density of $s$ is the prior restricted to the ridge.
+**Proposition P2.** Suppose the log-likelihood is flat along a direction $d$ at $\theta_0$: $\ell(\theta_0 + s\,d) = \ell(\theta_0)$ for all $s$ in a neighborhood of $0$. Then along that ridge the posterior is proportional to the prior: $p(\theta_0 + s\,d \mid y) \propto p(\theta_0 + s\,d)$, and the conditional posterior density of $s$ is the prior restricted to the ridge.
 
 **Proof.** Define $L_0 := e^{\ell(\theta_0)}$. By assumption,
 

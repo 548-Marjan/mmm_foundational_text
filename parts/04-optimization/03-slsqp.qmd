@@ -42,11 +42,11 @@ $$
 
 Only active constraints can exert force at $x^\star$; an inactive inequality has strict slack and is locally irrelevant. For the multipliers to be well-defined the active gradients must not be degenerate, and the standard guarantee is a **constraint qualification**. The **linear independence constraint qualification (LICQ)** holds at $x^\star$ when the active constraint gradients $\{\nabla c_i(x^\star) : i \in \mathcal{A}(x^\star)\}$ are **linearly independent**. LICQ is what makes the tangent geometry of the feasible set faithful to its linearization — the hypothesis the proof below leans on directly.
 
-> **Theorem (first-order necessary conditions / KKT).** Suppose $x^\star$ is a local minimizer of the program at which LICQ holds. Then there exist multipliers $\lambda^\star$ such that
-> $$
-> \nabla_x \mathcal{L}(x^\star, \lambda^\star) = \nabla f(x^\star) + \sum_i \lambda_i^\star \nabla c_i(x^\star) = 0 \quad\text{(stationarity)},
-> $$
-> together with **primal feasibility** ($c_i(x^\star) = 0$ for $i \in \mathcal{E}$ and $c_i(x^\star) \le 0$ for $i \in \mathcal{I}$), **dual feasibility** ($\lambda_i^\star \ge 0$ for $i \in \mathcal{I}$), and **complementary slackness** ($\lambda_i^\star c_i(x^\star) = 0$ for all $i$).
+**Theorem (first-order necessary conditions / KKT).** Suppose $x^\star$ is a local minimizer of the program at which LICQ holds. Then there exist multipliers $\lambda^\star$ such that
+$$
+\nabla_x \mathcal{L}(x^\star, \lambda^\star) = \nabla f(x^\star) + \sum_i \lambda_i^\star \nabla c_i(x^\star) = 0 \quad\text{(stationarity)},
+$$
+together with **primal feasibility** ($c_i(x^\star) = 0$ for $i \in \mathcal{E}$ and $c_i(x^\star) \le 0$ for $i \in \mathcal{I}$), **dual feasibility** ($\lambda_i^\star \ge 0$ for $i \in \mathcal{I}$), and **complementary slackness** ($\lambda_i^\star c_i(x^\star) = 0$ for all $i$).
 
 **Proof (of the equality-constrained core).** We prove the equality-only case — $\min f(x)$ subject to $c_i(x) = 0$ for $i \in \mathcal{E}$ — which carries the essential geometry; the inequality extension is stated immediately after and proved in full by @nocedal2006.
 
@@ -112,11 +112,11 @@ $$
 
 where $F'(z_k)$ is the Jacobian of $F$ at $z_k$. For the KKT system this Jacobian is the **KKT matrix** — the block matrix of Lagrangian-Hessian and constraint-Jacobian pieces that we assemble explicitly in the next rung; flag it here as the object every Newton step must factor.
 
-> **Theorem (local quadratic convergence).** Let $F$ be $C^2$ with a root $z^\star$, $F(z^\star) = 0$, at which the Jacobian $F'(z^\star)$ is nonsingular. Then there is a neighborhood of $z^\star$ such that, started anywhere in it, Newton's iterates converge to $z^\star$ and satisfy
-> $$
-> \|z_{k+1} - z^\star\| \le C\, \|z_k - z^\star\|^2
-> $$
-> for a constant $C$ — the error squares at each step.
+**Theorem (local quadratic convergence).** Let $F$ be $C^2$ with a root $z^\star$, $F(z^\star) = 0$, at which the Jacobian $F'(z^\star)$ is nonsingular. Then there is a neighborhood of $z^\star$ such that, started anywhere in it, Newton's iterates converge to $z^\star$ and satisfy
+$$
+\|z_{k+1} - z^\star\| \le C\, \|z_k - z^\star\|^2
+$$
+for a constant $C$ — the error squares at each step.
 
 **Proof.** Let $e_k = z_k - z^\star$ denote the error at step $k$.
 
@@ -189,11 +189,11 @@ The right-hand side has shed the $\lambda_k$-dependent term entirely: it is now 
 
 #### The theorem and proof
 
-> **Theorem (SQP = Newton on KKT).** The Newton step $(p, \lambda_{k+1})$ for the KKT system, as displayed above, is identical to the primal–dual solution of the **quadratic-programming (QP) subproblem**
-> $$
-> \min_p\ \nabla f_k^\top p + \tfrac12 p^\top \nabla^2_{xx}\mathcal{L}_k\, p \quad\text{subject to}\quad \nabla c_k\, p + c_k = 0.
-> $$
-> Each Newton iteration on the KKT conditions thus minimizes a quadratic model of the Lagrangian subject to a linearization of the constraints.
+**Theorem (SQP = Newton on KKT).** The Newton step $(p, \lambda_{k+1})$ for the KKT system, as displayed above, is identical to the primal–dual solution of the **quadratic-programming (QP) subproblem**
+$$
+\min_p\ \nabla f_k^\top p + \tfrac12 p^\top \nabla^2_{xx}\mathcal{L}_k\, p \quad\text{subject to}\quad \nabla c_k\, p + c_k = 0.
+$$
+Each Newton iteration on the KKT conditions thus minimizes a quadratic model of the Lagrangian subject to a linearization of the constraints.
 
 **Proof.** The strategy is to write down the KKT conditions of the QP subproblem *itself* and observe that they are the Newton block system verbatim. The QP is a constrained optimization problem in the step variable $p$, so it has its own first-order conditions — and by Rung 1 those conditions are exact and sufficient here, because the QP has a quadratic objective and *linear* constraints, so its feasible set is an affine subspace on which LICQ is the full-rank condition on $\nabla c_k$.
 

@@ -59,6 +59,6 @@ stub chapters following the standard template (see any `parts/**/**.qmd`).
 
 ## A note on code and data
 
-All code is original and self-contained — minimal PyMC / SciPy examples that
-teach the same patterns a production MMM uses. The book contains **no
-proprietary source, firm priors, or client data**.
+All code is original and self-contained — minimal NumPy, SciPy, and Matplotlib
+examples that teach the same patterns a production MMM uses. The book contains
+**no proprietary source, firm priors, or client data**.

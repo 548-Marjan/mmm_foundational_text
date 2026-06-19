@@ -54,9 +54,9 @@ The realistic case is *near*-collinearity. When TV and search are highly but imp
 
 Equip $\mathbb{R}^n$ with the standard inner product $\langle u, v\rangle = u^\top v$ and norm $\lVert v\rVert = \sqrt{\langle v, v\rangle}$; vectors are **orthogonal** when $\langle u, v\rangle = 0$. Since $y$ rarely lies in $\mathcal{C}(X)$, least squares seeks the point of $\mathcal{C}(X)$ closest to $y$ — the **orthogonal projection** of $y$ onto the column space, $\hat y = X\hat\beta$. Geometrically, the projection is the unique fit whose residual $y - \hat y$ is perpendicular to the subspace.
 
-> **Theorem (Normal equations).** If $X$ has full column rank, the unique minimizer of $\lVert y - X\beta\rVert^2$ is $\hat\beta = (X^\top X)^{-1} X^\top y$, equivalently the solution of $X^\top X \hat\beta = X^\top y$; the residual $y - X\hat\beta$ is orthogonal to every column of $X$.
+**Theorem (Normal equations).** If $X$ has full column rank, the unique minimizer of $\lVert y - X\beta\rVert^2$ is $\hat\beta = (X^\top X)^{-1} X^\top y$, equivalently the solution of $X^\top X \hat\beta = X^\top y$; the residual $y - X\hat\beta$ is orthogonal to every column of $X$.
 
-*Proof.* Define the objective
+**Proof.** Define the objective
 
 $$
 f(\beta) = \lVert y - X\beta \rVert^2 = (y - X\beta)^\top (y - X\beta) = y^\top y - 2\beta^\top X^\top y + \beta^\top X^\top X \beta.
@@ -90,9 +90,9 @@ Thus $\langle x_j, \, y - X\hat\beta\rangle = 0$ for every column $x_j$, i.e. th
 
 A scalar $\lambda$ and nonzero vector $v$ form an **eigenpair** $(\lambda, v)$ of a square matrix $A$ when $Av = \lambda v$: the matrix merely rescales $v$ rather than rotating it. Eigenvalues expose the intrinsic axes of a transformation, and for the symmetric matrices we care about — above all the Gram matrix $X^\top X$ — these axes are exceptionally well behaved.
 
-> **Theorem (Spectral theorem, symmetric case).** A real symmetric matrix $A = A^\top$ has only real eigenvalues, eigenvectors for distinct eigenvalues are orthogonal, and $A$ admits an orthonormal eigenbasis; equivalently $A = Q \Lambda Q^\top$ for an orthogonal $Q$ and diagonal $\Lambda$.
+**Theorem (Spectral theorem, symmetric case).** A real symmetric matrix $A = A^\top$ has only real eigenvalues, eigenvectors for distinct eigenvalues are orthogonal, and $A$ admits an orthonormal eigenbasis; equivalently $A = Q \Lambda Q^\top$ for an orthogonal $Q$ and diagonal $\Lambda$.
 
-*Proof.* **Real eigenvalues.** Let $Av = \lambda v$ with $v \ne 0$, allowing $\lambda \in \mathbb{C}$ and $v \in \mathbb{C}^n$, and write $\bar v$ for the entrywise conjugate. Consider the scalar $\bar v^\top A v$. On one hand $\bar v^\top A v = \bar v^\top (\lambda v) = \lambda\, \bar v^\top v = \lambda \lVert v\rVert^2$. On the other, because $A$ is real and symmetric, taking the conjugate transpose of the $1\times 1$ quantity gives
+**Proof.** **Real eigenvalues.** Let $Av = \lambda v$ with $v \ne 0$, allowing $\lambda \in \mathbb{C}$ and $v \in \mathbb{C}^n$, and write $\bar v$ for the entrywise conjugate. Consider the scalar $\bar v^\top A v$. On one hand $\bar v^\top A v = \bar v^\top (\lambda v) = \lambda\, \bar v^\top v = \lambda \lVert v\rVert^2$. On the other, because $A$ is real and symmetric, taking the conjugate transpose of the $1\times 1$ quantity gives
 $$
 \overline{(\bar v^\top A v)} = v^\top A^\top \bar v = v^\top A \bar v = \bar v^\top A v,
 $$
@@ -112,9 +112,9 @@ The Gram matrix $X^\top X$ is symmetric by construction, so it always diagonaliz
 
 A symmetric matrix $A$ is **positive semidefinite**, written $A \succeq 0$, when $z^\top A z \ge 0$ for all $z$, and **positive definite**, written $A \succ 0$, when $z^\top A z > 0$ for all $z \ne 0$. The quadratic form $z \mapsto z^\top A z$ thus measures how the matrix bends space; for the Gram matrix it measures squared lengths of fitted vectors.
 
-> **Proposition.** A symmetric matrix $A$ is positive definite if and only if all its eigenvalues are positive. Consequently $A \succ 0 \Rightarrow A$ is invertible.
+**Proposition.** A symmetric matrix $A$ is positive definite if and only if all its eigenvalues are positive. Consequently $A \succ 0 \Rightarrow A$ is invertible.
 
-*Proof.* Use the spectral decomposition $A = Q\Lambda Q^\top$ from the previous rung, with $Q$ orthogonal and $\Lambda = \operatorname{diag}(\lambda_1, \dots, \lambda_n)$. Substitute $w = Q^\top z$; since $Q$ is orthogonal, $w$ ranges over all of $\mathbb{R}^n$ as $z$ does and $\lVert w\rVert = \lVert z\rVert$. Then
+**Proof.** Use the spectral decomposition $A = Q\Lambda Q^\top$ from the previous rung, with $Q$ orthogonal and $\Lambda = \operatorname{diag}(\lambda_1, \dots, \lambda_n)$. Substitute $w = Q^\top z$; since $Q$ is orthogonal, $w$ ranges over all of $\mathbb{R}^n$ as $z$ does and $\lVert w\rVert = \lVert z\rVert$. Then
 $$
 z^\top A z = z^\top Q \Lambda Q^\top z = w^\top \Lambda w = \sum_i \lambda_i w_i^2.
 $$
