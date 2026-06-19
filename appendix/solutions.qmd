@@ -3037,4 +3037,74 @@ This depends only on the set $S$, not on how many times or in what order each id
 
 **A2.** Give events written after the schema change a new optional field, and have the reader supply a default when the field is absent (e.g. `ev.get("weight", 1.0)`). Older events, lacking the field, then fold exactly as before through the default, so the new reader processes the whole log — old and new events alike — without error: forward compatibility of the reader.
 
+## Chapter 26 — Testing & Reliability
+
+**C1.** The oracle problem is that, for much of the MMM stack, there is no closed-form correct output to compare against: a sampler returns random draws, an optimizer returns a tolerance-dependent allocation, and the store returns a posterior assembled from a stream. An example test needs such an output to assert (`assert f(x) == y`), so it has nothing to write on the right-hand side. A property test instead asserts an *invariant* that must hold for all inputs — a relation, not a value — which needs no oracle.
+
+**C2.** A proved theorem is a relation that holds for every valid input by mathematical necessity. A property test of it can therefore fail only when the implementation violates the theorem — never because the asserted "expected value" was chosen wrongly, since no value is asserted. A passing test is evidence (quantified by the keystone); a failing test is always a genuine defect.
+
+**C3.** An unseeded stochastic test that fails has destroyed its own evidence: the failing input was drawn from an unrecorded random state and cannot be regenerated, inspected, or minimized. Fixing the RNG seed makes the run replayable — the failing case is reproducible and shrinkable — at essentially no cost.
+
+**C4.** Prior-store fold: permutation invariance or idempotency under dedup (Chapter 25), `fold(log) == fold(permute(log))`. Module dependency graph: acyclicity (Chapter 24) — a topological order exists. Normal-equations solver: conditioning (Chapter 23), $\kappa(X^\top X) \approx \kappa(X)^2$.
+
+**B1.** $P_{\text{detect}} = 1 - (1-p)^N$ with $p = 0.02$.
+
+For $N = 50$:
+
+$$
+1 - 0.98^{50} \approx 1 - 0.364 = 0.636.
+$$
+
+For $N = 200$:
+
+$$
+1 - 0.98^{200} \approx 1 - 0.0176 = 0.982.
+$$
+
+**B2.** Using $N \ge \ln(1/\delta)/p$ with $p = 0.005$ and $\delta = 0.01$,
+
+$$
+N \;\ge\; \frac{\ln(100)}{0.005} = \frac{4.605}{0.005} \approx 921
+$$
+
+random cases.
+
+**B3.** Standard error $\sigma/\sqrt{n} = 0.8/\sqrt{2500} = 0.8/50 = 0.016$. A non-flaky tolerance must exceed the noise threshold $3\sigma/\sqrt{n} = 0.048$, so e.g. $\texttt{tol} = 0.05$ is safe. To assert within $\texttt{tol} = 0.01$ without flaking requires $3\sigma/\sqrt{n} \le 0.01$, i.e.
+
+$$
+\sqrt{n} \;\ge\; \frac{3\sigma}{0.01} = \frac{3 \cdot 0.8}{0.01} = 240, \qquad n \;\ge\; 240^2 = 57\,600.
+$$
+
+**P1.** A single random case lands in the failing region with probability $p$ and misses it with probability $1 - p$.
+
+By independence of the $N$ draws, the probability that *all* of them miss is the product
+
+$$
+(1-p)^N,
+$$
+
+so the probability that at least one case hits the failing region — detecting the defect — is the complement $1 - (1-p)^N$. Independence is exactly what turns the joint miss-probability into the product of per-case miss-probabilities.
+
+For the sample-size rule, demand confidence $1 - \delta$, i.e. miss-probability at most $\delta$:
+
+$$
+(1-p)^N \le \delta.
+$$
+
+Take logarithms; since $\ln(1-p) \le -p$ for $p \in (0,1)$,
+
+$$
+N \ln(1-p) \le \ln \delta \;\Longrightarrow\; N \ge \frac{\ln(1/\delta)}{p},
+$$
+
+where the final step divides by $-\ln(1-p) \ge p > 0$ and uses the bound to replace it conservatively by $p$. $\blacksquare$
+
+**P2.** Let the theorem assert a relation $R$ that holds for the specified function on all valid inputs, and let the metamorphic test evaluate $R$ on the implementation's outputs for some generated input. If the test reports a violation, then the implementation's outputs do *not* satisfy $R$ on that input. But the specified function's outputs *do* satisfy $R$ there (the theorem is universal). Hence the implementation's output differs from the specified function's — the implementation is wrong on that input. A violation therefore witnesses a real defect, and the oracle raises no false alarm: it is sound. $\blacksquare$
+
+**A1.** Add, for instance, an acyclicity relation (Chapter 24): build a small module graph, run a topological sort, and assert it places all nodes. The correct graph passes; injecting a back-edge (a cycle) makes the sort stall before placing every node, and the metamorphic test fails — whereas an example test that merely checks one module's declared dependencies would not notice the cycle. (Equivalently, an EVPI-monotonicity relation from Chapter 22: assert that folding in a ridge-aimed factor never raises the EVPI, and inject a factor that does.)
+
+**A2.** Generate random instances that trigger the defect with some natural frequency $p$ (e.g. graphs in which a back-edge appears with probability $p$), run $N$ cases for a grid of $N$, and record the fraction of campaigns that caught it; the empirical curve tracks $1 - (1-p)^N$, and fitting it recovers the observed failing fraction $p$.
+
+**A3.** Tighten a Monte-Carlo assertion's tolerance below $3\sigma/\sqrt{n}$ and rerun across several seeds: the test passes on some and fails on others — flaky. Restore reliability not by loosening the tolerance but by raising $n$ until $3\sigma/\sqrt{n}$ drops below the tolerance; report the smallest such $n$, at which the test passes on every seed.
+
 :::
