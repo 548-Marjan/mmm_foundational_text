@@ -48,16 +48,26 @@ derivative $D_u f(\beta)=\nabla f(\beta)^\top u$ is largest when $u$ points
 along $\nabla f(\beta)$, and the level set of $f$ through $\beta$ is orthogonal
 to $\nabla f(\beta)$.
 
-**Proof.** By Cauchy–Schwarz, $\nabla f(\beta)^\top u \le
-\lVert\nabla f(\beta)\rVert\,\lVert u\rVert = \lVert\nabla f(\beta)\rVert$, with
-equality iff $u$ is a nonnegative multiple of $\nabla f(\beta)$; the unit
-maximizer is therefore $u^\star=\nabla f(\beta)/\lVert\nabla f(\beta)\rVert$
-(assuming $\nabla f(\beta)\neq 0$). For the orthogonality claim, let
-$\gamma(t)$ be any curve lying in the level set $\{x:f(x)=f(\beta)\}$ with
-$\gamma(0)=\beta$. Then $f(\gamma(t))$ is constant, so differentiating and
-using the chain rule, $0=\tfrac{d}{dt}f(\gamma(t))\big|_{0}
-=\nabla f(\beta)^\top\gamma'(0)$. Hence $\nabla f(\beta)$ is orthogonal to every
-tangent direction of the level set. $\qquad\blacksquare$
+**Proof.** Write $g \equiv \nabla f(\beta)$.
+
+*The maximizing direction.* For any unit vector $u$,
+$$
+\begin{aligned}
+D_u f(\beta) &= g^\top u                         && \text{(directional derivative)} \\
+             &\le \lVert g\rVert\,\lVert u\rVert  && \text{(Cauchy–Schwarz)} \\
+             &= \lVert g\rVert                    && (\lVert u\rVert = 1),
+\end{aligned}
+$$
+with equality iff $u$ is a nonnegative multiple of $g$. The unit maximizer is therefore $u^\star = g/\lVert g\rVert$ (assuming $g \neq 0$).
+
+*Orthogonality to the level set.* Let $\gamma(t)$ be any curve in the level set $\{x : f(x) = f(\beta)\}$ with $\gamma(0) = \beta$. Then
+$$
+\begin{aligned}
+0 &= \tfrac{d}{dt}\, f(\gamma(t))\big|_{0}  && \text{($f\circ\gamma$ is constant)} \\
+  &= g^\top \gamma'(0)                       && \text{(chain rule).}
+\end{aligned}
+$$
+Hence $g$ is orthogonal to every tangent direction $\gamma'(0)$ of the level set. $\qquad\blacksquare$
 
 So the negative gradient is the locally steepest *downhill* direction — the
 fact every gradient-based fitting method in this book exploits.
