@@ -68,19 +68,18 @@ The first equation says position evolves in the direction of momentum, scaled by
 
 **Theorem (energy conservation).** Along any solution of Hamilton's equations, the Hamiltonian is constant: $\dfrac{d}{dt}H(q(t), p(t)) = 0$.
 
-**Proof.** By the chain rule,
+**Proof.** Differentiate along a solution trajectory:
 
 $$
-\frac{d}{dt}H(q(t), p(t)) = \sum_{i=1}^d \left(\frac{\partial H}{\partial q_i}\,\dot{q}_i + \frac{\partial H}{\partial p_i}\,\dot{p}_i\right).
+\begin{aligned}
+\frac{d}{dt}H(q(t), p(t))
+  &= \sum_{i=1}^d \left(\frac{\partial H}{\partial q_i}\,\dot{q}_i + \frac{\partial H}{\partial p_i}\,\dot{p}_i\right) && \text{(chain rule)} \\
+  &= \sum_{i=1}^d \left(\frac{\partial H}{\partial q_i}\,\frac{\partial H}{\partial p_i} - \frac{\partial H}{\partial p_i}\,\frac{\partial H}{\partial q_i}\right) && \text{(Hamilton's equations)} \\
+  &= 0 && \text{(terms cancel pairwise).}
+\end{aligned}
 $$
 
-Substituting Hamilton's equations $\dot{q}_i = \partial H/\partial p_i$ and $\dot{p}_i = -\partial H/\partial q_i$,
-
-$$
-\frac{dH}{dt} = \sum_{i=1}^d \left(\frac{\partial H}{\partial q_i}\,\frac{\partial H}{\partial p_i} - \frac{\partial H}{\partial p_i}\,\frac{\partial H}{\partial q_i}\right) = 0,
-$$
-
-since each pair of terms is equal and opposite and cancels identically. $\blacksquare$
+$\blacksquare$
 
 Energy conservation means the trajectory remains on a level set of $e^{-H}$: the joint density is constant along the trajectory. A proposal drawn from the endpoint of an exact Hamiltonian trajectory has the same density under $\pi(q,p)$ as the starting point — a Metropolis acceptance probability of exactly $1$ if the dynamics were integrated without numerical error.
 
@@ -172,9 +171,9 @@ One HMC step from the current position $q$ proceeds in three sub-steps.
 
 **Proof.** The HMC step is the composition of two sub-steps; it suffices to show that each preserves the joint density $\pi(q, p) \propto e^{-H(q,p)}$.
 
-**(i) Momentum resampling.** The momentum $p$ is replaced by a fresh draw from $\mathcal{N}(0, M)$. Because $H(q, p) = U(q) + K(p)$ decomposes additively and $K(p) = \tfrac{1}{2}p^\top M^{-1}p$ is the negative log-density of $\mathcal{N}(0, M)$, the conditional distribution of $p$ given $q$ under $\pi(q, p) \propto e^{-H}$ is exactly $\mathcal{N}(0, M)$. Drawing $p$ from this conditional is a **Gibbs step**: it leaves the joint $\pi(q, p)$ invariant by the fundamental property of Gibbs sampling.
+*(i) Momentum resampling.* The momentum $p$ is replaced by a fresh draw from $\mathcal{N}(0, M)$. Because $H(q, p) = U(q) + K(p)$ decomposes additively and $K(p) = \tfrac{1}{2}p^\top M^{-1}p$ is the negative log-density of $\mathcal{N}(0, M)$, the conditional distribution of $p$ given $q$ under $\pi(q, p) \propto e^{-H}$ is exactly $\mathcal{N}(0, M)$. Drawing $p$ from this conditional is a **Gibbs step**: it leaves the joint $\pi(q, p)$ invariant by the fundamental property of Gibbs sampling.
 
-**(ii) Leapfrog proposal with Metropolis correction.** Let $T$ denote the deterministic map "run $L$ leapfrog steps from $(q, p)$, then negate the final momentum." By Rung 3, leapfrog is **volume-preserving** ($|\det \partial T| = 1$) and $T$ is an **involution** ($T \circ T = \mathrm{id}$): applying momentum negation after $L$ leapfrog steps and then running $L$ more leapfrog steps and negating again returns exactly to $(q, p)$, because leapfrog composed with momentum negation is time-reversible. Proposing $T(q, p) = (q^*, p^*)$ and accepting with the Metropolis–Hastings rule gives acceptance probability
+*(ii) Leapfrog proposal with Metropolis correction.* Let $T$ denote the deterministic map "run $L$ leapfrog steps from $(q, p)$, then negate the final momentum." By Rung 3, leapfrog is **volume-preserving** ($|\det \partial T| = 1$) and $T$ is an **involution** ($T \circ T = \mathrm{id}$): applying momentum negation after $L$ leapfrog steps and then running $L$ more leapfrog steps and negating again returns exactly to $(q, p)$, because leapfrog composed with momentum negation is time-reversible. Proposing $T(q, p) = (q^*, p^*)$ and accepting with the Metropolis–Hastings rule gives acceptance probability
 
 $$
 \alpha = \min\!\left(1,\; \frac{\pi(T(q,p))}{\pi(q,p)}\,\bigl|\det \partial T\bigr|\right) = \min\!\left(1,\; \frac{e^{-H(q^*, p^*)}}{e^{-H(q, p)}}\right) = \min\!\bigl(1,\, e^{-\Delta H}\bigr),

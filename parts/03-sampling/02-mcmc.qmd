@@ -127,10 +127,15 @@ where $x_{-i} = (x_1, \dots, x_{i-1}, x_{i+1}, \dots, x_d)$ denotes all blocks e
 **Proof.** The update changes only block $i$; the remaining blocks $x_{-i}$ are untouched. The density of the updated state $(x_i', x_{-i})$ is obtained by averaging the old block $x_i$ out of the joint and applying the conditional draw:
 
 $$
-\int \pi(x_i, x_{-i})\,p(x_i' \mid x_{-i})\,\mathrm{d}x_i = p(x_i' \mid x_{-i})\int \pi(x_i, x_{-i})\,\mathrm{d}x_i = p(x_i' \mid x_{-i})\,\pi(x_{-i}) = \pi(x_i', x_{-i}).
+\begin{aligned}
+\int \pi(x_i, x_{-i})\,p(x_i' \mid x_{-i})\,\mathrm{d}x_i
+  &= p(x_i' \mid x_{-i})\int \pi(x_i, x_{-i})\,\mathrm{d}x_i && \text{(factor out the draw)} \\
+  &= p(x_i' \mid x_{-i})\,\pi(x_{-i})                        && \text{(marginalize $x_i$)} \\
+  &= \pi(x_i', x_{-i})                                       && \text{(conditional $\times$ marginal).}
+\end{aligned}
 $$
 
-The first equality factors out $p(x_i' \mid x_{-i})$, which does not depend on the variable of integration $x_i$. The second equality uses $\int \pi(x_i, x_{-i})\,\mathrm{d}x_i = \pi(x_{-i})$, the marginal of $\pi$ over block $i$. The third equality reconstitutes the joint by the definition of conditional density: $p(x_i' \mid x_{-i})\,\pi(x_{-i}) = \pi(x_i', x_{-i})$. Thus the updated state has density $\pi$. $\blacksquare$
+The draw $p(x_i' \mid x_{-i})$ does not depend on the integration variable $x_i$, so it factors out; integrating $\pi$ over block $i$ leaves the marginal $\pi(x_{-i})$; and the product of conditional and marginal reconstitutes the joint. Thus the updated state has density $\pi$. $\blacksquare$
 
 **Gibbs is Metropolis–Hastings with acceptance probability 1.** To see why, cast the full-conditional update as a Metropolis–Hastings step. The proposal is $q(x' \mid x) = p(x_i' \mid x_{-i})$ with $x_{-i}' = x_{-i}$, and the Metropolis–Hastings acceptance ratio is
 

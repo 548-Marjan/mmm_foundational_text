@@ -142,13 +142,18 @@ The left side is the equilibrium flux from state $i$ to state $j$; the right sid
 
 **Theorem (detailed balance $\Rightarrow$ stationarity).** If a probability vector $\pi$ satisfies $\pi_i P_{ij} = \pi_j P_{ji}$ for all $i, j$, then $\pi P = \pi$, i.e.\ $\pi$ is stationary for $P$.
 
-**Proof.** Compute the $j$th entry of $\pi P$, apply detailed balance term by term, then use row-stochasticity:
+**Proof.** Compute the $j$th entry of $\pi P$:
 
 $$
-(\pi P)_j = \sum_i \pi_i P_{ij} = \sum_i \pi_j P_{ji} = \pi_j \sum_i P_{ji} = \pi_j,
+\begin{aligned}
+(\pi P)_j &= \sum_i \pi_i P_{ij}   && \text{(definition of $\pi P$)} \\
+          &= \sum_i \pi_j P_{ji}   && \text{(detailed balance)} \\
+          &= \pi_j \sum_i P_{ji}   && \text{(factor out $\pi_j$)} \\
+          &= \pi_j                 && \text{(row $j$ sums to 1).}
+\end{aligned}
 $$
 
-since $\sum_i P_{ji} = 1$ (row $j$ of $P$ sums to 1). As this holds for every $j$, $\pi P = \pi$. $\blacksquare$
+As this holds for every $j$, $\pi P = \pi$. $\blacksquare$
 
 **The MCMC payoff.** Detailed balance is a **local, checkable** condition: one scalar equation per ordered pair of states $(i,j)$, involving $\pi$ only through the ratio $\pi_j / \pi_i$. Rewriting the condition as $P_{ij}/P_{ji} = \pi_j/\pi_i$, any unknown normalizing constant in $\pi$ cancels from both sides. This is the decisive structural fact: engineering a chain reversible with respect to a target $\pi$ requires only the ability to evaluate $\pi$ pointwise up to a constant — exactly the situation in Bayesian inference, where the posterior is known as $p(\theta \mid y) \propto p(y \mid \theta)\,p(\theta)$ with an intractable denominator. By contrast, solving the global linear system $\pi P = \pi$ directly involves $m$ coupled equations in $m$ unknowns; detailed balance replaces this with $m(m-1)/2$ independent two-body conditions, each involving only one ratio $\pi_j/\pi_i$, and each solvable in closed form once the ratio is prescribed. Constructing the transition entries $P_{ij}$ from these ratios by accept–reject logic — so that detailed balance is satisfied by design — is precisely the Metropolis–Hastings algorithm of Chapter 9.
 
