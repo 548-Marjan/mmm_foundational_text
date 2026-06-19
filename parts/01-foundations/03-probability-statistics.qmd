@@ -34,13 +34,16 @@ whose $(i,j)$ entry is the covariance between coordinates $w_i$ and $w_j$. It is
 
 **Proposition.** For a fixed matrix $A$ and fixed vector $b$, $\operatorname{Cov}(Aw + b) = A\,\operatorname{Cov}(w)\,A^\top$.
 
-**Proof.** Let $\mu = \mathbb{E}w$. By linearity of expectation, $\mathbb{E}[Aw + b] = A\mu + b$, so the centered vector is $(Aw + b) - (A\mu + b) = A(w - \mu)$. Therefore
-
+**Proof.** Let $\mu = \mathbb{E}w$. By linearity of expectation $\mathbb{E}[Aw + b] = A\mu + b$, so the centered vector is $(Aw + b) - (A\mu + b) = A(w - \mu)$. Therefore
 $$
-\operatorname{Cov}(Aw + b) = \mathbb{E}\big[A(w - \mu)(w - \mu)^\top A^\top\big] = A\,\mathbb{E}\big[(w - \mu)(w - \mu)^\top\big]\,A^\top = A\,\operatorname{Cov}(w)\,A^\top,
+\begin{aligned}
+\operatorname{Cov}(Aw + b)
+  &= \mathbb{E}\big[A(w - \mu)(w - \mu)^\top A^\top\big]      && \text{(centered outer product)} \\
+  &= A\,\mathbb{E}\big[(w - \mu)(w - \mu)^\top\big]\,A^\top   && \text{($A$ constant)} \\
+  &= A\,\operatorname{Cov}(w)\,A^\top .
+\end{aligned}
 $$
-
-where the middle step pulls the constant matrices $A$ and $A^\top$ outside the expectation. $\blacksquare$
+$\blacksquare$
 
 This is exactly the identity that justified Chapter 1's Cholesky sampling: if $z$ has $\operatorname{Cov}(z) = I$ and $\Sigma = LL^\top$, then $\operatorname{Cov}(Lz) = L\,I\,L^\top = LL^\top = \Sigma$, so $Lz$ has the desired correlation structure.
 
@@ -88,13 +91,18 @@ The cleanest way to build such a vector is to push a standard Gaussian through a
 
 **Proposition.** If $z \sim \mathcal{N}(0, I)$ and $w = \mu + Lz$, then $\mathbb{E}[w] = \mu$ and $\operatorname{Cov}(w) = LL^\top$. In particular, with $\Sigma = LL^\top$ (the Chapter 1 Cholesky factor), $w \sim \mathcal{N}(\mu, \Sigma)$.
 
-**Proof.** By linearity of expectation, $\mathbb{E}[w] = \mathbb{E}[\mu + Lz] = \mu + L\,\mathbb{E}[z] = \mu$, since $\mathbb{E}[z] = 0$. For the covariance, a constant shift does not change spread, so the rung-1 identity $\operatorname{Cov}(Aw + b) = A\,\operatorname{Cov}(w)\,A^\top$ gives
+**Proof.**
 
+*Mean.* By linearity of expectation,
 $$
-\operatorname{Cov}(w) = \operatorname{Cov}(\mu + Lz) = L\,\operatorname{Cov}(z)\,L^\top = L\,I\,L^\top = LL^\top,
+\mathbb{E}[w] = \mathbb{E}[\mu + Lz] = \mu + L\,\mathbb{E}[z] = \mu \qquad (\mathbb{E}[z] = 0).
 $$
 
-using $\operatorname{Cov}(z) = I$. With $\Sigma = LL^\top$ this is exactly $\Sigma$. $\blacksquare$
+*Covariance.* A constant shift does not change spread, so the rung-1 identity $\operatorname{Cov}(Aw + b) = A\,\operatorname{Cov}(w)\,A^\top$ gives
+$$
+\operatorname{Cov}(w) = \operatorname{Cov}(\mu + Lz) = L\,\operatorname{Cov}(z)\,L^\top = L\,I\,L^\top = LL^\top \qquad (\operatorname{Cov}(z) = I).
+$$
+With $\Sigma = LL^\top$ this is exactly $\Sigma$. $\blacksquare$
 
 That the affine image of a Gaussian is again *Gaussian* — not merely some distribution with the matched mean and covariance — is the standard closure property of the normal family, which we take as given and cite [@casella2002]. Applied to our model, $y = X\beta + \varepsilon$ is an affine map of the Gaussian noise $\varepsilon \sim \mathcal{N}(0, \sigma^2 I)$, so $y \sim \mathcal{N}(X\beta, \sigma^2 I)$ — the regression mean and covariance of rung 3, now upgraded to a full distributional statement.
 
