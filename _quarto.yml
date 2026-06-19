@@ -1,11 +1,14 @@
 project:
   type: book
+  resources:
+    - CNAME
 
 # Build with solutions:  quarto render --metadata show-solutions:true
 show-solutions: false
 
 book:
   title: "The Mathematics and Engineering of Marketing Mix Modeling"
+  site-url: https://book.548marjan.com
   subtitle: "A self-contained path from calculus, linear algebra, and calculus-based statistics to advanced MMM practice."
   author: "548 Marjan"
   date: today
