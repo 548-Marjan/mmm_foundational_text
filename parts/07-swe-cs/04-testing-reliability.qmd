@@ -46,7 +46,7 @@ $$
 P_{\text{detect}}(N) = 1 - (1-p)^N \;\ge\; 1 - e^{-pN}.
 $$
 
-A single random case lands in the failing region with probability $p$ and misses it with probability $1 - p$.
+**Proof.** A single random case lands in the failing region with probability $p$ and misses it with probability $1 - p$.
 
 By independence, all $N$ cases miss the failing region simultaneously with probability
 
