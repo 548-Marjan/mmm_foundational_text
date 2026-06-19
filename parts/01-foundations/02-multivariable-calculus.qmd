@@ -119,25 +119,25 @@ diagnose collinearity. Its eigenvalues are the curvatures of the bowl $L$.
 **Theorem (first-order necessary condition).** If $\beta^\star$ is an interior
 local minimizer of a differentiable $f$, then $\nabla f(\beta^\star)=0$.
 
-**Proof.** Fix any direction $u$. The scalar $\phi(t)=f(\beta^\star+tu)$ has a
-local minimum at $t=0$, so $\phi'(0)=\nabla f(\beta^\star)^\top u=0$. As $u$ was
-arbitrary, every component of $\nabla f(\beta^\star)$ vanishes. $\qquad\blacksquare$
+**Proof.** Fix any direction $u$ and restrict $f$ to the line through $\beta^\star$ via $\phi(t)=f(\beta^\star+tu)$. Since $\phi$ has a local minimum at $t=0$,
+$$
+0 = \phi'(0) = \nabla f(\beta^\star)^\top u .
+$$
+As $u$ was arbitrary, every component of $\nabla f(\beta^\star)$ vanishes, i.e. $\nabla f(\beta^\star)=0$. $\qquad\blacksquare$
 
 **Theorem (second-order sufficient condition).** If $\nabla f(\beta^\star)=0$
 and $\nabla^2 f(\beta^\star)$ is positive definite, then $\beta^\star$ is a
 strict local minimizer.
 
-**Proof.** Let $\lambda_{\min}>0$ be the smallest eigenvalue of
-$H=\nabla^2 f(\beta^\star)$ (real and positive by the spectral theorem and PD,
-from Chapter 1). With $\nabla f(\beta^\star)=0$, Taylor gives
+**Proof.** Let $\lambda_{\min}>0$ be the smallest eigenvalue of $H=\nabla^2 f(\beta^\star)$ (real and positive by the spectral theorem and positive-definiteness, Chapter 1). With $\nabla f(\beta^\star)=0$, the second-order Taylor expansion gives
 $$
+\begin{aligned}
 f(\beta^\star+\delta)-f(\beta^\star)
- = \tfrac12\,\delta^\top H\,\delta + o(\lVert\delta\rVert^2)
- \ge \tfrac12\lambda_{\min}\lVert\delta\rVert^2 + o(\lVert\delta\rVert^2).
+ &= \tfrac12\,\delta^\top H\,\delta + o(\lVert\delta\rVert^2)                && \text{(Taylor, $\nabla f(\beta^\star)=0$)} \\
+ &\ge \tfrac12\lambda_{\min}\lVert\delta\rVert^2 + o(\lVert\delta\rVert^2)   && (H \succeq \lambda_{\min} I).
+\end{aligned}
 $$
-For $\lVert\delta\rVert$ small enough the right side is positive, so
-$f(\beta^\star+\delta)>f(\beta^\star)$ for all small $\delta\neq 0$.
-$\qquad\blacksquare$
+For $\lVert\delta\rVert$ small enough the right side is positive, so $f(\beta^\star+\delta)>f(\beta^\star)$ for all small $\delta\neq 0$. $\qquad\blacksquare$
 
 ### Convexity and the global guarantee
 
@@ -148,14 +148,19 @@ $f(tx+(1-t)z)\le t f(x)+(1-t)f(z)$.
 convex domain is convex if and only if $\nabla^2 f(x)\succeq 0$ (positive
 semidefinite) for every $x$.
 
-**Proof.** ($\Leftarrow$) For any $x,z$ let $\delta=z-x$ and
-$\psi(t)=f(x+t\delta)$ on $[0,1]$. Then $\psi''(t)=\delta^\top\nabla^2
-f(x+t\delta)\,\delta\ge 0$, so $\psi$ is a convex scalar function, which is
-exactly the convexity inequality for $f$ along the segment.
-($\Rightarrow$) If some $\nabla^2 f(x_0)$ had a negative eigenvalue with
-eigenvector $v$, then $\psi(t)=f(x_0+tv)$ would satisfy $\psi''(0)=v^\top
-\nabla^2 f(x_0)v<0$, making $\psi$ strictly concave near $0$ and violating
-convexity along that segment. $\qquad\blacksquare$
+**Proof.**
+
+*($\Leftarrow$) PSD Hessian $\Rightarrow$ convex.* For any $x,z$ let $\delta=z-x$ and $\psi(t)=f(x+t\delta)$ on $[0,1]$. Then
+$$
+\psi''(t)=\delta^\top\nabla^2 f(x+t\delta)\,\delta \ge 0 ,
+$$
+so $\psi$ is a convex scalar function — which is exactly the convexity inequality for $f$ along the segment from $x$ to $z$.
+
+*($\Rightarrow$) Convex $\Rightarrow$ PSD Hessian.* If some $\nabla^2 f(x_0)$ had a negative eigenvalue with eigenvector $v$, then $\psi(t)=f(x_0+tv)$ would satisfy
+$$
+\psi''(0)=v^\top \nabla^2 f(x_0)\,v < 0 ,
+$$
+making $\psi$ strictly concave near $0$ and violating convexity along that segment. $\qquad\blacksquare$
 
 Apply this to the loss. Since $\nabla^2 L(\beta)=2X^\top X$ and
 $v^\top X^\top X v=\lVert Xv\rVert^2\ge 0$ for all $v$, the Hessian is PSD
