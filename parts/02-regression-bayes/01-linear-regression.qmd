@@ -18,7 +18,13 @@ The fix introduces a deliberate bias to achieve a large reduction in variance: r
 
 ### The OLS estimator and its sampling distribution
 
-Recall the OLS estimator $\hat\beta = (X^\top X)^{-1} X^\top y$. To understand its behavior as a random quantity, substitute the data-generating model $y = X\beta + \varepsilon$ directly into this formula. This yields the single most useful decomposition in the chapter:
+**Proposition (OLS sampling distribution).** Under the linear model $y = X\beta + \varepsilon$ with $\mathbb{E}[\varepsilon] = 0$, $\operatorname{Cov}(\varepsilon) = \sigma^2 I$, and $\varepsilon$ Gaussian, the OLS estimator $\hat\beta = (X^\top X)^{-1} X^\top y$ is unbiased, has covariance $\sigma^2 (X^\top X)^{-1}$, and is itself Gaussian:
+
+$$
+\hat\beta \sim \mathcal{N}\big(\beta,\ \sigma^2 (X^\top X)^{-1}\big).
+$$
+
+**Proof.** Recall that $\hat\beta = (X^\top X)^{-1} X^\top y$. To understand its behavior as a random quantity, substitute the data-generating model $y = X\beta + \varepsilon$ directly into this formula. This yields the single most useful decomposition in the chapter:
 
 $$
 \hat\beta = (X^\top X)^{-1} X^\top (X\beta + \varepsilon) = \beta + (X^\top X)^{-1} X^\top \varepsilon .
