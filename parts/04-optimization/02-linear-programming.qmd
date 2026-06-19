@@ -305,9 +305,14 @@ $$
 
 - **(Constructive route, the LP-native proof.)** The simplex method hands us the optimal dual point for free. When simplex terminates at an optimal basis $B$, its optimality test $\bar c_N \ge 0$ says precisely that the vector $y = (A_B^{-1})^\top c_B$ is **dual feasible**, $A^\top y \le c$ (Rung 4). This same $y$ attains
 $$
-b^\top y = b^\top (A_B^{-1})^\top c_B = c_B^\top A_B^{-1} b = c_B^\top x_B = c^\top x^\star,
+\begin{aligned}
+b^\top y &= b^\top (A_B^{-1})^\top c_B && \text{(definition of $y$)} \\
+         &= c_B^\top A_B^{-1} b        && \text{(scalar transpose)} \\
+         &= c_B^\top x_B               && (x_B = A_B^{-1} b) \\
+         &= c^\top x^\star,            && \text{(nonbasic part zero)}
+\end{aligned}
 $$
-the primal optimal value, since the nonbasic entries of $x^\star$ are zero. So we have exhibited a dual-feasible point whose objective matches the primal optimum; by weak-duality corollary (i) it is dual-optimal, and the gap is exactly zero. The full development from the Farkas lemma — which also covers the infeasible and unbounded cases — is given by @bertsimas1997. $\blacksquare$
+the primal optimal value. So we have exhibited a dual-feasible point whose objective matches the primal optimum; by weak-duality corollary (i) it is dual-optimal, and the gap is exactly zero. The full development from the Farkas lemma — which also covers the infeasible and unbounded cases — is given by @bertsimas1997. $\blacksquare$
 
 **Theorem (complementary slackness).** A primal-feasible $x$ and dual-feasible $y$ are **both optimal** if and only if
 $$

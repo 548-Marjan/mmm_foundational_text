@@ -219,9 +219,13 @@ f(X) \ge f(\mu) + \nabla f(\mu)^\top (X - \mu),
 $$
 an inequality that holds pointwise, for each outcome of the random vector. Now take expectations of both sides. Expectation is monotone (it preserves $\ge$) and linear, and $f(\mu)$ and $\nabla f(\mu)$ are constants, so
 $$
-\mathbb{E}[f(X)] \ge f(\mu) + \nabla f(\mu)^\top \mathbb{E}[X - \mu] = f(\mu) + \nabla f(\mu)^\top \cdot 0 = f(\mu) = f(\mathbb{E}[X]),
+\begin{aligned}
+\mathbb{E}[f(X)] &\ge f(\mu) + \nabla f(\mu)^\top \mathbb{E}[X - \mu] && \text{(take expectations)} \\
+                 &= f(\mu)                                            && (\mathbb{E}[X - \mu] = 0) \\
+                 &= f(\mathbb{E}[X]),                                  && (\mu = \mathbb{E}[X])
+\end{aligned}
 $$
-where the middle step uses $\mathbb{E}[X - \mu] = \mathbb{E}[X] - \mu = 0$. This is the claim. If $f$ is convex but not differentiable, the identical argument runs with a subgradient at $\mu$ in place of $\nabla f(\mu)$, since the supporting-hyperplane inequality holds there too. The concave case follows by applying the result to $-f$. $\blacksquare$
+which is the claim. If $f$ is convex but not differentiable, the identical argument runs with a subgradient at $\mu$ in place of $\nabla f(\mu)$, since the supporting-hyperplane inequality holds there too. The concave case follows by applying the result to $-f$. $\blacksquare$
 
 **MMM reading: volatility is a tax.** The response curve $r$ is concave, so Jensen runs the other way:
 $$
@@ -243,9 +247,13 @@ Rungs 1–6 built the machinery: convex sets, the chord and tangent characteriza
 
 *Part 1 (local $\Rightarrow$ global), by contradiction.* Suppose $x^\star$ is a local minimizer but not global, so there exists $z \in C$ with $f(z) < f(x^\star)$. For $\lambda \in (0,1]$ consider the point $x_\lambda = \lambda z + (1-\lambda)x^\star$, which lies in $C$ by convexity of the set. By convexity of $f$,
 $$
-f(x_\lambda) \le \lambda f(z) + (1-\lambda)f(x^\star) = f(x^\star) + \lambda\bigl(f(z) - f(x^\star)\bigr) < f(x^\star),
+\begin{aligned}
+f(x_\lambda) &\le \lambda f(z) + (1-\lambda)f(x^\star)            && \text{(convexity of $f$)} \\
+             &= f(x^\star) + \lambda\bigl(f(z) - f(x^\star)\bigr)  && \text{(rearrange)} \\
+             &< f(x^\star),                                        && (f(z) < f(x^\star))
+\end{aligned}
 $$
-since $f(z) - f(x^\star) < 0$. As $\lambda \to 0^+$, $x_\lambda \to x^\star$, so every neighborhood of $x^\star$ contains points $x_\lambda$ with $f(x_\lambda) < f(x^\star)$ — contradicting that $x^\star$ is a local minimizer. Hence no such $z$ exists and $x^\star$ is global.
+As $\lambda \to 0^+$, $x_\lambda \to x^\star$, so every neighborhood of $x^\star$ contains points $x_\lambda$ with $f(x_\lambda) < f(x^\star)$ — contradicting that $x^\star$ is a local minimizer. Hence no such $z$ exists and $x^\star$ is global.
 
 *Part 2 (stationarity is sufficient).* Suppose $\nabla f(x^\star)^\top(y - x^\star) \ge 0$ for all $y \in C$. By the first-order condition of Rung 3, for every $y \in C$,
 $$
