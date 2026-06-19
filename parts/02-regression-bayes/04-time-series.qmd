@@ -52,7 +52,7 @@ Conditions 1 and 3 together say that shifting the time window by any integer num
 
 **Proposition P1.** *Let $\{y_t\}$ be a covariance-stationary series with autocovariance function $\gamma_k$ and autocorrelation function $\rho_k = \gamma_k/\gamma_0$. Then: (i) $\gamma_k = \gamma_{-k}$ for all $k$; (ii) $\rho_0 = 1$; (iii) $|\rho_k| \le 1$ for all $k$; and (iv) for any finite collection of times $t_1,\ldots,t_m$ and weights $a_1,\ldots,a_m \in \mathbb{R}$, the $m \times m$ matrix $\Gamma$ with $(i,j)$-entry $\gamma_{|t_i - t_j|}$ is positive-semidefinite.*
 
-*Proof.* **(i) Even symmetry.** Covariance is symmetric in its two arguments:
+**Proof.** **(i) Even symmetry.** Covariance is symmetric in its two arguments:
 
 $$
 \gamma_k = \mathrm{Cov}(y_t,\, y_{t+k}) = \mathrm{Cov}(y_{t+k},\, y_t).
@@ -103,7 +103,7 @@ $$
 
 *and autocorrelation function $\rho_k = \phi^k$ for all $k \ge 0$.*
 
-*Proof.*
+**Proof.**
 
 **MA($\infty$) form.** Unrolling the AR(1) recursion one step at a time yields
 
@@ -210,7 +210,7 @@ $$
 \sum_{t=0}^{s-1}\cos\!\big(\tfrac{2\pi j t}{s}\big)\sin\!\big(\tfrac{2\pi k t}{s}\big) = 0.
 $$
 
-*Proof.*
+**Proof.**
 
 **Root-of-unity identity.** Define $\omega = e^{2\pi i/s}$, a primitive $s$-th root of unity, and set
 

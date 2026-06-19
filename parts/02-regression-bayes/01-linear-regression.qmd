@@ -56,7 +56,7 @@ This finite-sample sampling distribution — exact, not asymptotic — is the fo
 
 The previous result assumed normality. Remarkably, the optimality of OLS does not.
 
-> **Theorem (Gauss–Markov).** Assume only $\mathbb{E}[\varepsilon] = 0$ and $\operatorname{Cov}(\varepsilon) = \sigma^2 I$ (no normality required). Among all linear unbiased estimators $\tilde\beta = Cy$, the OLS estimator $\hat\beta$ has the smallest covariance: $\operatorname{Cov}(\tilde\beta) - \operatorname{Cov}(\hat\beta) \succeq 0$.
+**Theorem (Gauss–Markov).** Assume only $\mathbb{E}[\varepsilon] = 0$ and $\operatorname{Cov}(\varepsilon) = \sigma^2 I$ (no normality required). Among all linear unbiased estimators $\tilde\beta = Cy$, the OLS estimator $\hat\beta$ has the smallest covariance: $\operatorname{Cov}(\tilde\beta) - \operatorname{Cov}(\hat\beta) \succeq 0$.
 
 **Proof.** Consider any *linear* estimator, i.e. $\tilde\beta = Cy$ for some fixed matrix $C \in \mathbb{R}^{p \times n}$ not depending on $y$. For it to be *unbiased* for every possible $\beta$ we need
 
@@ -188,7 +188,7 @@ where $R_j^2$ is the $R^2$ from regressing predictor $j$ on all the *other* pred
 
 Escaping this requires admitting biased estimators, which calls for the right yardstick. For any estimator $\hat\theta$ of a scalar $\theta$:
 
-> **Proposition.** $\operatorname{MSE}(\hat\theta) = \mathbb{E}\big[(\hat\theta - \theta)^2\big] = \operatorname{Var}(\hat\theta) + \big(\mathbb{E}[\hat\theta] - \theta\big)^2$ — variance plus bias squared.
+**Proposition.** $\operatorname{MSE}(\hat\theta) = \mathbb{E}\big[(\hat\theta - \theta)^2\big] = \operatorname{Var}(\hat\theta) + \big(\mathbb{E}[\hat\theta] - \theta\big)^2$ — variance plus bias squared.
 
 **Proof.** Write $\mu = \mathbb{E}[\hat\theta]$ and add and subtract it inside the square:
 
@@ -224,7 +224,7 @@ This is precisely the conditioning fix for rung 6. Adding $\lambda I$ shifts eve
 
 Why a squared-error penalty, of all choices? Because it is secretly a Gaussian prior.
 
-> **Theorem (ridge = Gaussian-prior MAP).** Under the model $y\sim\mathcal N(X\beta,\sigma^2 I)$ with prior $\beta\sim\mathcal N(0,\tau^2 I)$, the posterior mode (MAP estimate) of $\beta$ is exactly the ridge estimator with $\lambda = \sigma^2/\tau^2$.
+**Theorem (ridge = Gaussian-prior MAP).** Under the model $y\sim\mathcal N(X\beta,\sigma^2 I)$ with prior $\beta\sim\mathcal N(0,\tau^2 I)$, the posterior mode (MAP estimate) of $\beta$ is exactly the ridge estimator with $\lambda = \sigma^2/\tau^2$.
 
 **Proof.** By Bayes' theorem (Chapter 3), $p(\beta\mid y)\propto p(y\mid\beta)\,p(\beta)$. Both factors are Gaussian densities, so taking logs turns each into a negative quadratic:
 
