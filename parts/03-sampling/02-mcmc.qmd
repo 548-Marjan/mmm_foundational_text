@@ -68,7 +68,7 @@ $$
 
 and there is a complementary **rejection mass** at $x$ itself — the diagonal term — equal to the total probability of rejection from state $x$: $P(x,\{x\}) = 1 - \int P(x,y)\,\mathrm{d}y$.
 
-> **Theorem (Metropolis–Hastings is reversible).** The Metropolis–Hastings kernel satisfies detailed balance with respect to $\pi$: $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all $x \ne y$. Hence, by Chapter 8's detailed-balance theorem, $\pi$ is a stationary distribution of the chain.
+**Theorem (Metropolis–Hastings is reversible).** The Metropolis–Hastings kernel satisfies detailed balance with respect to $\pi$: $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all $x \ne y$. Hence, by Chapter 8's detailed-balance theorem, $\pi$ is a stationary distribution of the chain.
 
 **Proof.** Fix $x \ne y$. Substitute $P(x,y) = q(y\mid x)\,\alpha(x,y)$ and apply the elementary **min identity**: for any $a, b > 0$,
 
@@ -122,7 +122,7 @@ $$
 
 where $x_{-i} = (x_1, \dots, x_{i-1}, x_{i+1}, \dots, x_d)$ denotes all blocks except block $i$, and hold all other blocks at their current values ($x_{-i}' = x_{-i}$). After all $d$ updates in sequence the chain has completed one step, producing a new state $(x_1', \dots, x_d')$. This is **systematic-scan** Gibbs, with the blocks updated in a fixed order; an alternative is **random-scan** Gibbs, which at each step selects a block $i$ uniformly at random and updates only that block, a device sometimes preferred for theoretical analysis. Both variants require the full conditionals in closed form — an algebraic tractability that is not always available, a point addressed at the end of this rung.
 
-> **Theorem (Gibbs leaves $\pi$ invariant).** The full-conditional update of block $i$ — draw $x_i' \sim p(\cdot \mid x_{-i})$, keep $x_{-i}' = x_{-i}$ — preserves $\pi$: if the current state is distributed as $\pi$, so is the updated state.
+**Theorem (Gibbs leaves $\pi$ invariant).** The full-conditional update of block $i$ — draw $x_i' \sim p(\cdot \mid x_{-i})$, keep $x_{-i}' = x_{-i}$ — preserves $\pi$: if the current state is distributed as $\pi$, so is the updated state.
 
 **Proof.** The update changes only block $i$; the remaining blocks $x_{-i}$ are untouched. The density of the updated state $(x_i', x_{-i})$ is obtained by averaging the old block $x_i$ out of the joint and applying the conditional draw:
 

@@ -126,7 +126,7 @@ $$
 
 **P1.** *Claim.* If $X$ has full column rank, then $\hat\beta = (X^\top X)^{-1} X^\top y$ minimizes $f(\beta) = \lVert y - X\beta \rVert^2$.
 
-*Proof.* Full column rank implies $X^\top X \succ 0$, hence invertible, so $\hat\beta$ is well defined. Write any $\beta = \hat\beta + d$. The residual at $\hat\beta$ is $r = y - X\hat\beta$, and by construction $X^\top r = X^\top y - X^\top X (X^\top X)^{-1} X^\top y = 0$. Then
+**Proof.** Full column rank implies $X^\top X \succ 0$, hence invertible, so $\hat\beta$ is well defined. Write any $\beta = \hat\beta + d$. The residual at $\hat\beta$ is $r = y - X\hat\beta$, and by construction $X^\top r = X^\top y - X^\top X (X^\top X)^{-1} X^\top y = 0$. Then
 $$
 f(\beta) = \lVert y - X\hat\beta - Xd \rVert^2 = \lVert r - Xd \rVert^2
 = \lVert r \rVert^2 - 2 d^\top X^\top r + \lVert Xd \rVert^2 .
@@ -139,7 +139,7 @@ Equality holds iff $\lVert Xd \rVert^2 = 0$, i.e. $Xd = 0$; full column rank for
 
 **P2.** *Claim.* If $A = A^\top$, $Av_1 = \lambda_1 v_1$, $Av_2 = \lambda_2 v_2$, and $\lambda_1 \neq \lambda_2$, then $v_1^\top v_2 = 0$.
 
-*Proof.* Consider $v_1^\top A v_2$. On one hand $v_1^\top A v_2 = v_1^\top (\lambda_2 v_2) = \lambda_2\, v_1^\top v_2$. On the other hand, using $A = A^\top$,
+**Proof.** Consider $v_1^\top A v_2$. On one hand $v_1^\top A v_2 = v_1^\top (\lambda_2 v_2) = \lambda_2\, v_1^\top v_2$. On the other hand, using $A = A^\top$,
 $$
 v_1^\top A v_2 = (A v_1)^\top v_2 = (\lambda_1 v_1)^\top v_2 = \lambda_1\, v_1^\top v_2 .
 $$
@@ -147,7 +147,7 @@ Subtracting, $(\lambda_1 - \lambda_2)\, v_1^\top v_2 = 0$. Since $\lambda_1 \neq
 
 **P3.** *Claim.* A symmetric positive-definite matrix $A \succ 0$ is invertible.
 
-*Proof.* Because $A$ is real symmetric, the spectral theorem gives an orthonormal eigenbasis with real eigenvalues $\lambda_1, \dots, \lambda_n$. Positive definiteness means $v^\top A v > 0$ for every $v \neq 0$; applying this to a unit eigenvector $v_i$ gives $\lambda_i = v_i^\top A v_i > 0$. Thus every eigenvalue is strictly positive. The determinant equals the product of the eigenvalues,
+**Proof.** Because $A$ is real symmetric, the spectral theorem gives an orthonormal eigenbasis with real eigenvalues $\lambda_1, \dots, \lambda_n$. Positive definiteness means $v^\top A v > 0$ for every $v \neq 0$; applying this to a unit eigenvector $v_i$ gives $\lambda_i = v_i^\top A v_i > 0$. Thus every eigenvalue is strictly positive. The determinant equals the product of the eigenvalues,
 $$
 \det A = \prod_{i=1}^n \lambda_i > 0,
 $$
@@ -232,7 +232,7 @@ Observing the spike lifts the probability of high season from the prior $0.30$ t
 
 **P1.** *Claim.* If $\operatorname{Cov}(w)=\Sigma$, $A$ is a fixed matrix, and $b$ is a fixed vector, then $\operatorname{Cov}(Aw+b)=A\Sigma A^\top$.
 
-*Proof.* By linearity of expectation, $\mathbb{E}[Aw+b]=A\,\mathbb{E}[w]+b$, so the centered vector is
+**Proof.** By linearity of expectation, $\mathbb{E}[Aw+b]=A\,\mathbb{E}[w]+b$, so the centered vector is
 $$
 (Aw+b)-\mathbb{E}[Aw+b] = A\big(w-\mathbb{E}[w]\big).
 $$
@@ -247,7 +247,7 @@ $$
 
 **P2.** *Claim.* If $y\sim\mathcal N(X\beta,\sigma^2 I)$ with $X$ of full column rank, then the MLE $\hat\beta$ satisfies $X^\top X\hat\beta=X^\top y$.
 
-*Proof.* The density of $y$ is $p(y\mid\beta)=(2\pi\sigma^2)^{-n/2}\exp\!\big(-\tfrac{1}{2\sigma^2}\lVert y-X\beta\rVert^2\big)$, so the log-likelihood is
+**Proof.** The density of $y$ is $p(y\mid\beta)=(2\pi\sigma^2)^{-n/2}\exp\!\big(-\tfrac{1}{2\sigma^2}\lVert y-X\beta\rVert^2\big)$, so the log-likelihood is
 $$
 \ell(\beta) = -\frac{n}{2}\log(2\pi\sigma^2) - \frac{1}{2\sigma^2}\lVert y-X\beta\rVert^2.
 $$
@@ -259,7 +259,7 @@ Setting the gradient to zero gives $X^\top(y-X\hat\beta)=0$, i.e. the normal equ
 
 **P3.** *Claim (weak law of large numbers).* If $X_1,\dots,X_n$ are i.i.d. with mean $\mu$ and finite variance $\sigma^2$, and $\bar X_n=\tfrac1n\sum_{i=1}^n X_i$, then for every $\epsilon>0$, $\Pr(|\bar X_n-\mu|\ge\epsilon)\to0$ as $n\to\infty$.
 
-*Proof.* By linearity, $\mathbb{E}[\bar X_n]=\tfrac1n\sum_{i=1}^n\mathbb{E}[X_i]=\mu$. By independence the variances add, so
+**Proof.** By linearity, $\mathbb{E}[\bar X_n]=\tfrac1n\sum_{i=1}^n\mathbb{E}[X_i]=\mu$. By independence the variances add, so
 $$
 \operatorname{Var}(\bar X_n) = \frac{1}{n^2}\sum_{i=1}^n\operatorname{Var}(X_i) = \frac{1}{n^2}\cdot n\sigma^2 = \frac{\sigma^2}{n}.
 $$
@@ -371,7 +371,7 @@ For comparison, the OLS estimate ($\lambda=0$) is $(X^\top X)^{-1}X^\top y=\tfra
 
 **P1.** *Claim.* Under $y=X\beta+\varepsilon$ with fixed $X$ of full column rank and $\mathbb{E}[\varepsilon]=0$, the OLS estimator $\hat\beta=(X^\top X)^{-1}X^\top y$ satisfies $\mathbb{E}[\hat\beta]=\beta$.
 
-*Proof.* Substitute the model $y=X\beta+\varepsilon$ into the estimator:
+**Proof.** Substitute the model $y=X\beta+\varepsilon$ into the estimator:
 $$
 \hat\beta = (X^\top X)^{-1}X^\top(X\beta+\varepsilon) = (X^\top X)^{-1}(X^\top X)\beta + (X^\top X)^{-1}X^\top\varepsilon = \beta + (X^\top X)^{-1}X^\top\varepsilon,
 $$
@@ -383,7 +383,7 @@ The assumption $\mathbb{E}[\varepsilon]=0$ kills the second term, leaving $\math
 
 **P2.** *Claim (Gauss–Markov).* Under $\mathbb{E}[\varepsilon]=0$, $\operatorname{Cov}(\varepsilon)=\sigma^2 I$, with $X$ fixed and full column rank, the OLS estimator $\hat\beta=(X^\top X)^{-1}X^\top y$ has the smallest covariance among all linear unbiased estimators: for any unbiased $\tilde\beta=Cy$, the matrix $\operatorname{Cov}(\tilde\beta)-\operatorname{Cov}(\hat\beta)$ is positive semidefinite.
 
-*Proof.* Write $C=(X^\top X)^{-1}X^\top+D$ for some fixed matrix $D$. Then, using $y=X\beta+\varepsilon$,
+**Proof.** Write $C=(X^\top X)^{-1}X^\top+D$ for some fixed matrix $D$. Then, using $y=X\beta+\varepsilon$,
 $$
 \mathbb{E}[\tilde\beta] = \mathbb{E}[Cy] = C\,\mathbb{E}[y] = C X\beta = \big[(X^\top X)^{-1}X^\top X + DX\big]\beta = \beta + DX\beta.
 $$
@@ -399,7 +399,7 @@ The matrix $\sigma^2 DD^\top$ is positive semidefinite (for any $v$, $v^\top DD^
 
 **P3.** *Claim.* If $y\mid\beta\sim\mathcal N(X\beta,\sigma^2 I)$ with prior $\beta\sim\mathcal N(0,\tau^2 I)$, the MAP estimate of $\beta$ equals the ridge estimator $(X^\top X+\lambda I)^{-1}X^\top y$ with $\lambda=\sigma^2/\tau^2$.
 
-*Proof.* By Bayes' rule the posterior satisfies $p(\beta\mid y)\propto p(y\mid\beta)\,p(\beta)$, so the MAP estimate maximizes the log-posterior $\log p(y\mid\beta)+\log p(\beta)$, dropping constants in $\beta$. The Gaussian likelihood contributes $-\tfrac{1}{2\sigma^2}\lVert y-X\beta\rVert^2$ and the Gaussian prior contributes $-\tfrac{1}{2\tau^2}\lVert\beta\rVert^2$, so maximizing the log-posterior is equivalent to minimizing
+**Proof.** By Bayes' rule the posterior satisfies $p(\beta\mid y)\propto p(y\mid\beta)\,p(\beta)$, so the MAP estimate maximizes the log-posterior $\log p(y\mid\beta)+\log p(\beta)$, dropping constants in $\beta$. The Gaussian likelihood contributes $-\tfrac{1}{2\sigma^2}\lVert y-X\beta\rVert^2$ and the Gaussian prior contributes $-\tfrac{1}{2\tau^2}\lVert\beta\rVert^2$, so maximizing the log-posterior is equivalent to minimizing
 $$
 J(\beta) = \frac{1}{\sigma^2}\lVert y-X\beta\rVert^2 + \frac{1}{\tau^2}\lVert\beta\rVert^2.
 $$
@@ -548,7 +548,7 @@ using $6\cdot6-2\cdot4=28$ and $-2\cdot6+6\cdot4=12$. This is exactly the ridge 
 
 **P1.** *Claim.* The Beta distribution is conjugate to the Binomial likelihood, and the posterior mean is a convex combination of the prior mean and the MLE.
 
-*Proof.* Let $k\mid\theta\sim\text{Binomial}(n,\theta)$ so the likelihood kernel is $p(k\mid\theta)\propto\theta^k(1-\theta)^{n-k}$, and let $\theta\sim\text{Beta}(\alpha,\beta)$ with density proportional to $\theta^{\alpha-1}(1-\theta)^{\beta-1}$. By Bayes' rule,
+**Proof.** Let $k\mid\theta\sim\text{Binomial}(n,\theta)$ so the likelihood kernel is $p(k\mid\theta)\propto\theta^k(1-\theta)^{n-k}$, and let $\theta\sim\text{Beta}(\alpha,\beta)$ with density proportional to $\theta^{\alpha-1}(1-\theta)^{\beta-1}$. By Bayes' rule,
 $$
 p(\theta\mid k) \;\propto\; \theta^k(1-\theta)^{n-k}\cdot\theta^{\alpha-1}(1-\theta)^{\beta-1} = \theta^{(\alpha+k)-1}(1-\theta)^{(\beta+n-k)-1}.
 $$
@@ -562,7 +562,7 @@ which is exactly the posterior mean. $\blacksquare$
 
 **P2.** *Claim.* Under the prior $\mu\sim\mathcal{N}(\mu_0,\tau^2)$ and i.i.d.\ observations $y_i\mid\mu\sim\mathcal{N}(\mu,\sigma^2)$ with $\sigma^2$ known, the posterior is $\mu\mid y\sim\mathcal{N}(\mu_{\text{post}},\sigma_{\text{post}}^2)$ with precisions adding and the posterior mean a precision-weighted average.
 
-*Proof.* By Bayes' rule, $-2\log p(\mu\mid y)$ equals, up to $\mu$-free constants,
+**Proof.** By Bayes' rule, $-2\log p(\mu\mid y)$ equals, up to $\mu$-free constants,
 $$
 \frac{(\mu-\mu_0)^2}{\tau^2}+\frac{1}{\sigma^2}\sum_{i=1}^n(y_i-\mu)^2.
 $$
@@ -582,7 +582,7 @@ The two weights are non-negative and sum to $(\tau^{-2}+n\sigma^{-2})/(\tau^{-2}
 
 **P3.** *Claim.* Under the prior $\beta\sim\mathcal{N}(0,\tau^2 I)$ and the likelihood $y\mid\beta\sim\mathcal{N}(X\beta,\sigma^2 I)$ with $X\in\mathbb{R}^{n\times p}$ fixed and $\sigma^2$ known, the posterior is $\beta\mid y\sim\mathcal{N}(\mu_{\text{post}},\Sigma_{\text{post}})$ with $\Sigma_{\text{post}}=A^{-1}$, $\mu_{\text{post}}=A^{-1}b$, and $\mu_{\text{post}}=(X^\top X+\lambda I)^{-1}X^\top y$ where $\lambda=\sigma^2/\tau^2$.
 
-*Proof.* By Bayes' rule, $-2\log p(\beta\mid y)$ equals, up to $\beta$-free constants,
+**Proof.** By Bayes' rule, $-2\log p(\beta\mid y)$ equals, up to $\beta$-free constants,
 $$
 \frac{1}{\sigma^2}(y-X\beta)^\top(y-X\beta)+\frac{1}{\tau^2}\beta^\top\beta.
 $$
@@ -826,7 +826,7 @@ $$
 
 **P1.** *Claim.* For the two-level Gaussian model $\bar y_g\mid\theta_g\sim\mathcal{N}(\theta_g,\sigma^2/n_g)$ and $\theta_g\sim\mathcal{N}(\mu,\tau^2)$ with $\sigma^2$, $n_g$, $\mu$, $\tau^2$ all known, the posterior is $\theta_g\mid\bar y_g\sim\mathcal{N}(\lambda_g\bar y_g+(1-\lambda_g)\mu,\;1/A)$ with $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$ and $A = n_g/\sigma^2 + 1/\tau^2$.
 
-*Proof.* By Bayes' rule, $-2\log p(\theta_g\mid\bar y_g)$ equals, up to $\theta_g$-free constants,
+**Proof.** By Bayes' rule, $-2\log p(\theta_g\mid\bar y_g)$ equals, up to $\theta_g$-free constants,
 $$
 \frac{(\bar y_g - \theta_g)^2}{\sigma^2/n_g} + \frac{(\theta_g - \mu)^2}{\tau^2} = \frac{n_g}{\sigma^2}(\bar y_g - \theta_g)^2 + \frac{1}{\tau^2}(\theta_g - \mu)^2.
 $$
@@ -846,7 +846,7 @@ and the posterior variance is $1/A$. As $\tau^2\to\infty$, $1/\tau^2\to 0$ so $\
 
 **P2.** *Claim.* For $G\ge 3$ and $z\sim\mathcal{N}(\theta,\sigma^2 I_G)$, the James–Stein estimator $\hat\theta^{\text{JS}}=z+g(z)$ with $g(z) = -(G-2)\sigma^2 z/\lVert z\rVert^2$ satisfies $\mathbb{E}\lVert\hat\theta^{\text{JS}}-\theta\rVert^2 < G\sigma^2$ for every $\theta\in\mathbb{R}^G$.
 
-*Proof via Stein's SURE.* By the SURE formula it suffices to show $2\sigma^2\,\nabla\!\cdot g + \lVert g\rVert^2 < 0$.
+**Proof via Stein's SURE.** By the SURE formula it suffices to show $2\sigma^2\,\nabla\!\cdot g + \lVert g\rVert^2 < 0$.
 
 **(a) $\lVert g(z)\rVert^2$.** With scalar $c = (G-2)\sigma^2/\lVert z\rVert^2$:
 $$
@@ -879,7 +879,7 @@ V_g &= \left(\frac{X_g^\top X_g}{\sigma^2} + \Sigma_\beta^{-1}\right)^{-1}\!, \q
 \end{aligned}
 $$
 
-*Proof.* By Bayes' rule, $-2\log p(\beta_g\mid y_g,\mu_\beta,\Sigma_\beta,\sigma^2)$ equals, up to $\beta_g$-free constants,
+**Proof.** By Bayes' rule, $-2\log p(\beta_g\mid y_g,\mu_\beta,\Sigma_\beta,\sigma^2)$ equals, up to $\beta_g$-free constants,
 $$
 \frac{1}{\sigma^2}(y_g - X_g\beta_g)^\top(y_g - X_g\beta_g) + (\beta_g - \mu_\beta)^\top\Sigma_\beta^{-1}(\beta_g - \mu_\beta).
 $$
@@ -1226,7 +1226,7 @@ $$
 
 **P1.** *Claim.* Let $P$ be a row-stochastic matrix and $\pi$ a probability vector satisfying $\pi_i P_{ij} = \pi_j P_{ji}$ for all states $i, j$. Then $\pi P = \pi$.
 
-*Proof.* Compute the $j$-th component of $\pi P$, apply the detailed-balance condition to each summand, and use row-stochasticity:
+**Proof.** Compute the $j$-th component of $\pi P$, apply the detailed-balance condition to each summand, and use row-stochasticity:
 
 $$
 (\pi P)_j = \sum_i \pi_i P_{ij} = \sum_i \pi_j P_{ji} = \pi_j \sum_i P_{ji} = \pi_j,
@@ -1236,7 +1236,7 @@ where the second equality substitutes $\pi_i P_{ij} = \pi_j P_{ji}$, and the fin
 
 **P2.** *Claim.* For a diagonalizable, irreducible, aperiodic finite Markov chain with stationary distribution $\pi$, $P^n \to \mathbf{1}\pi$ entrywise as $n \to \infty$, and $\lVert \pi_t - \pi \rVert \le C|\lambda_2|^t$ for some constant $C$.
 
-*Proof.* By the **Perron–Frobenius theorem** for irreducible aperiodic stochastic matrices, $\lambda_1 = 1$ is an eigenvalue of $P$ that is **simple** (algebraic multiplicity one) and **strictly dominant**: every other eigenvalue satisfies $|\lambda_k| < 1$ for $k = 2, \dots, m$. Since $P\mathbf{1} = \mathbf{1}$ (each row sums to one), the right eigenvector for $\lambda_1 = 1$ is $r_1 = \mathbf{1}$; since $\pi P = \pi$, the left eigenvector is $\ell_1^\top = \pi$, normalized so $\pi\mathbf{1} = 1$. Assume $P$ is diagonalizable with biorthogonality normalization $\ell_j^\top r_k = \delta_{jk}$; the spectral decomposition (Chapter 1) is
+**Proof.** By the **Perron–Frobenius theorem** for irreducible aperiodic stochastic matrices, $\lambda_1 = 1$ is an eigenvalue of $P$ that is **simple** (algebraic multiplicity one) and **strictly dominant**: every other eigenvalue satisfies $|\lambda_k| < 1$ for $k = 2, \dots, m$. Since $P\mathbf{1} = \mathbf{1}$ (each row sums to one), the right eigenvector for $\lambda_1 = 1$ is $r_1 = \mathbf{1}$; since $\pi P = \pi$, the left eigenvector is $\ell_1^\top = \pi$, normalized so $\pi\mathbf{1} = 1$. Assume $P$ is diagonalizable with biorthogonality normalization $\ell_j^\top r_k = \delta_{jk}$; the spectral decomposition (Chapter 1) is
 
 $$
 P = \sum_{k=1}^m \lambda_k\, r_k \ell_k^\top, \qquad r_1 = \mathbf{1},\quad \ell_1^\top = \pi.
@@ -1262,7 +1262,7 @@ $$
 \frac{1}{n}\sum_{t=1}^{n} f(X_t) \xrightarrow{\ n\to\infty\ } \mathbb{E}_\pi[f] = \sum_{x \in S} f(x)\,\pi_x \quad \text{almost surely.}
 $$
 
-*Proof.* Fix a reference state $s \in S$. Since the chain is finite and irreducible, $s$ is positively recurrent and visited infinitely often. Let $0 \le T_0 < T_1 < T_2 < \cdots$ be the successive visit times to $s$, and define cycle lengths $\tau_k = T_k - T_{k-1}$ and per-cycle reward sums
+**Proof.** Fix a reference state $s \in S$. Since the chain is finite and irreducible, $s$ is positively recurrent and visited infinitely often. Let $0 \le T_0 < T_1 < T_2 < \cdots$ be the successive visit times to $s$, and define cycle lengths $\tau_k = T_k - T_{k-1}$ and per-cycle reward sums
 
 $$
 S_k = \sum_{t=T_{k-1}}^{T_k - 1} f(X_t).
@@ -1504,7 +1504,7 @@ $$
 
 **P1.** *Claim.* For the Metropolis–Hastings kernel $P(x,y) = q(y\mid x)\,\alpha(x,y)$ with $\alpha(x,y) = \min\!\big(1,\frac{\pi(y)q(x\mid y)}{\pi(x)q(y\mid x)}\big)$, we have $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all $x \ne y$.
 
-*Proof.* Set $a = \pi(x)\,q(y\mid x)$ and $b = \pi(y)\,q(x\mid y)$. Applying the identity $a\min(1,b/a) = \min(a,b)$:
+**Proof.** Set $a = \pi(x)\,q(y\mid x)$ and $b = \pi(y)\,q(x\mid y)$. Applying the identity $a\min(1,b/a) = \min(a,b)$:
 
 $$
 \pi(x)P(x,y) = \pi(x)\,q(y\mid x)\,\min\!\left(1,\frac{\pi(y)\,q(x\mid y)}{\pi(x)\,q(y\mid x)}\right) = \min\!\bigl(\pi(x)\,q(y\mid x),\;\pi(y)\,q(x\mid y)\bigr).
@@ -1520,7 +1520,7 @@ which is the identical quantity. Therefore $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all
 
 **P2.** *Claim.* (i) The Gibbs full-conditional update $x_i' \sim p(\cdot\mid x_{-i})$ with $x_{-i}' = x_{-i}$ leaves $\pi$ invariant. (ii) This update is Metropolis–Hastings with acceptance probability identically $1$.
 
-*Proof of (i).* The density of the updated state $(x_i', x_{-i})$ is obtained by averaging the old $x_i$ out of the joint and applying the conditional draw:
+**Proof of (i).** The density of the updated state $(x_i', x_{-i})$ is obtained by averaging the old $x_i$ out of the joint and applying the conditional draw:
 
 $$
 \int \pi(x_i, x_{-i})\,p(x_i'\mid x_{-i})\,\mathrm{d}x_i = p(x_i'\mid x_{-i})\int \pi(x_i, x_{-i})\,\mathrm{d}x_i = p(x_i'\mid x_{-i})\,\pi(x_{-i}) = \pi(x_i', x_{-i}).
@@ -1528,7 +1528,7 @@ $$
 
 The first equality extracts $p(x_i'\mid x_{-i})$ from the integral, since it does not depend on $x_i$. The second applies $\int\pi(x_i,x_{-i})\,\mathrm{d}x_i = \pi(x_{-i})$. The third uses the definition of the conditional density: $p(x_i'\mid x_{-i})\,\pi(x_{-i}) = \pi(x_i',x_{-i})$. Thus the updated state has density $\pi$.
 
-*Proof of (ii).* Cast the update as Metropolis–Hastings with proposal $q(x'\mid x) = p(x_i'\mid x_{-i})$. Substituting into the Hastings ratio and applying $\pi(x_i,x_{-i}) = p(x_i\mid x_{-i})\,\pi(x_{-i})$:
+**Proof of (ii).** Cast the update as Metropolis–Hastings with proposal $q(x'\mid x) = p(x_i'\mid x_{-i})$. Substituting into the Hastings ratio and applying $\pi(x_i,x_{-i}) = p(x_i\mid x_{-i})\,\pi(x_{-i})$:
 
 $$
 \frac{\pi(x_i',x_{-i})\,p(x_i\mid x_{-i})}{\pi(x_i,x_{-i})\,p(x_i'\mid x_{-i})} = \frac{p(x_i'\mid x_{-i})\,\pi(x_{-i})\,p(x_i\mid x_{-i})}{p(x_i\mid x_{-i})\,\pi(x_{-i})\,p(x_i'\mid x_{-i})} = 1.
@@ -1818,7 +1818,7 @@ $$
 
 **P1.** *Claim.* Along any solution of Hamilton's equations $\dot{q}_i = \partial H/\partial p_i$, $\dot{p}_i = -\partial H/\partial q_i$, the Hamiltonian is constant: $\dfrac{d}{dt}H(q(t), p(t)) = 0$.
 
-*Proof.* By the chain rule,
+**Proof.** By the chain rule,
 
 $$
 \frac{d}{dt}H(q(t), p(t)) = \sum_{i=1}^d \left(\frac{\partial H}{\partial q_i}\,\dot{q}_i + \frac{\partial H}{\partial p_i}\,\dot{p}_i\right).
@@ -1834,7 +1834,7 @@ since every summand is a product minus itself. $\blacksquare$
 
 **P2.** *Claim.* (i) Each leapfrog step has Jacobian determinant $1$ (volume-preserving). (ii) Composed with momentum negation, the step is an involution (time-reversible).
 
-*Proof of (i).* Decompose the leapfrog step into three sub-maps and verify that each has unit Jacobian determinant.
+**Proof of (i).** Decompose the leapfrog step into three sub-maps and verify that each has unit Jacobian determinant.
 
 *Sub-map 1* — momentum half-kick: $(q, p) \mapsto (q,\; p - \tfrac{\varepsilon}{2}\nabla U(q))$. Only $p$ changes; the Jacobian of the map with respect to $(q, p)$ is
 
@@ -1853,11 +1853,11 @@ a block lower-triangular matrix with identity diagonal blocks — a shear transf
 
 The leapfrog step is the composition of these three sub-maps, so its Jacobian determinant is $1 \cdot 1 \cdot 1 = 1$. Phase-space volume is preserved, and no Jacobian correction appears in the acceptance ratio.
 
-*Proof of (ii).* The half-kick / full-step / half-kick structure of leapfrog is symmetric under time reversal. Negating the momentum $(q, p) \mapsto (q, -p)$, applying one leapfrog step, and negating the momentum again returns exactly to $(q, p)$: the sequence of operations is its own inverse. For $L$ chained leapfrog steps the same argument extends by induction, since each step is individually reversible and the composition of $L$ such steps is the entire leapfrog trajectory. Thus the map $T$ consisting of $L$ leapfrog steps followed by momentum negation satisfies $T \circ T = \mathrm{id}$: it is an involution. $\blacksquare$
+**Proof of (ii).** The half-kick / full-step / half-kick structure of leapfrog is symmetric under time reversal. Negating the momentum $(q, p) \mapsto (q, -p)$, applying one leapfrog step, and negating the momentum again returns exactly to $(q, p)$: the sequence of operations is its own inverse. For $L$ chained leapfrog steps the same argument extends by induction, since each step is individually reversible and the composition of $L$ such steps is the entire leapfrog trajectory. Thus the map $T$ consisting of $L$ leapfrog steps followed by momentum negation satisfies $T \circ T = \mathrm{id}$: it is an involution. $\blacksquare$
 
 **P3.** *Claim.* The HMC transition — momentum resampling followed by a leapfrog proposal with Metropolis correction — leaves the posterior $\pi(q)$ invariant.
 
-*Proof.* Define $T(q,p)$ as the map "run $L$ leapfrog steps from $(q,p)$, then negate the final momentum." By P2, $|\det \partial T| = 1$ (each leapfrog step has unit Jacobian, and negating $p$ contributes $(-1)^d$ whose absolute value is $1$) and $T$ is an **involution**: $T \circ T = \mathrm{id}$.
+**Proof.** Define $T(q,p)$ as the map "run $L$ leapfrog steps from $(q,p)$, then negate the final momentum." By P2, $|\det \partial T| = 1$ (each leapfrog step has unit Jacobian, and negating $p$ contributes $(-1)^d$ whose absolute value is $1$) and $T$ is an **involution**: $T \circ T = \mathrm{id}$.
 
 Propose $T(q,p) = (q^*, p^*)$ and apply the Metropolis–Hastings acceptance rule. Since $T$ is deterministic and is its own inverse, the forward proposal from $(q,p)$ to $(q^*,p^*)$ and the reverse proposal from $(q^*,p^*)$ back to $(q,p)$ are point masses at the same involution image; the proposal-density ratio is $1$ and cancels. The acceptance probability is therefore
 

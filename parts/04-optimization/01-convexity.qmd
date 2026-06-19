@@ -207,11 +207,11 @@ whose minimizer is the MAP estimate. Read it through the calculus. The squared E
 
 The chord inequality of Rung 2 compares a convex function evaluated at a two-point average, $\lambda x + (1-\lambda)y$, to the corresponding average of its values. But an average over two points with weights $\lambda$ and $1-\lambda$ is just the simplest probability distribution — a coin flip. Nothing in the geometry of convexity is special to two points, and the natural generalization replaces the finite average by an expectation over *any* probability distribution. That generalization is Jensen's inequality, and it is the bridge from convexity to probability that the rest of the book will cross repeatedly.
 
-> **Theorem (Jensen's inequality).** Let $f$ be convex and let $X$ be a random vector with finite mean $\mu = \mathbb{E}[X]$, taking values in the domain of $f$. Then
-> $$
-> f(\mathbb{E}[X]) \le \mathbb{E}[f(X)].
-> $$
-> For concave $f$ the inequality reverses.
+**Theorem (Jensen's inequality).** Let $f$ be convex and let $X$ be a random vector with finite mean $\mu = \mathbb{E}[X]$, taking values in the domain of $f$. Then
+$$
+f(\mathbb{E}[X]) \le \mathbb{E}[f(X)].
+$$
+For concave $f$ the inequality reverses.
 
 **Proof.** Assume $f$ is differentiable and apply the first-order condition of Rung 3 with base point $\mu$. For *every* realization $x$ that $X$ may take, the graph lies above the tangent plane at $\mu$:
 $$
@@ -233,11 +233,11 @@ Read the two sides as two flighting plans with the *same* average budget. The le
 
 Rungs 1–6 built the machinery: convex sets, the chord and tangent characterizations of convex functions, the Hessian test, the closure rules, and Jensen. This rung is what all of it was for. A single structural property of convex functions is the reason convex optimization is tractable at all — and it is the reason detecting convexity, through the first- and second-order conditions of Rungs 3–4, is the opening move on any optimization problem. The foreshadowing planted at the end of Rung 3 is paid off here in full.
 
-> **Theorem (local = global).** Let $f$ be convex on a convex set $C$. Then:
->
-> 1. every local minimizer of $f$ over $C$ is a global minimizer;
-> 2. if $f$ is differentiable, the stationarity condition $\nabla f(x^\star)^\top (y - x^\star) \ge 0$ for all $y \in C$ — which for an interior or unconstrained minimum reduces to $\nabla f(x^\star) = 0$ — is **sufficient** for $x^\star$ to be a global minimizer;
-> 3. if $f$ is strictly convex, the global minimizer is unique.
+**Theorem (local = global).** Let $f$ be convex on a convex set $C$. Then:
+
+1. every local minimizer of $f$ over $C$ is a global minimizer;
+2. if $f$ is differentiable, the stationarity condition $\nabla f(x^\star)^\top (y - x^\star) \ge 0$ for all $y \in C$ — which for an interior or unconstrained minimum reduces to $\nabla f(x^\star) = 0$ — is **sufficient** for $x^\star$ to be a global minimizer;
+3. if $f$ is strictly convex, the global minimizer is unique.
 
 **Proof.**
 
@@ -294,7 +294,7 @@ The **sign convention** is not arbitrary. An inequality multiplier $\lambda_i$ i
 
 Complementary slackness deserves a word, because it is the condition that encodes which constraints matter. For each $i$ the product $\lambda_i^\star g_i(x^\star)$ is zero, so at least one factor must vanish. Either the constraint is **active** — it holds with equality, $g_i(x^\star) = 0$, and its multiplier $\lambda_i^\star$ is free to be positive, exerting force on the optimum — or it is **inactive**, $g_i(x^\star) < 0$, with strict slack, and then complementary slackness forces $\lambda_i^\star = 0$. An inactive constraint exerts no force: it is not touching the optimum, so it contributes nothing to the stationarity balance. The multipliers thus switch off automatically for the constraints that do not bind.
 
-> **Theorem (KKT sufficiency for convex programs).** For the convex program above — $f$ and all $g_i$ convex, all $h_j$ affine — if $(x^\star, \lambda^\star, \nu^\star)$ satisfies the four KKT conditions, then $x^\star$ is a **global** minimizer of $f$ over the feasible set.
+**Theorem (KKT sufficiency for convex programs).** For the convex program above — $f$ and all $g_i$ convex, all $h_j$ affine — if $(x^\star, \lambda^\star, \nu^\star)$ satisfies the four KKT conditions, then $x^\star$ is a **global** minimizer of $f$ over the feasible set.
 
 **Proof.** Fix the multipliers at their KKT values and define the **partial Lagrangian**
 
@@ -339,7 +339,7 @@ $$
 
 where each channel's response $r_i$ is concave, increasing, and differentiable. To put this in the standard convex form of Rung 8, minimize the negative total response. The objective $-\sum_i r_i(b_i)$ is convex because each $-r_i$ is convex (a function is concave exactly when its negative is convex, Rung 2) and a sum of convex functions is convex (Rung 5). The feasible set $\{b \ge 0,\ \mathbf{1}^\top b = B\}$ is convex — the intersection of the nonnegative orthant with a hyperplane (Rung 1). So this is a genuine convex program, and the KKT conditions of Rung 8 are not merely necessary but sufficient: any point that satisfies them is the global optimum.
 
-> **Theorem (equal marginal returns / water-filling).** At the optimal allocation $b^\star$ there is a scalar $\lambda$ — the shadow price of the budget — such that every funded channel ($b_i^\star > 0$) satisfies $r_i'(b_i^\star) = \lambda$, and every unfunded channel ($b_i^\star = 0$) satisfies $r_i'(0) \le \lambda$.
+**Theorem (equal marginal returns / water-filling).** At the optimal allocation $b^\star$ there is a scalar $\lambda$ — the shadow price of the budget — such that every funded channel ($b_i^\star > 0$) satisfies $r_i'(b_i^\star) = \lambda$, and every unfunded channel ($b_i^\star = 0$) satisfies $r_i'(0) \le \lambda$.
 
 **Proof.** Apply the KKT machinery of Rung 8 to the convex program $\min\ -\sum_i r_i(b_i)$ subject to the equality constraint $\mathbf{1}^\top b - B = 0$, with multiplier $\nu$, and the inequality constraints $-b_i \le 0$, with multipliers $\mu_i \ge 0$. The Lagrangian is
 

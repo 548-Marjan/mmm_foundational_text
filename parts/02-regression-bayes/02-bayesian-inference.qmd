@@ -54,7 +54,7 @@ $$
 
 Place a **Beta prior** on $\theta$: $\theta \sim \text{Beta}(\alpha, \beta)$, with density $p(\theta) \propto \theta^{\alpha-1}(1-\theta)^{\beta-1}$.
 
-> **Theorem (Beta–Binomial conjugacy).** Under $p(k \mid \theta) \propto \theta^k(1-\theta)^{n-k}$ with prior $\theta \sim \text{Beta}(\alpha, \beta)$, the posterior is $\theta \mid k \sim \text{Beta}(\alpha + k,\; \beta + n - k)$.
+**Theorem (Beta–Binomial conjugacy).** Under $p(k \mid \theta) \propto \theta^k(1-\theta)^{n-k}$ with prior $\theta \sim \text{Beta}(\alpha, \beta)$, the posterior is $\theta \mid k \sim \text{Beta}(\alpha + k,\; \beta + n - k)$.
 
 **Proof.** Multiply prior and likelihood kernel-to-kernel:
 
@@ -86,7 +86,7 @@ The Gaussian family closes under conjugate updating because its log-density is q
 
 Let the prior be $\mu \sim \mathcal{N}(\mu_0, \tau^2)$ and observe $n$ i.i.d. draws $y_1, \ldots, y_n \mid \mu \sim \mathcal{N}(\mu, \sigma^2)$ with **known** noise variance $\sigma^2$. Write $\bar{y} = n^{-1}\sum_{i=1}^n y_i$ for the sample mean.
 
-> **Theorem (Gaussian conjugacy).** Under the above model, the posterior is $\mu \mid y \sim \mathcal{N}(\mu_{\text{post}}, \sigma_{\text{post}}^2)$ with posterior precision $1/\sigma_{\text{post}}^2 = 1/\tau^2 + n/\sigma^2$ and posterior mean $\mu_{\text{post}} = \sigma_{\text{post}}^2(\mu_0/\tau^2 + n\bar{y}/\sigma^2)$.
+**Theorem (Gaussian conjugacy).** Under the above model, the posterior is $\mu \mid y \sim \mathcal{N}(\mu_{\text{post}}, \sigma_{\text{post}}^2)$ with posterior precision $1/\sigma_{\text{post}}^2 = 1/\tau^2 + n/\sigma^2$ and posterior mean $\mu_{\text{post}} = \sigma_{\text{post}}^2(\mu_0/\tau^2 + n\bar{y}/\sigma^2)$.
 
 **Proof.** The log-posterior, up to additive constants free of $\mu$, combines log-prior and log-likelihood:
 
@@ -134,7 +134,7 @@ $$
 
 This is quadratic in $\beta$ — the multivariate signature of a Gaussian posterior — so the proof is: expand, collect, complete the square, read off precision and mean.
 
-> **Theorem (Bayesian linear regression).** [@hoff2009] Under $y \mid \beta \sim \mathcal{N}(X\beta, \sigma^2 I)$ with prior $\beta \sim \mathcal{N}(0, \tau^2 I)$, the posterior is $\beta \mid y \sim \mathcal{N}(\mu_{\text{post}}, \Sigma_{\text{post}})$ with $\Sigma_{\text{post}} = (X^\top X/\sigma^2 + I/\tau^2)^{-1}$, $\mu_{\text{post}} = \Sigma_{\text{post}}\, X^\top y/\sigma^2$, and the keystone identity $\mu_{\text{post}} = (X^\top X + \lambda I)^{-1}X^\top y$ with $\lambda = \sigma^2/\tau^2$ — the Chapter 4 ridge estimator.
+**Theorem (Bayesian linear regression).** [@hoff2009] Under $y \mid \beta \sim \mathcal{N}(X\beta, \sigma^2 I)$ with prior $\beta \sim \mathcal{N}(0, \tau^2 I)$, the posterior is $\beta \mid y \sim \mathcal{N}(\mu_{\text{post}}, \Sigma_{\text{post}})$ with $\Sigma_{\text{post}} = (X^\top X/\sigma^2 + I/\tau^2)^{-1}$, $\mu_{\text{post}} = \Sigma_{\text{post}}\, X^\top y/\sigma^2$, and the keystone identity $\mu_{\text{post}} = (X^\top X + \lambda I)^{-1}X^\top y$ with $\lambda = \sigma^2/\tau^2$ — the Chapter 4 ridge estimator.
 
 **Proof.** Expand the fit term $(y - X\beta)^\top(y - X\beta) = y^\top y - 2\beta^\top X^\top y + \beta^\top X^\top X\beta$ and collect only the $\beta$-dependent terms:
 
@@ -200,7 +200,7 @@ The posterior also supports several **point summaries**. The **posterior mean** 
 
 Rungs 1–5 characterize uncertainty in the model parameters $\beta$. Marketing decisions, however, are about *outcomes* — specifically, the sales $\tilde{y}$ that a planned media spend $\tilde{x}$ would generate next quarter. The posterior predictive distribution $p(\tilde{y} \mid y)$ carries the posterior uncertainty in $\beta$ forward into a forecast by marginalizing $\beta$ out of the joint distribution $p(\tilde{y}, \beta \mid y)$. For Bayesian linear regression this marginalization yields a closed form.
 
-> **Theorem (posterior predictive).** Under the model of Rung 4, let $\tilde{y} = \tilde{x}^\top\beta + \tilde{\varepsilon}$ for a fixed covariate vector $\tilde{x} \in \mathbb{R}^p$, with $\tilde{\varepsilon} \sim \mathcal{N}(0, \sigma^2)$ independent of $\beta \mid y$. Then $\tilde{y} \mid y \sim \mathcal{N}\!\left(\tilde{x}^\top\mu_{\text{post}},\;\tilde{x}^\top\Sigma_{\text{post}}\,\tilde{x} + \sigma^2\right)$.
+**Theorem (posterior predictive).** Under the model of Rung 4, let $\tilde{y} = \tilde{x}^\top\beta + \tilde{\varepsilon}$ for a fixed covariate vector $\tilde{x} \in \mathbb{R}^p$, with $\tilde{\varepsilon} \sim \mathcal{N}(0, \sigma^2)$ independent of $\beta \mid y$. Then $\tilde{y} \mid y \sim \mathcal{N}\!\left(\tilde{x}^\top\mu_{\text{post}},\;\tilde{x}^\top\Sigma_{\text{post}}\,\tilde{x} + \sigma^2\right)$.
 
 **Proof.** Conditional on $y$, the posterior is $\beta \mid y \sim \mathcal{N}(\mu_{\text{post}}, \Sigma_{\text{post}})$. The linear form $\tilde{x}^\top\beta$ is a scalar affine image of a Gaussian vector, so by the affine-image property:
 

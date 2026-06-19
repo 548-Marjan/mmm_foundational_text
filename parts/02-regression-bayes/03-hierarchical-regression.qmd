@@ -54,11 +54,11 @@ Complete pooling minimizes variance at the cost of bias squared; no pooling elim
 
 The Gaussian two-level model of Rung 1 is exactly the Gaussian conjugate setup of Chapter 5 Rung 3, applied separately to each group. The likelihood $\bar y_g \mid \theta_g \sim \mathcal{N}(\theta_g, \sigma^2/n_g)$ contributes **data precision** $n_g/\sigma^2$; the prior $\theta_g \sim \mathcal{N}(\mu, \tau^2)$ contributes **prior precision** $1/\tau^2$. Chapter 5's "precisions add" applies directly.
 
-> **Theorem (partial-pooling shrinkage).** For the Gaussian hierarchical model with known $\sigma^2$, $\mu$, and $\tau^2$, where $\bar y_g \mid \theta_g \sim \mathcal{N}(\theta_g, \sigma^2/n_g)$ and $\theta_g \sim \mathcal{N}(\mu, \tau^2)$, the posterior mean of $\theta_g$ is
->
-> $$
-> \hat\theta_g \;=\; \lambda_g\,\bar y_g + (1 - \lambda_g)\,\mu, \qquad \lambda_g \;=\; \frac{n_g/\sigma^2}{n_g/\sigma^2 + 1/\tau^2}.
-> $$
+**Theorem (partial-pooling shrinkage).** For the Gaussian hierarchical model with known $\sigma^2$, $\mu$, and $\tau^2$, where $\bar y_g \mid \theta_g \sim \mathcal{N}(\theta_g, \sigma^2/n_g)$ and $\theta_g \sim \mathcal{N}(\mu, \tau^2)$, the posterior mean of $\theta_g$ is
+
+$$
+\hat\theta_g \;=\; \lambda_g\,\bar y_g + (1 - \lambda_g)\,\mu, \qquad \lambda_g \;=\; \frac{n_g/\sigma^2}{n_g/\sigma^2 + 1/\tau^2}.
+$$
 
 **Proof.** Apply Chapter 5 Rung 3 with prior mean $\mu_0 = \mu$, prior variance $\tau^2$, and data precision $n_g/\sigma^2$ (the contribution of $n_g$ observations each with variance $\sigma^2$, so the sufficient statistic $\bar y_g$ carries precision $n_g/\sigma^2$). By "precisions add," the posterior mean of $\theta_g$ is the precision-weighted average
 
@@ -94,7 +94,7 @@ $$
 
 In practice one shrinks toward the grand mean $\bar z$ rather than zero; the algebra is identical after centering.
 
-> **Theorem (James–Stein dominance).** [@casella2002; @hoff2009] For $G \ge 3$, the James–Stein estimator $\hat\theta^{\text{JS}}$ satisfies $\mathbb{E}\lVert\hat\theta^{\text{JS}} - \theta\rVert^2 < G\sigma^2 = \mathbb{E}\lVert z - \theta\rVert^2$ for every $\theta \in \mathbb{R}^G$.
+**Theorem (James–Stein dominance).** [@casella2002; @hoff2009] For $G \ge 3$, the James–Stein estimator $\hat\theta^{\text{JS}}$ satisfies $\mathbb{E}\lVert\hat\theta^{\text{JS}} - \theta\rVert^2 < G\sigma^2 = \mathbb{E}\lVert z - \theta\rVert^2$ for every $\theta \in \mathbb{R}^G$.
 
 **Proof via Stein's unbiased risk estimate (SURE).** Write $\hat\theta^{\text{JS}} = z + g(z)$ with
 
