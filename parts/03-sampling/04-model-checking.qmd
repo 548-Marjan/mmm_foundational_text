@@ -75,7 +75,7 @@ $$
 
 **Theorem ($\hat{R}$ detects non-convergence).** If the $M$ chains are stationary and have converged to a common target with finite variance, then $\hat{R} \to 1$ as $N \to \infty$. If the chains have not mixed — if they occupy systematically different regions of parameter space — then $\hat{R} > 1$.
 
-**Proof.** Suppose first that all chains have converged to the common target, whose marginal variance for $\theta$ is $\operatorname{var}(\theta)$.
+**Proof.** *Converged case.* Suppose first that all chains have converged to the common target, whose marginal variance for $\theta$ is $\operatorname{var}(\theta)$.
 
 The within-chain term $W$ averages the $M$ within-chain sample variances. Each $s_m^2$ is a consistent estimator of the marginal variance of a stationary chain, so as $N \to \infty$ each $s_m^2 \to \operatorname{var}(\theta)$ and therefore
 
@@ -107,7 +107,7 @@ $$
   \to \sqrt{\frac{\operatorname{var}(\theta)}{\operatorname{var}(\theta)}} = 1.
 $$
 
-Now suppose the chains have not mixed: they sit in systematically different regions, so the chain means $\bar\theta_m$ differ by amounts that do not shrink as $N$ grows. Then $B$, which scales those squared mean differences by $N$, does not vanish on the relative scale, and $\widehat{\operatorname{var}}^+(\theta)$ — built to be unbiased only under the overdispersed-initialization assumption that the chains jointly cover the target — **overestimates** $\operatorname{var}(\theta)$. At the same time each chain, confined to its own region, explores only part of the target, so $W$ **underestimates** $\operatorname{var}(\theta)$. The ratio therefore exceeds one,
+*Unmixed case.* Now suppose the chains have not mixed: they sit in systematically different regions, so the chain means $\bar\theta_m$ differ by amounts that do not shrink as $N$ grows. Then $B$, which scales those squared mean differences by $N$, does not vanish on the relative scale, and $\widehat{\operatorname{var}}^+(\theta)$ — built to be unbiased only under the overdispersed-initialization assumption that the chains jointly cover the target — **overestimates** $\operatorname{var}(\theta)$. At the same time each chain, confined to its own region, explores only part of the target, so $W$ **underestimates** $\operatorname{var}(\theta)$. The ratio therefore exceeds one,
 
 $$
 \hat{R} = \sqrt{\frac{\widehat{\operatorname{var}}^+(\theta)}{W}} > 1,
@@ -227,10 +227,15 @@ A predictive p-value is only interpretable if we know what distribution it follo
 
 **Proposition (PIT uniformity).** Let $T$ be a continuous test statistic with cumulative distribution function $F$ under the (correct) model. Then the random variable $U = F(T)$ is uniformly distributed on $[0, 1]$. Consequently, if the model is correct, the tail probability $p_B$ is $\text{Uniform}(0,1)$.
 
-**Proof.** For any $u \in [0,1]$, using that $F$ is continuous and nondecreasing with (generalized) inverse $F^{-1}$,
+**Proof.** Fix $u \in [0,1]$. Using that $F$ is continuous and nondecreasing with (generalized) inverse $F^{-1}$,
 
 $$
-\Pr(U \le u) = \Pr(F(T) \le u) = \Pr(T \le F^{-1}(u)) = F(F^{-1}(u)) = u,
+\begin{aligned}
+\Pr(U \le u) &= \Pr(F(T) \le u)      && \text{(definition $U = F(T)$)} \\
+             &= \Pr(T \le F^{-1}(u)) && \text{($F$ nondecreasing)} \\
+             &= F(F^{-1}(u))         && \text{(definition of $F$)} \\
+             &= u,                   && \text{($F \circ F^{-1} = \mathrm{id}$)}
+\end{aligned}
 $$
 
 which is exactly the cumulative distribution function of $\text{Uniform}(0,1)$. Hence $U \sim \text{Uniform}(0,1)$. $\blacksquare$
@@ -264,7 +269,7 @@ The claim that turns this into a test is that a single number — the rank — c
 
 **Proof.** The argument has three steps: the data-averaged posterior is the prior; therefore the truth and each posterior draw share that prior as their marginal law; therefore the $L+1$ values are exchangeable, and the rank of an exchangeable value is uniform.
 
-**Step 1 — the data-averaged posterior equals the prior.** Let $p(y) = \int p(y \mid \theta')\,p(\theta')\,d\theta'$ be the prior-predictive (marginal likelihood). Averaging the posterior over datasets drawn from this marginal returns the prior:
+*Step 1 — the data-averaged posterior equals the prior.* Let $p(y) = \int p(y \mid \theta')\,p(\theta')\,d\theta'$ be the prior-predictive (marginal likelihood). Averaging the posterior over datasets drawn from this marginal returns the prior:
 
 $$
 \begin{aligned}
@@ -276,7 +281,7 @@ $$
 
 The first equality is Bayes' rule read backwards — $p(\theta \mid y)\,p(y) = p(\theta, y)$ is precisely the joint density — and the second is the definition of a marginal: integrating the joint over $y$ removes $y$ and leaves the prior marginal $p(\theta)$. The posterior, weighted by how often each dataset actually occurs under the model, reconstructs the prior exactly.
 
-**Step 2 — the truth and the posterior draws are identically distributed.** In the SBC generative process the truth is drawn $\theta_0 \sim p(\theta)$ and the data $y \sim p(y \mid \theta_0)$, so the pair $(\theta_0, y)$ has joint density $p(\theta_0, y) = p(y \mid \theta_0)\,p(\theta_0)$, and the marginal law of $\theta_0$ is the prior $p(\theta)$ by construction. A posterior draw $\theta_\ell$ is generated by first producing $y$ through that same process and then sampling $\theta_\ell \sim p(\theta \mid y)$. Its marginal density, averaged over the whole process, is therefore
+*Step 2 — the truth and the posterior draws are identically distributed.* In the SBC generative process the truth is drawn $\theta_0 \sim p(\theta)$ and the data $y \sim p(y \mid \theta_0)$, so the pair $(\theta_0, y)$ has joint density $p(\theta_0, y) = p(y \mid \theta_0)\,p(\theta_0)$, and the marginal law of $\theta_0$ is the prior $p(\theta)$ by construction. A posterior draw $\theta_\ell$ is generated by first producing $y$ through that same process and then sampling $\theta_\ell \sim p(\theta \mid y)$. Its marginal density, averaged over the whole process, is therefore
 
 $$
 \int p(\theta_\ell \mid y)\,p(y)\,dy = p(\theta_\ell),
@@ -284,7 +289,7 @@ $$
 
 which is Step 1. Hence $\theta_0$ and every $\theta_\ell$ have the *same* marginal distribution — the prior. Exact inference is exactly the condition under which the recovered draws inherit the prior they came from.
 
-**Step 3 — exchangeability and the uniform rank.** Identical marginals are not yet enough; what makes the rank uniform is that the whole collection is **exchangeable**. Condition on the realized dataset $y$. The truth $\theta_0$ that generated $y$ is, in the joint distribution, itself a draw from $p(\theta \mid y)$: by Bayes the conditional law of $\theta_0$ given $y$ is the posterior, the same law from which $\theta_1, \dots, \theta_L$ are drawn. So conditional on $y$ the $L+1$ values $\theta_0, \theta_1, \dots, \theta_L$ are i.i.d. from $p(\theta \mid y)$, hence exchangeable; and exchangeability that holds for every $y$ holds unconditionally after averaging over $y$. For $L+1$ exchangeable continuous random variables all $(L+1)!$ strict orderings are equally likely — ties have probability zero — so the distinguished value $\theta_0$ is equally likely to occupy each of the $L+1$ positions in the sorted order. The number of the other values below it, which is $r$, is therefore equally likely to be any of $0, 1, \dots, L$, each with probability $1/(L+1)$. Thus $r \sim \text{Uniform}\{0, 1, \dots, L\}$. $\blacksquare$
+*Step 3 — exchangeability and the uniform rank.* Identical marginals are not yet enough; what makes the rank uniform is that the whole collection is **exchangeable**. Condition on the realized dataset $y$. The truth $\theta_0$ that generated $y$ is, in the joint distribution, itself a draw from $p(\theta \mid y)$: by Bayes the conditional law of $\theta_0$ given $y$ is the posterior, the same law from which $\theta_1, \dots, \theta_L$ are drawn. So conditional on $y$ the $L+1$ values $\theta_0, \theta_1, \dots, \theta_L$ are i.i.d. from $p(\theta \mid y)$, hence exchangeable; and exchangeability that holds for every $y$ holds unconditionally after averaging over $y$. For $L+1$ exchangeable continuous random variables all $(L+1)!$ strict orderings are equally likely — ties have probability zero — so the distinguished value $\theta_0$ is equally likely to occupy each of the $L+1$ positions in the sorted order. The number of the other values below it, which is $r$, is therefore equally likely to be any of $0, 1, \dots, L$, each with probability $1/(L+1)$. Thus $r \sim \text{Uniform}\{0, 1, \dots, L\}$. $\blacksquare$
 
 The theorem is the whole point: uniformity is *necessary* under exact inference, so any reproducible departure from a uniform rank distribution convicts the inference of inexactness — a bug, a biased sampler, or a posterior the algorithm cannot reach. And the target is the same flat histogram for every model, so the test needs no model-specific reference distribution to compare against.
 
