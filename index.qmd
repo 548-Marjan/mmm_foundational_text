@@ -60,6 +60,67 @@ offers instead is the through-line those sources leave out: one model, derived f
 first principles and carried all the way to a system you can operate. Each borrowed
 field is developed as far as that model requires, and no further.
 
+## How to use this book
+
+Each chapter follows the same structure: intuition, then theory and proofs, then
+worked examples, then a runnable code tie-in, then exercises, then a summary. The
+exercises come in four tiers:
+
+- **C — Conceptual / reading comprehension.**
+- **B — By hand** (compute or derive manually).
+- **P — Prove it** (short proofs).
+- **A — Applied / code.**
+
+Worked solutions are kept as a separate answer key rather than printed inline, so
+each exercise is reached only after a genuine attempt. Instructors and readers who
+would like the full answer key can request it by reaching out to 548 Marjan.
+
+Each chapter closes with a summary: the concepts to be able to state and the
+identities to be able to reproduce before moving on.
+
+## What you will learn
+
+By the end you will be able to derive, build, calibrate, and optimize a full
+Bayesian MMM. Each part contributes one layer, and each ends with a concrete
+payoff:
+
+- **Part I · Mathematical Foundations.** The linear algebra, calculus, and
+  probability the rest of the book stands on — least squares and the normal
+  equations, the eigenstructure that governs conditioning and collinearity, convex
+  curvature read through the gradient and Hessian, and the Gaussian / covariance
+  toolkit. The conditioning of the Gram matrix already previews the *identification*
+  problem that recurs throughout.
+- **Part II · Regression & Bayesian Inference.** OLS sampling theory and the
+  Gauss–Markov optimality of least squares; the bias–variance trade that motivates
+  ridge — and the recognition that *a penalty is a prior*, making ridge exactly the
+  Gaussian-prior MAP estimate. From there the full Bayesian posterior (credible
+  intervals, posterior-predictive uncertainty), hierarchical partial pooling and
+  shrinkage, and the autocorrelation and seasonality structure of time series.
+- **Part III · Computation: Sampling.** Why MCMC works and when to trust it:
+  stationarity from detailed balance, convergence governed by the spectral gap, and
+  the ergodic theorem that licenses estimating posterior expectations from a single
+  chain. You build Metropolis–Hastings, Gibbs, and gradient-driven HMC / NUTS, and
+  learn the diagnostics — $\hat{R}$, effective sample size, PIT, and simulation-based
+  calibration — that certify a fit.
+- **Part IV · Optimization.** Convexity as the property that turns local search into
+  a global guarantee; the KKT conditions; and their payoff for MMM — the
+  equal-marginal-returns (water-filling) rule for splitting a budget, linear-program
+  duality and shadow prices, and SLSQP as Newton's method on the KKT system.
+- **Part V · Marketing Mix Modeling.** The synthesis: the data-generating process
+  (adstock carryover, saturation, and a trend-and-seasonality baseline), building and
+  fitting the Bayesian MMM, dynamic / state-space formulations, and budget
+  optimization over the fitted response curves — with parameter uncertainty carried
+  all the way through to the allocation decision.
+- **Part VI · Causal Grounding & Calibration.** Why a good fit is not the same as a
+  correct answer: potential outcomes and confounding, quasi-experimental designs
+  (difference-in-differences, instrumental variables, geo tests), and calibrating the
+  model against experiments through a prior store and a calibration–optimization
+  loop. This is where the identification through-line is confronted head-on.
+- **Part VII · Software Engineering & Computer Science.** Turning the model into a
+  system that runs: computer-science foundations, software architecture, data
+  engineering, and the testing and reliability practices that make an MMM
+  reproducible and safe to operate.
+
 ## Table of contents
 
 The book proceeds from foundations to applications, with each part building on the
@@ -119,91 +180,6 @@ ones before it.
 **Appendix**
 
 - Worked Solutions
-
-## How to use this book
-
-Each chapter follows the same structure: intuition, then theory and proofs, then
-worked examples, then a runnable code tie-in, then exercises, then a summary. The
-exercises come in four tiers:
-
-- **C — Conceptual / reading comprehension.**
-- **B — By hand** (compute or derive manually).
-- **P — Prove it** (short proofs).
-- **A — Applied / code.**
-
-Worked solutions are collected in a single appendix at the back of the book, with
-no inline links from the exercises, so they are reached only after a genuine
-attempt. (Instructor builds render the full solutions; reader builds omit them.)
-
-Each chapter closes with a summary: the concepts to be able to state and the
-identities to be able to reproduce before moving on.
-
-## Notation
-
-The book uses one consistent set of symbols throughout. Local meaning always wins
-where a chapter says so, but unless noted these conventions hold everywhere.
-
-**Linear algebra and matrices.**
-
-| Symbol | Meaning |
-|---|---|
-| $X$ | design / feature matrix (rows are observations, columns are predictors) |
-| $y$ | response vector (e.g. sales) |
-| $\beta$, $\hat\beta$ | coefficient vector; its estimate |
-| $X^\top$, $A^{-1}$ | transpose; inverse |
-| $X^\top X$ | Gram matrix (the normal-equations matrix) |
-| $I$, $\mathbf{1}$ | identity matrix; all-ones vector |
-| $\lVert v \rVert$ | Euclidean ($\ell_2$) norm of $v$ |
-| $\operatorname{diag}(\cdot)$ | diagonal matrix from a vector |
-| $\kappa(A)$ | condition number of $A$ (with $\kappa(X^\top X) \approx \kappa(X)^2$) |
-| $A \succ 0$, $A \succeq 0$ | positive definite; positive semidefinite (Loewner order) |
-| $\lambda_i$, $\sigma_i$ | eigenvalue; singular value |
-
-**Probability and statistics.**
-
-| Symbol | Meaning |
-|---|---|
-| $\mathbb{E}[\cdot]$, $\operatorname{Var}(\cdot)$, $\operatorname{Cov}(\cdot)$ | expectation; variance; covariance |
-| $\mathcal{N}(\mu, \Sigma)$ | (multivariate) normal with mean $\mu$, covariance $\Sigma$ |
-| $\Sigma$, $\sigma^2$ | covariance matrix; (scalar) variance |
-| $X \sim p$ | $X$ is distributed according to $p$ |
-| $\perp$ | (conditional) independence |
-| $p(\cdot)$, $\propto$ | density / mass function; "proportional to" |
-
-**Bayesian inference.**
-
-| Symbol | Meaning |
-|---|---|
-| $p(\beta)$, $p(\beta \mid y)$ | prior; posterior over parameters |
-| $\mathcal{L}(\beta)$, $\ell(\beta)$ | likelihood; log-likelihood |
-| $\tau$ | prior scale (standard deviation) |
-| $\Lambda$ | precision (inverse covariance) |
-
-**Optimization.**
-
-| Symbol | Meaning |
-|---|---|
-| $\nabla f$, $\nabla^2 f$ | gradient; Hessian |
-| $\arg\max$, $\arg\min$ | maximizing / minimizing argument |
-| $b$, $B$ | budget allocation vector; total budget |
-| $\lambda^\star$ | optimal Lagrange multiplier / shadow price |
-| KKT | Karush–Kuhn–Tucker optimality conditions |
-
-**Marketing-mix-modeling quantities.**
-
-| Symbol | Meaning |
-|---|---|
-| adstock | geometric carryover transform of spend (rate $r$) |
-| saturation | concave diminishing-returns response transform |
-| EVPI | expected value of perfect information |
-
-**Logic and proofs.**
-
-| Symbol | Meaning |
-|---|---|
-| $:=$, $\triangleq$ | "is defined as" |
-| $\Rightarrow$, $\iff$ | implies; if and only if |
-| $\blacksquare$ | end of proof |
 
 ## Reproducibility
 
