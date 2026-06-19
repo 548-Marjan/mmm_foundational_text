@@ -56,35 +56,35 @@ Equip $\mathbb{R}^n$ with the standard inner product $\langle u, v\rangle = u^\t
 
 **Theorem (Normal equations).** If $X$ has full column rank, the unique minimizer of $\lVert y - X\beta\rVert^2$ is $\hat\beta = (X^\top X)^{-1} X^\top y$, equivalently the solution of $X^\top X \hat\beta = X^\top y$; the residual $y - X\hat\beta$ is orthogonal to every column of $X$.
 
-**Proof.** Define the objective
+**Proof.**
 
+*Stationary point.* The objective and its gradient are
 $$
-f(\beta) = \lVert y - X\beta \rVert^2 = (y - X\beta)^\top (y - X\beta) = y^\top y - 2\beta^\top X^\top y + \beta^\top X^\top X \beta.
+\begin{aligned}
+f(\beta)        &= \lVert y - X\beta \rVert^2 = y^\top y - 2\beta^\top X^\top y + \beta^\top X^\top X \beta, \\
+\nabla f(\beta) &= -2 X^\top y + 2 X^\top X \beta = -2\, X^\top (y - X\beta).
+\end{aligned}
 $$
-
-Differentiating with respect to $\beta$ gives the gradient
-
+Setting $\nabla f(\beta) = 0$ yields the **normal equations** $X^\top X \beta = X^\top y$. Because $X$ has full column rank, $X^\top X$ is invertible (full column rank forces $X^\top X \succ 0$; see the positive-definiteness section), so the unique stationary point is
 $$
-\nabla f(\beta) = -2 X^\top y + 2 X^\top X \beta = -2\, X^\top (y - X\beta).
-$$
-
-Setting $\nabla f(\beta) = 0$ yields the **normal equations** $X^\top X \beta = X^\top y$. Because $X$ has full column rank, $X^\top X$ is invertible — we prove that full column rank forces $X^\top X \succ 0$, hence nonsingular, in the positive-definiteness section — so the system has the unique solution
-
-$$
-\hat\beta = (X^\top X)^{-1} X^\top y,
+\hat\beta = (X^\top X)^{-1} X^\top y.
 $$
 
-the only stationary point of $f$.
-
-It remains to show this stationary point is a global minimizer. The Hessian of $f$ is $\nabla^2 f(\beta) = 2 X^\top X \succeq 0$, since $z^\top (X^\top X) z = \lVert Xz\rVert^2 \ge 0$ for all $z$. A twice-differentiable function with everywhere positive-semidefinite Hessian is convex, so any stationary point is a global minimum; with $X^\top X$ invertible the minimizer is unique.
-
-Finally, evaluate the residual against the columns of $X$:
-
+*Global minimizer.* The Hessian is constant and positive semidefinite,
 $$
-X^\top (y - X\hat\beta) = X^\top y - X^\top X \hat\beta = X^\top y - X^\top y = 0.
+\nabla^2 f(\beta) = 2 X^\top X \succeq 0 \qquad (z^\top X^\top X z = \lVert Xz\rVert^2 \ge 0\ \text{for all } z),
 $$
+so $f$ is convex and every stationary point is a global minimum; with $X^\top X$ invertible the minimizer is unique.
 
-Thus $\langle x_j, \, y - X\hat\beta\rangle = 0$ for every column $x_j$, i.e. the residual is orthogonal to all of $\mathcal{C}(X)$. This is the geometric content of "projection": $\hat y = X\hat\beta$ is the foot of the perpendicular dropped from $y$ onto the column space. $\qquad\blacksquare$
+*Residual orthogonality.* Evaluating the residual against the columns of $X$,
+$$
+\begin{aligned}
+X^\top (y - X\hat\beta) &= X^\top y - X^\top X \hat\beta \\
+                        &= X^\top y - X^\top y  && \text{($X^\top X\hat\beta = X^\top y$)} \\
+                        &= 0 .
+\end{aligned}
+$$
+Thus $\langle x_j, \, y - X\hat\beta\rangle = 0$ for every column $x_j$: the residual is orthogonal to all of $\mathcal{C}(X)$, and $\hat y = X\hat\beta$ is the foot of the perpendicular dropped from $y$ onto the column space. $\qquad\blacksquare$
 
 ### Eigenvalues and the spectral theorem
 
@@ -92,19 +92,24 @@ A scalar $\lambda$ and nonzero vector $v$ form an **eigenpair** $(\lambda, v)$ o
 
 **Theorem (Spectral theorem, symmetric case).** A real symmetric matrix $A = A^\top$ has only real eigenvalues, eigenvectors for distinct eigenvalues are orthogonal, and $A$ admits an orthonormal eigenbasis; equivalently $A = Q \Lambda Q^\top$ for an orthogonal $Q$ and diagonal $\Lambda$.
 
-**Proof.** **Real eigenvalues.** Let $Av = \lambda v$ with $v \ne 0$, allowing $\lambda \in \mathbb{C}$ and $v \in \mathbb{C}^n$, and write $\bar v$ for the entrywise conjugate. Consider the scalar $\bar v^\top A v$. On one hand $\bar v^\top A v = \bar v^\top (\lambda v) = \lambda\, \bar v^\top v = \lambda \lVert v\rVert^2$. On the other, because $A$ is real and symmetric, taking the conjugate transpose of the $1\times 1$ quantity gives
-$$
-\overline{(\bar v^\top A v)} = v^\top A^\top \bar v = v^\top A \bar v = \bar v^\top A v,
-$$
-so $\bar v^\top A v$ equals its own conjugate and is therefore real. Since $\lVert v\rVert^2 > 0$, $\lambda = \bar v^\top A v / \lVert v\rVert^2 \in \mathbb{R}$.
+**Proof.**
 
-**Orthogonality for distinct eigenvalues.** Suppose $Av_1 = \lambda_1 v_1$ and $Av_2 = \lambda_2 v_2$ with $\lambda_1 \ne \lambda_2$ (now real vectors). Using $A = A^\top$,
+*Real eigenvalues.* Let $Av = \lambda v$ with $v \ne 0$, allowing $\lambda \in \mathbb{C}$ and $v \in \mathbb{C}^n$, and write $\bar v$ for the entrywise conjugate. Evaluate the scalar $\bar v^\top A v$ two ways:
+$$
+\begin{aligned}
+\bar v^\top A v             &= \bar v^\top (\lambda v) = \lambda\, \bar v^\top v = \lambda \lVert v\rVert^2  && \text{(from $Av = \lambda v$)}, \\
+\overline{(\bar v^\top A v)} &= v^\top A^\top \bar v = v^\top A \bar v = \bar v^\top A v                       && \text{($A$ real symmetric).}
+\end{aligned}
+$$
+So $\bar v^\top A v$ equals its own conjugate and is therefore real; since $\lVert v\rVert^2 > 0$, $\lambda = \bar v^\top A v / \lVert v\rVert^2 \in \mathbb{R}$.
+
+*Orthogonality for distinct eigenvalues.* Suppose $Av_1 = \lambda_1 v_1$ and $Av_2 = \lambda_2 v_2$ with $\lambda_1 \ne \lambda_2$. Using $A = A^\top$,
 $$
 \lambda_1\, v_1^\top v_2 = (Av_1)^\top v_2 = v_1^\top A v_2 = \lambda_2\, v_1^\top v_2,
 $$
 hence $(\lambda_1 - \lambda_2)\, v_1^\top v_2 = 0$, and since $\lambda_1 \ne \lambda_2$ we conclude $v_1^\top v_2 = 0$.
 
-The full statement — that even with repeated eigenvalues one can choose an orthonormal eigenbasis, so $A = Q\Lambda Q^\top$ with $Q^\top Q = I$ and $\Lambda = \operatorname{diag}(\lambda_1, \dots, \lambda_n)$ — follows by induction on invariant subspaces; we refer to Axler for the complete argument [@axler2015]. $\qquad\blacksquare$
+*Orthonormal eigenbasis.* The full statement — that even with repeated eigenvalues one can choose an orthonormal eigenbasis, so $A = Q\Lambda Q^\top$ with $Q^\top Q = I$ and $\Lambda = \operatorname{diag}(\lambda_1, \dots, \lambda_n)$ — follows by induction on invariant subspaces; we refer to Axler for the complete argument [@axler2015]. $\qquad\blacksquare$
 
 The Gram matrix $X^\top X$ is symmetric by construction, so it always diagonalizes this way. The eigenvalues we will use to diagnose collinearity are therefore guaranteed real, and they come with an orthonormal eigenbasis $Q$ — the orthogonal axes along which $X^\top X$ acts by pure scaling.
 
@@ -114,11 +119,16 @@ A symmetric matrix $A$ is **positive semidefinite**, written $A \succeq 0$, when
 
 **Proposition.** A symmetric matrix $A$ is positive definite if and only if all its eigenvalues are positive. Consequently $A \succ 0 \Rightarrow A$ is invertible.
 
-**Proof.** Use the spectral decomposition $A = Q\Lambda Q^\top$ from the previous rung, with $Q$ orthogonal and $\Lambda = \operatorname{diag}(\lambda_1, \dots, \lambda_n)$. Substitute $w = Q^\top z$; since $Q$ is orthogonal, $w$ ranges over all of $\mathbb{R}^n$ as $z$ does and $\lVert w\rVert = \lVert z\rVert$. Then
+**Proof.** Use the spectral decomposition $A = Q\Lambda Q^\top$ from the previous rung ($Q$ orthogonal, $\Lambda = \operatorname{diag}(\lambda_1, \dots, \lambda_n)$) and substitute $w = Q^\top z$; since $Q$ is orthogonal, $w$ ranges over all of $\mathbb{R}^n$ as $z$ does and $\lVert w\rVert = \lVert z\rVert$. Then
 $$
-z^\top A z = z^\top Q \Lambda Q^\top z = w^\top \Lambda w = \sum_i \lambda_i w_i^2.
+z^\top A z = z^\top Q \Lambda Q^\top z = w^\top \Lambda w = \sum_i \lambda_i w_i^2 .
 $$
-If every $\lambda_i > 0$, this sum is strictly positive whenever $w \ne 0$, i.e. whenever $z \ne 0$, so $A \succ 0$. Conversely, taking $z = Q e_i$ (so $w = e_i$) gives $z^\top A z = \lambda_i$; if $A \succ 0$ then each such value is positive, forcing $\lambda_i > 0$. Finally, positive eigenvalues give $\det A = \prod_i \lambda_i > 0$, so $A$ is invertible. $\qquad\blacksquare$
+
+*Eigenvalues positive $\Rightarrow$ PD.* If every $\lambda_i > 0$, the sum is strictly positive whenever $w \ne 0$, i.e. whenever $z \ne 0$, so $A \succ 0$.
+
+*PD $\Rightarrow$ eigenvalues positive.* Taking $z = Q e_i$ (so $w = e_i$) gives $z^\top A z = \lambda_i$; if $A \succ 0$ then each such value is positive, forcing $\lambda_i > 0$.
+
+*Invertibility.* Positive eigenvalues give $\det A = \prod_i \lambda_i > 0$, so $A$ is invertible. $\qquad\blacksquare$
 
 This closes the loop with rungs 2–3. For any design matrix $X$ and any $z$,
 $$
