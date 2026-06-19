@@ -20,6 +20,7 @@ book:
   chapters:
     - index.qmd
     - parts/00-introduction/00-introduction.qmd
+    - parts/00-introduction/notation.qmd
     - part: "Part I — Mathematical Foundations"
       chapters:
         - parts/01-foundations/01-linear-algebra.qmd
