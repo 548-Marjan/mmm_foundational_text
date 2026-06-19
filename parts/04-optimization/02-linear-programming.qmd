@@ -118,12 +118,12 @@ This correspondence is what makes linear programming finite. A basis is a choice
 
 Rung 2 made vertices *computable*: it identified the geometric corners of $\mathcal{P}$ with the basic feasible solutions, points we can produce by selecting $m$ columns and solving a square system. But computability is only half the prize. We do not want every vertex — we want an *optimal* one, and so far nothing rules out the possibility that the best feasible point hides somewhere in the flat interior of a face, far from any corner. This rung closes that gap. It shows that the search for an optimum can be **confined to the vertices**: if the problem has any optimal solution at all, it has one sitting at a corner. Combined with Rung 2's finiteness, this is what makes linear programming solvable with certainty.
 
-> **Theorem (Fundamental Theorem of LP).** Consider a standard-form LP $\min c^\top x$ s.t. $x \in \mathcal{P} = \{x : Ax = b,\ x \ge 0\}$.
->
-> 1. If $\mathcal{P}$ is nonempty, it has at least one basic feasible solution (vertex).
-> 2. If the LP has an optimal solution, then it has an optimal solution at a vertex.
->
-> Consequently every LP is exactly one of: **infeasible** ($\mathcal{P} = \varnothing$), **unbounded** (the objective decreases without bound on $\mathcal{P}$), or has a **finite optimum attained at a vertex**.
+**Theorem (Fundamental Theorem of LP).** Consider a standard-form LP $\min c^\top x$ s.t. $x \in \mathcal{P} = \{x : Ax = b,\ x \ge 0\}$.
+
+1. If $\mathcal{P}$ is nonempty, it has at least one basic feasible solution (vertex).
+2. If the LP has an optimal solution, then it has an optimal solution at a vertex.
+
+Consequently every LP is exactly one of: **infeasible** ($\mathcal{P} = \varnothing$), **unbounded** (the objective decreases without bound on $\mathcal{P}$), or has a **finite optimum attained at a vertex**.
 
 **Proof.** We prove part 2; part 1 is the same argument applied to any feasible point, ignoring the objective.
 
@@ -267,11 +267,11 @@ $$
 
 Maximizing $g$ discards the $-\infty$ branch, leaving exactly the dual feasible region $A^\top y \le c$, $y \ge 0$, on which the dual objective is $b^\top y$. So maximizing the dual function *is* (D), and the dual variables ARE the constraint multipliers of Chapter 12 — the same $y$ that the simplex method already met as $y = (A_B^{-1})^\top c_B$ in Rung 4.
 
-> **Theorem (weak duality).** For any primal-feasible $x$ (so $Ax \ge b$, $x \ge 0$) and any dual-feasible $y$ (so $A^\top y \le c$, $y \ge 0$),
-> $$
-> b^\top y \;\le\; c^\top x.
-> $$
-> Every dual objective value is a lower bound on every primal objective value.
+**Theorem (weak duality).** For any primal-feasible $x$ (so $Ax \ge b$, $x \ge 0$) and any dual-feasible $y$ (so $A^\top y \le c$, $y \ge 0$),
+$$
+b^\top y \;\le\; c^\top x.
+$$
+Every dual objective value is a lower bound on every primal objective value.
 
 **Proof.** Chain the two feasibility conditions through a pair of sign-controlled inequalities:
 
@@ -294,10 +294,10 @@ Two corollaries fall straight out of the bound, and they are the reason duality 
 
 Weak duality pins the primal optimum between the dual values from below, but it leaves open the possibility of a **gap** — a stubborn space between the best lower bound the dual can offer and the true primal minimum. For general optimization problems that gap is real. The defining miracle of linear programming is that the gap is always *zero*: the dual bound is not merely a bound but is *achievable*, and at the optimum the two problems agree exactly. This is the LP specialization of Chapter 12's strong-duality result, and because the data are affine it holds with no qualification to check. From the equality of values we then read off **complementary slackness**, the bookkeeping that says which constraints bind and which dual prices are live.
 
-> **Theorem (strong duality).** If the primal (P) has a finite optimum, then so does the dual (D), and their optimal values are equal:
-> $$
-> \min\{c^\top x : Ax \ge b,\ x \ge 0\} = \max\{b^\top y : A^\top y \le c,\ y \ge 0\}.
-> $$
+**Theorem (strong duality).** If the primal (P) has a finite optimum, then so does the dual (D), and their optimal values are equal:
+$$
+\min\{c^\top x : Ax \ge b,\ x \ge 0\} = \max\{b^\top y : A^\top y \le c,\ y \ge 0\}.
+$$
 
 **Proof.** We give two routes to the same conclusion — one that inherits Chapter 12, and one that is native to LP and *constructs* the optimal dual point.
 
@@ -309,11 +309,11 @@ b^\top y = b^\top (A_B^{-1})^\top c_B = c_B^\top A_B^{-1} b = c_B^\top x_B = c^\
 $$
 the primal optimal value, since the nonbasic entries of $x^\star$ are zero. So we have exhibited a dual-feasible point whose objective matches the primal optimum; by weak-duality corollary (i) it is dual-optimal, and the gap is exactly zero. The full development from the Farkas lemma — which also covers the infeasible and unbounded cases — is given by @bertsimas1997. $\blacksquare$
 
-> **Theorem (complementary slackness).** A primal-feasible $x$ and dual-feasible $y$ are **both optimal** if and only if
-> $$
-> y_i\,\bigl(a_i^\top x - b_i\bigr) = 0 \ \ \forall i, \qquad\text{and}\qquad x_j\,\bigl(c_j - (A^\top y)_j\bigr) = 0 \ \ \forall j,
-> $$
-> where $a_i^\top$ is the $i$-th row of $A$.
+**Theorem (complementary slackness).** A primal-feasible $x$ and dual-feasible $y$ are **both optimal** if and only if
+$$
+y_i\,\bigl(a_i^\top x - b_i\bigr) = 0 \ \ \forall i, \qquad\text{and}\qquad x_j\,\bigl(c_j - (A^\top y)_j\bigr) = 0 \ \ \forall j,
+$$
+where $a_i^\top$ is the $i$-th row of $A$.
 
 **Proof.** Return to the weak-duality chain of Rung 5, written as
 

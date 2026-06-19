@@ -95,7 +95,7 @@ $f_t = F_t^\top a_t$ is the one-step-ahead **forecast mean**, $Q_t = F_t^\top R_
 
 **Proposition P1.** *For the DLM with known $V_t, W_t$, if $\theta_{t-1} \mid y_{1:t-1} \sim \mathcal{N}(m_{t-1}, C_{t-1})$ then $\theta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$ with the recursions below; hence the filtering distribution is Gaussian at every $t$.*
 
-*Proof.* By induction on $t$.
+**Proof.** By induction on $t$.
 
 **Inductive hypothesis.** $\theta_{t-1} \mid y_{1:t-1} \sim \mathcal{N}(m_{t-1}, C_{t-1})$.
 
@@ -176,7 +176,7 @@ Inside the Gibbs loop, FFBS and the conjugate variance updates alternate. Each f
 
 **Proposition P2.** *FFBS draws an exact sample from the joint smoothing posterior $p(\theta_{0:T} \mid y_{1:T})$.*
 
-*Proof.*
+**Proof.**
 
 **Factorization via the Markov property.** The state sequence $\theta_{0:T}$ satisfies the Markov property: $\theta_t$ depends on the past only through $\theta_{t-1}$, and on the observations only through the observations available at time $t$ and the future states. Precisely, given $\theta_{t+1}$, the state $\theta_t$ is conditionally independent of the future data $y_{t+1:T}$, because those observations influence $\theta_t$ only through the chain $\theta_t \to \theta_{t+1} \to \cdots$, which is blocked by conditioning on $\theta_{t+1}$. Applying this to the joint smoothing posterior by the chain rule of probability:
 
@@ -210,7 +210,7 @@ Proofs P1 and P2 together establish the DLM's central lesson. With variances $V$
 
 **Proposition P3.** *With the DLM of Rung 2: (i) if $V$ and $W$ are known, the filtered posteriors and the marginal likelihood $p(y_{1:T})$ are available in closed form; (ii) if $V$ and $W$ are unknown with prior distributions assigned, the joint posterior $p(\theta_{0:T}, V, W \mid y_{1:T})$ has no closed form, and a Gibbs sampler restores tractability.*
 
-*Proof.*
+**Proof.**
 
 **Part 1 — Known $(V, W)$.** By Proof P1, $\theta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$ at every $t$, with recursions that are finite compositions of affine-Gaussian operations on a starting Gaussian — exact and closed-form. The marginal likelihood $p(y_{1:T})$ factors through the one-step-ahead predictive distributions via the **prediction-error (innovations) decomposition**:
 

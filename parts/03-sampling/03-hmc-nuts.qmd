@@ -66,7 +66,7 @@ $$
 
 The first equation says position evolves in the direction of momentum, scaled by the inverse mass matrix; the second says momentum is pushed in the direction $-\nabla U = \nabla \log \pi$, toward higher log-posterior. A particle starting in a low-density region experiences a strong push toward the posterior's mode; near the mode the push is gentle. The trajectory traces the posterior's geometry, accelerating through valleys and decelerating on ridges, all while remaining on a level set of $H$.
 
-> **Theorem (energy conservation).** Along any solution of Hamilton's equations, the Hamiltonian is constant: $\dfrac{d}{dt}H(q(t), p(t)) = 0$.
+**Theorem (energy conservation).** Along any solution of Hamilton's equations, the Hamiltonian is constant: $\dfrac{d}{dt}H(q(t), p(t)) = 0$.
 
 **Proof.** By the chain rule,
 
@@ -118,7 +118,7 @@ $$
 
 When $L$ leapfrog steps are chained, the final half-kick of one step and the opening half-kick of the next merge into a single full kick, so $L$ chained steps require only $L+1$ gradient evaluations in total.
 
-> **Theorem (leapfrog is volume-preserving and reversible).** Each leapfrog step has Jacobian determinant $1$, and composed with momentum negation it is an involution.
+**Theorem (leapfrog is volume-preserving and reversible).** Each leapfrog step has Jacobian determinant $1$, and composed with momentum negation it is an involution.
 
 **Proof (volume preservation).** Decompose the leapfrog step into three sub-maps and verify that each has unit Jacobian determinant.
 
@@ -168,7 +168,7 @@ One HMC step from the current position $q$ proceeds in three sub-steps.
 2. **Leapfrog proposal.** Run $L$ leapfrog steps from $(q, p)$ to obtain the proposal $(q^*, p^*)$.
 3. **Metropolis accept/reject.** Accept $q^*$ as the next state with probability $\min\!\bigl(1,\, e^{-\Delta H}\bigr)$, where $\Delta H = H(q^*, p^*) - H(q, p)$; otherwise retain $q$.
 
-> **Theorem (HMC leaves $\pi$ invariant).** The HMC transition has the posterior $\pi(q)$ as a stationary distribution.
+**Theorem (HMC leaves $\pi$ invariant).** The HMC transition has the posterior $\pi(q)$ as a stationary distribution.
 
 **Proof.** The HMC step is the composition of two sub-steps; it suffices to show that each preserves the joint density $\pi(q, p) \propto e^{-H(q,p)}$.
 

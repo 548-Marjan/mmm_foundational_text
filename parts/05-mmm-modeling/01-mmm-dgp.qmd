@@ -49,7 +49,7 @@ Unrolling the recursion one step at a time reproduces the infinite weighted sum;
 
 ### Proof P1 — Geometric adstock identities
 
-> **Proposition P1.** Let $\lambda \in [0, 1)$, define $a_\lambda(x)_t = \sum_{k=0}^{\infty} \lambda^k x_{t-k}$, and let $w_k = (1-\lambda)\lambda^k$. Then: (i) $\sum_{k=0}^{\infty} w_k = 1$; (ii) constant input $x_t \equiv x$ gives unnormalized adstock $x/(1-\lambda)$ and normalized adstock $x$; (iii) the impulse $x_0 = 1$, $x_t = 0$ for $t \neq 0$, gives $a_\lambda(x)_t = \lambda^t$ with total mass $1/(1-\lambda)$; (iv) the half-life is $t_{1/2} = \log_\lambda \tfrac{1}{2}$; (v) the mean lag is $\bar{k} = \lambda/(1-\lambda)$.
+**Proposition P1.** Let $\lambda \in [0, 1)$, define $a_\lambda(x)_t = \sum_{k=0}^{\infty} \lambda^k x_{t-k}$, and let $w_k = (1-\lambda)\lambda^k$. Then: (i) $\sum_{k=0}^{\infty} w_k = 1$; (ii) constant input $x_t \equiv x$ gives unnormalized adstock $x/(1-\lambda)$ and normalized adstock $x$; (iii) the impulse $x_0 = 1$, $x_t = 0$ for $t \neq 0$, gives $a_\lambda(x)_t = \lambda^t$ with total mass $1/(1-\lambda)$; (iv) the half-life is $t_{1/2} = \log_\lambda \tfrac{1}{2}$; (v) the mean lag is $\bar{k} = \lambda/(1-\lambda)$.
 
 **Proof.**
 
@@ -113,7 +113,7 @@ The parameter $K$ is the **half-saturation point**: direct substitution gives $g
 
 ### Proof P2 — Hill shape theorem
 
-> **Proposition P2.** For $x > 0$, $K > 0$, $n > 0$, the Hill function $g(x;\,K,n) = x^n/(K^n + x^n)$ is strictly increasing and bounded in $(0,1)$, with $g(0^+) = 0$, $g(\infty) = 1$, and $g(K) = \tfrac{1}{2}$. For $n \le 1$, $g$ is concave on $(0,\infty)$. For $n > 1$, $g$ has a single inflection at $x^\star = K\big(\tfrac{n-1}{n+1}\big)^{1/n}$, is convex on $(0, x^\star)$, and concave on $(x^\star, \infty)$.
+**Proposition P2.** For $x > 0$, $K > 0$, $n > 0$, the Hill function $g(x;\,K,n) = x^n/(K^n + x^n)$ is strictly increasing and bounded in $(0,1)$, with $g(0^+) = 0$, $g(\infty) = 1$, and $g(K) = \tfrac{1}{2}$. For $n \le 1$, $g$ is concave on $(0,\infty)$. For $n > 1$, $g$ has a single inflection at $x^\star = K\big(\tfrac{n-1}{n+1}\big)^{1/n}$, is convex on $(0, x^\star)$, and concave on $(x^\star, \infty)$.
 
 **Proof.**
 
@@ -153,7 +153,7 @@ The per-channel data-generating pipeline runs in a fixed sequence: raw spend $x_
 
 ### Proof P3 — Non-commutativity of adstock and saturation
 
-> **Proposition P3.** In general, $(g \circ a_\lambda)(x) \neq (a_\lambda \circ g)(x)$: adstock-then-saturate and saturate-then-adstock produce different time series.
+**Proposition P3.** In general, $(g \circ a_\lambda)(x) \neq (a_\lambda \circ g)(x)$: adstock-then-saturate and saturate-then-adstock produce different time series.
 
 **Proof.** We construct an explicit numeric counterexample. Let the spend sequence be $x_0 = 3$, $x_1 = 0$, with decay $\lambda = 0.5$, half-saturation $K = 3$, and shape $n = 2$.
 
@@ -189,7 +189,7 @@ These three pathologies interact and reinforce each other in practice. But even 
 
 ### Proof P4 — Non-identifiability at a single operating point
 
-> **Proposition P4.** Suppose channel $i$'s spend is observed only at a single operating point $x_0$, so the data constrain the model only through the scalar $\beta_i\, g(x_0;\, K, n)$. Then the parameters $(\beta_i, K, n)$ are not identified: distinct parameter vectors exist that are observationally indistinguishable on the support $\{x_0\}$.
+**Proposition P4.** Suppose channel $i$'s spend is observed only at a single operating point $x_0$, so the data constrain the model only through the scalar $\beta_i\, g(x_0;\, K, n)$. Then the parameters $(\beta_i, K, n)$ are not identified: distinct parameter vectors exist that are observationally indistinguishable on the support $\{x_0\}$.
 
 **Proof.** Fix $x_0 = 3$ and $n = 2$ throughout. For any parameter vector $(\beta_i, K, n)$, the observable channel contribution at $x_0$ is
 

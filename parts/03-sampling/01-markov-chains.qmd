@@ -128,7 +128,7 @@ $$
 
 Equivalently, $\pi$ is a **left eigenvector** of $P$ for eigenvalue 1. If the chain's distribution at time $t$ is $\pi_t = \pi$, then $\pi_{t+1} = \pi_t P = \pi$: the distribution does not evolve. Whether $\pi_t \to \pi$ as $t \to \infty$ from an arbitrary start is the convergence question taken up in Rung 4.
 
-> **Theorem (existence and uniqueness, Perron–Frobenius).** [@norris1997] An irreducible finite Markov chain has a unique stationary distribution $\pi$, and $\pi_i > 0$ for every $i \in S$.
+**Theorem (existence and uniqueness, Perron–Frobenius).** [@norris1997] An irreducible finite Markov chain has a unique stationary distribution $\pi$, and $\pi_i > 0$ for every $i \in S$.
 
 Irreducibility is essential: a reducible chain may have multiple stationary distributions, one supported on each closed communicating class, and there is no way to select among them without additional information about the starting point.
 
@@ -140,7 +140,7 @@ $$
 
 The left side is the equilibrium flux from state $i$ to state $j$; the right side is the flux from $j$ to $i$. Equality of these fluxes is the **reversibility** condition: time-reversed dynamics under $\pi$ look statistically identical to the forward dynamics. A chain satisfying detailed balance with respect to $\pi$ is called **reversible** with respect to $\pi$.
 
-> **Theorem (detailed balance $\Rightarrow$ stationarity).** If a probability vector $\pi$ satisfies $\pi_i P_{ij} = \pi_j P_{ji}$ for all $i, j$, then $\pi P = \pi$, i.e.\ $\pi$ is stationary for $P$.
+**Theorem (detailed balance $\Rightarrow$ stationarity).** If a probability vector $\pi$ satisfies $\pi_i P_{ij} = \pi_j P_{ji}$ for all $i, j$, then $\pi P = \pi$, i.e.\ $\pi$ is stationary for $P$.
 
 **Proof.** Compute the $j$th entry of $\pi P$, apply detailed balance term by term, then use row-stochasticity:
 
@@ -154,7 +154,7 @@ since $\sum_i P_{ji} = 1$ (row $j$ of $P$ sums to 1). As this holds for every $j
 
 ### Rung 4 — Convergence to stationarity
 
-> **Theorem (convergence).** For an irreducible, aperiodic finite Markov chain with stationary distribution $\pi$, $P^n \to \mathbf{1}\pi$ entrywise as $n\to\infty$ (every row of $P^n$ converges to $\pi$), and hence $\pi_t = \pi_0 P^t \to \pi$ for every initial distribution $\pi_0$.
+**Theorem (convergence).** For an irreducible, aperiodic finite Markov chain with stationary distribution $\pi$, $P^n \to \mathbf{1}\pi$ entrywise as $n\to\infty$ (every row of $P^n$ converges to $\pi$), and hence $\pi_t = \pi_0 P^t \to \pi$ for every initial distribution $\pi_0$.
 
 Here $\mathbf{1}$ is the column vector of ones, so $\mathbf{1}\pi$ is the rank-one matrix every row of which is $\pi$.
 
@@ -196,11 +196,11 @@ a larger gap means faster geometric convergence. The **mixing time** $t_{\mathrm
 
 ### Rung 5 — The ergodic theorem
 
-> **Theorem (ergodic theorem for finite chains).** For an irreducible finite Markov chain with stationary distribution $\pi$ and any bounded function $f : S \to \mathbb{R}$, from any initial state,
->
-> $$
-> \frac{1}{n}\sum_{t=1}^{n} f(X_t) \xrightarrow{\ n\to\infty\ } \mathbb{E}_\pi[f] = \sum_{x\in S} f(x)\,\pi_x \quad \text{almost surely.}
-> $$
+**Theorem (ergodic theorem for finite chains).** For an irreducible finite Markov chain with stationary distribution $\pi$ and any bounded function $f : S \to \mathbb{R}$, from any initial state,
+
+$$
+\frac{1}{n}\sum_{t=1}^{n} f(X_t) \xrightarrow{\ n\to\infty\ } \mathbb{E}_\pi[f] = \sum_{x\in S} f(x)\,\pi_x \quad \text{almost surely.}
+$$
 
 **Proof (renewal / return-time argument).** Fix a reference state $s \in S$; since the chain is finite and irreducible, $s$ is recurrent and is visited infinitely often. Let $0 \le T_0 < T_1 < T_2 < \cdots$ be the successive times at which the chain visits $s$. By the **strong Markov property**, the trajectory segments between consecutive visits — the **cycles** — are independent and identically distributed. Define the cycle lengths $\tau_k = T_k - T_{k-1}$ and the per-cycle sums
 
