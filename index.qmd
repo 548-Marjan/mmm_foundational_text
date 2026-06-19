@@ -76,44 +76,45 @@ ones before it.
 4. Linear Regression
 5. Bayesian Inference
 6. Hierarchical Regression
+7. Time Series, Trend & Seasonality
 
 **Part III · Computation: Sampling**
 
-7. Markov Chains
-8. MCMC
-9. HMC & NUTS
-10. Model Checking & Diagnostics
+8. Markov Chains
+9. MCMC
+10. HMC & NUTS
+11. Model Checking & Diagnostics
 
 **Part IV · Optimization**
 
-11. Convexity
-12. Linear Programming
-13. Constrained Optimization (SLSQP)
+12. Convexity
+13. Linear Programming
+14. Constrained Optimization (SLSQP)
 
 **Part V · Marketing Mix Modeling: Modeling**
 
-14. The MMM Data-Generating Process
-15. Building & Fitting an MMM
-16. Dynamic Linear Models & State-Space MMM
-17. Budget Optimization
+15. The MMM Data-Generating Process
+16. Building & Fitting an MMM
+17. Dynamic Linear Models & State-Space MMM
+18. Budget Optimization
 
 **Part VI · Causal Grounding & Calibration**
 
-18. Causal Inference Foundations
-19. Quasi-Experimental Design
-20. Advanced Calibration
-21. The Prior Store & the Calibration–Optimization Loop
+19. Causal Inference Foundations
+20. Quasi-Experimental Design
+21. Advanced Calibration
+22. The Prior Store & the Calibration–Optimization Loop
 
 **Part VII · Software Engineering & Computer Science**
 
-22. CS Foundations
-23. Software Architecture
-24. Data Engineering
-25. Testing & Reliability
+23. CS Foundations
+24. Software Architecture
+25. Data Engineering
+26. Testing & Reliability
 
 **Part VIII · Capstone**
 
-26. Putting It All Together
+27. Putting It All Together
 
 **Appendix**
 
