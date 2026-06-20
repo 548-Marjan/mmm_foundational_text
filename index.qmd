@@ -74,7 +74,7 @@ exercises come in four tiers:
 Worked solutions are kept as a separate answer key rather than printed inline, so
 each exercise is reached only after a genuine attempt. Instructors and readers who
 would like the full answer key can request it by reaching out to
-[548 Marjan](https://548marjan.com).
+[548 Marjan](https://www.548marjan.com).
 
 Each chapter closes with a summary: the concepts to be able to state and the
 identities to be able to reproduce before moving on.

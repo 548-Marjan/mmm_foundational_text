@@ -12,13 +12,13 @@ book:
   subtitle: "A self-contained path from calculus, linear algebra, and calculus-based statistics to advanced MMM practice."
   author:
     name: "548 Marjan"
-    url: https://548marjan.com
+    url: https://www.548marjan.com
   date: today
   search: true
   repo-url: https://github.com/jlhf80/mmm_foundational_text
   repo-actions: [issue]
   page-footer:
-    left: "© [548 Marjan](https://548marjan.com)"
+    left: "© [548 Marjan](https://www.548marjan.com)"
     right: "Built with [Quarto](https://quarto.org)."
   chapters:
     - index.qmd
