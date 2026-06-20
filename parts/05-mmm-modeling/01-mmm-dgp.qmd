@@ -53,7 +53,7 @@ Unrolling the recursion one step at a time reproduces the infinite weighted sum;
 
 **Proof.**
 
-**(i) Normalization.** The weights form a geometric series with first term $(1-\lambda)$ and ratio $\lambda$. Since $|\lambda| < 1$ the series converges:
+*(i) Normalization.* The weights form a geometric series with first term $(1-\lambda)$ and ratio $\lambda$. Since $|\lambda| < 1$ the series converges:
 
 $$
 \sum_{k=0}^{\infty} w_k = (1-\lambda) \sum_{k=0}^{\infty} \lambda^k = (1-\lambda) \cdot \frac{1}{1-\lambda} = 1.
@@ -61,7 +61,7 @@ $$
 
 The weights therefore constitute a valid probability distribution on the nonnegative integers. In particular, constant input $x_t \equiv x$ gives normalized adstock $\tilde{a}_\lambda(x)_t = x \sum_{k=0}^{\infty} w_k = x$: the level is preserved exactly.
 
-**(ii) Unnormalized steady state.** For constant $x_t \equiv x$, the unnormalized filter gives
+*(ii) Unnormalized steady state.* For constant $x_t \equiv x$, the unnormalized filter gives
 
 $$
 a_\lambda(x)_t = \sum_{k=0}^{\infty} \lambda^k x = x \sum_{k=0}^{\infty} \lambda^k = \frac{x}{1-\lambda}.
@@ -69,7 +69,7 @@ $$
 
 The factor $1/(1-\lambda) > 1$ is the steady-state amplification: a channel spending $x$ every week accumulates effective exposure $x/(1-\lambda)$. At $\lambda = 0.5$ this is $2x$.
 
-**(iii) Impulse response.** Set $x_0 = 1$ and $x_t = 0$ for $t \neq 0$. Only the $k = t$ term survives in the sum, so $a_\lambda(x)_t = \lambda^t \cdot 1 = \lambda^t$ for $t \geq 0$. The total mass is
+*(iii) Impulse response.* Set $x_0 = 1$ and $x_t = 0$ for $t \neq 0$. Only the $k = t$ term survives in the sum, so $a_\lambda(x)_t = \lambda^t \cdot 1 = \lambda^t$ for $t \geq 0$. The total mass is
 
 $$
 \sum_{t=0}^{\infty} \lambda^t = \frac{1}{1-\lambda},
@@ -77,7 +77,7 @@ $$
 
 matching the steady-state amplification of (ii): both expressions measure the filter's total weight.
 
-**(iv) Half-life.** The impulse response at lag $t$ is $\lambda^t$. The half-life $t_{1/2}$ satisfies $\lambda^{t_{1/2}} = 1/2$; taking logarithms:
+*(iv) Half-life.* The impulse response at lag $t$ is $\lambda^t$. The half-life $t_{1/2}$ satisfies $\lambda^{t_{1/2}} = 1/2$; taking logarithms:
 
 $$
 t_{1/2} \ln \lambda = \ln \tfrac{1}{2} \implies t_{1/2} = \frac{\ln(1/2)}{\ln \lambda} = \log_\lambda \tfrac{1}{2}.
@@ -85,7 +85,7 @@ $$
 
 Since $\ln \lambda < 0$ and $\ln(1/2) < 0$, the ratio is positive. At $\lambda = 0.5$: $t_{1/2} = \ln 2 / \ln 2 = 1$ week.
 
-**(v) Mean lag.** The mean lag under the normalized weight distribution is
+*(v) Mean lag.* The mean lag under the normalized weight distribution is
 
 $$
 \bar{k} = \sum_{k=0}^{\infty} k\, w_k = (1-\lambda) \sum_{k=0}^{\infty} k \lambda^k.
@@ -99,7 +99,7 @@ $$
 
 At $\lambda = 0.5$: $\bar{k} = 0.5 / 0.5 = 1$ week.
 
-**Summary at $\lambda = 0.5$.** The three summary statistics coincide: the half-life is $1$ week, the mean lag is $1$ week, and the steady-state amplification is $2x$. This trio provides a rapid calibration check — to model roughly one week of carryover, initialize $\lambda = 0.5$ and adjust as the data indicate. $\blacksquare$
+*Summary at $\lambda = 0.5$.* The three summary statistics coincide: the half-life is $1$ week, the mean lag is $1$ week, and the steady-state amplification is $2x$. This trio provides a rapid calibration check — to model roughly one week of carryover, initialize $\lambda = 0.5$ and adjust as the data indicate. $\blacksquare$
 
 ### Rung 3 — Saturation and shape
 
@@ -117,7 +117,7 @@ The parameter $K$ is the **half-saturation point**: direct substitution gives $g
 
 **Proof.**
 
-**Monotone and bounded.** Differentiating with the quotient rule and collecting:
+*Monotone and bounded.* Differentiating with the quotient rule and collecting:
 
 $$
 g'(x) = \frac{n x^{n-1}(K^n + x^n) - x^n \cdot n x^{n-1}}{(K^n + x^n)^2} = \frac{n K^n x^{n-1}}{(K^n + x^n)^2}.
@@ -125,7 +125,7 @@ $$
 
 Every factor in the numerator is positive for $x > 0$, so $g'(x) > 0$: $g$ is strictly increasing. As $x \to 0^+$ the numerator $x^n \to 0$ while the denominator approaches $K^n$, giving $g(0^+) = 0$; as $x \to \infty$, $x^n$ dominates $K^n + x^n$, giving $g(\infty) = 1$. At $x = K$ the numerator and denominator are equal, so $g(K) = K^n/(2K^n) = \tfrac{1}{2}$.
 
-**Curvature.** Differentiating $g'(x) = nK^n x^{n-1}(K^n + x^n)^{-2}$ by the product rule and simplifying yields:
+*Curvature.* Differentiating $g'(x) = nK^n x^{n-1}(K^n + x^n)^{-2}$ by the product rule and simplifying yields:
 
 $$
 g''(x) = \frac{nK^n x^{n-2}}{(K^n + x^n)^3}\Big[(n-1)K^n - (n+1)x^n\Big].
@@ -133,9 +133,9 @@ $$
 
 The prefactor $\dfrac{nK^n x^{n-2}}{(K^n+x^n)^3}$ is strictly positive for $x > 0$, so $\operatorname{sign} g'' = \operatorname{sign}\big[(n-1)K^n - (n+1)x^n\big]$.
 
-**Case $n \le 1$.** When $n < 1$ the term $(n-1)K^n$ is negative and $-(n+1)x^n$ is also negative, so their sum is negative for all $x > 0$. When $n = 1$ the bracket reduces to $0 - 2x^n < 0$. In both sub-cases $g'' < 0$ everywhere: $g$ is concave on $(0,\infty)$, delivering diminishing returns from the first dollar.
+*Case $n \le 1$.* When $n < 1$ the term $(n-1)K^n$ is negative and $-(n+1)x^n$ is also negative, so their sum is negative for all $x > 0$. When $n = 1$ the bracket reduces to $0 - 2x^n < 0$. In both sub-cases $g'' < 0$ everywhere: $g$ is concave on $(0,\infty)$, delivering diminishing returns from the first dollar.
 
-**Case $n > 1$.** Here $(n-1) > 0$, so the bracket $(n-1)K^n - (n+1)x^n$ is positive at small $x$ and decreasing. Setting it to zero:
+*Case $n > 1$.* Here $(n-1) > 0$, so the bracket $(n-1)K^n - (n+1)x^n$ is positive at small $x$ and decreasing. Setting it to zero:
 
 $$
 (n-1)K^n = (n+1)x^n \implies x^\star = K\!\left(\frac{n-1}{n+1}\right)^{\!1/n}.
@@ -157,7 +157,7 @@ The per-channel data-generating pipeline runs in a fixed sequence: raw spend $x_
 
 **Proof.** We construct an explicit numeric counterexample. Let the spend sequence be $x_0 = 3$, $x_1 = 0$, with decay $\lambda = 0.5$, half-saturation $K = 3$, and shape $n = 2$.
 
-**Path 1 — adstock then saturate.** Apply the adstock filter first. At $t = 0$: $a_0 = x_0 = 3$. At $t = 1$: $a_1 = x_1 + \lambda\, a_0 = 0 + 0.5 \cdot 3 = 1.5$. The effective-exposure sequence is $(3,\; 1.5)$. Applying saturation term by term:
+*Path 1 — adstock then saturate.* Apply the adstock filter first. At $t = 0$: $a_0 = x_0 = 3$. At $t = 1$: $a_1 = x_1 + \lambda\, a_0 = 0 + 0.5 \cdot 3 = 1.5$. The effective-exposure sequence is $(3,\; 1.5)$. Applying saturation term by term:
 
 $$
 g(3) = \frac{3^2}{3^2 + 3^2} = \frac{9}{18} = 0.5, \qquad g(1.5) = \frac{1.5^2}{3^2 + 1.5^2} = \frac{2.25}{11.25} = 0.2.
@@ -165,7 +165,7 @@ $$
 
 The saturated sequence under Path 1 is $(0.5,\; 0.2)$.
 
-**Path 2 — saturate then adstock.** Apply saturation to the raw spend first:
+*Path 2 — saturate then adstock.* Apply saturation to the raw spend first:
 
 $$
 g(3) = 0.5, \qquad g(0) = \frac{0^2}{3^2 + 0^2} = 0.
@@ -173,7 +173,7 @@ $$
 
 The pre-saturated sequence is $(0.5,\; 0)$. Applying the adstock filter: at $t = 0$ the output is $0.5$; at $t = 1$ the output is $0 + 0.5 \cdot 0.5 = 0.25$. The adstocked sequence under Path 2 is $(0.5,\; 0.25)$.
 
-**Comparison.** At the impulse period $t = 0$ both paths agree: $0.5 = 0.5$. At the carryover period $t = 1$ they differ: $0.2 \neq 0.25$. The disagreement lives entirely in the carryover period — Path 1 carries forward the compressed (saturated) effective exposure, while Path 2 carries forward raw spend and then compresses. Because the saturation function is nonlinear, carrying over a compressed signal is not equivalent to compressing a carried-over signal. The ordering of transforms is therefore a modeling decision with empirical consequences. $\blacksquare$
+*Comparison.* At the impulse period $t = 0$ both paths agree: $0.5 = 0.5$. At the carryover period $t = 1$ they differ: $0.2 \neq 0.25$. The disagreement lives entirely in the carryover period — Path 1 carries forward the compressed (saturated) effective exposure, while Path 2 carries forward raw spend and then compresses. Because the saturation function is nonlinear, carrying over a compressed signal is not equivalent to compressing a carried-over signal. The ordering of transforms is therefore a modeling decision with empirical consequences. $\blacksquare$
 
 ### Rung 5 — The identification wound
 
@@ -199,7 +199,7 @@ $$
 
 We exhibit two distinct parameter vectors that both give $c = 0.5$.
 
-**Parameter set A.** Take $(\beta_i, K, n) = (1,\, 3,\, 2)$. Then
+*Parameter set A.* Take $(\beta_i, K, n) = (1,\, 3,\, 2)$. Then
 
 $$
 g(3;\, 3,\, 2) = \frac{3^2}{3^2 + 3^2} = \frac{9}{18} = 0.5,
@@ -207,7 +207,7 @@ $$
 
 and the channel contribution is $1 \cdot 0.5 = 0.5$.
 
-**Parameter set B.** Take $(\beta_i, K, n) = (2,\, 3\sqrt{3},\, 2)$. Note $3\sqrt{3} \approx 5.196$. Then
+*Parameter set B.* Take $(\beta_i, K, n) = (2,\, 3\sqrt{3},\, 2)$. Note $3\sqrt{3} \approx 5.196$. Then
 
 $$
 g\!\left(3;\, 3\sqrt{3},\, 2\right) = \frac{3^2}{\left(3\sqrt{3}\right)^2 + 3^2} = \frac{9}{27 + 9} = \frac{9}{36} = 0.25,
@@ -215,7 +215,7 @@ $$
 
 and the channel contribution is $2 \cdot 0.25 = 0.5$.
 
-**The ridge.** Both parameter vectors produce identical expected sales at $x_0 = 3$:
+*The ridge.* Both parameter vectors produce identical expected sales at $x_0 = 3$:
 
 $$
 1 \cdot g(3;\, 3,\, 2) \;=\; 0.5 \;=\; 2 \cdot g\!\left(3;\, 3\sqrt{3},\, 2\right).
