@@ -97,15 +97,15 @@ $f_t = F_t^\top a_t$ is the one-step-ahead **forecast mean**, $Q_t = F_t^\top R_
 
 **Proof.** By induction on $t$.
 
-**Inductive hypothesis.** $\theta_{t-1} \mid y_{1:t-1} \sim \mathcal{N}(m_{t-1}, C_{t-1})$.
+*Inductive hypothesis.* $\theta_{t-1} \mid y_{1:t-1} \sim \mathcal{N}(m_{t-1}, C_{t-1})$.
 
-**Predict.** The evolution equation $\theta_t = G_t \theta_{t-1} + w_t$ is an affine-Gaussian map: $G_t$ applied to a Gaussian random vector with independent Gaussian noise $w_t \sim \mathcal{N}(0, W_t)$ added. By the standard affine-transformation and addition rules for Gaussians, the one-step-ahead prior is
+*Predict.* The evolution equation $\theta_t = G_t \theta_{t-1} + w_t$ is an affine-Gaussian map: $G_t$ applied to a Gaussian random vector with independent Gaussian noise $w_t \sim \mathcal{N}(0, W_t)$ added. By the standard affine-transformation and addition rules for Gaussians, the one-step-ahead prior is
 
 $$
 \theta_t \mid y_{1:t-1} \sim \mathcal{N}(a_t,\, R_t), \qquad a_t = G_t m_{t-1}, \quad R_t = G_t C_{t-1} G_t^\top + W_t.
 $$
 
-**Joint of state and next observation.** Since $y_t = F_t^\top \theta_t + v_t$ is affine-Gaussian in $\theta_t$ and $v_t \sim \mathcal{N}(0, V_t)$ is independent of $\theta_t \mid y_{1:t-1}$, the pair $(\theta_t, y_t)$ given $y_{1:t-1}$ is jointly Gaussian. Compute each block of the joint covariance:
+*Joint of state and next observation.* Since $y_t = F_t^\top \theta_t + v_t$ is affine-Gaussian in $\theta_t$ and $v_t \sim \mathcal{N}(0, V_t)$ is independent of $\theta_t \mid y_{1:t-1}$, the pair $(\theta_t, y_t)$ given $y_{1:t-1}$ is jointly Gaussian. Compute each block of the joint covariance:
 
 $$
 \begin{aligned}
@@ -121,7 +121,7 @@ $$
 \begin{bmatrix} \theta_t \\ y_t \end{bmatrix} \Bigm| y_{1:t-1} \sim \mathcal{N}\!\left( \begin{bmatrix} a_t \\ f_t \end{bmatrix},\ \begin{bmatrix} R_t & R_t F_t \\ F_t^\top R_t & Q_t \end{bmatrix} \right).
 $$
 
-**Update by Gaussian conditioning.** Apply the conditional-Gaussian formula (Chapters 3 and 5): for a joint Gaussian with blocks $\Sigma_{uu}$, $\Sigma_{uz}$, $\Sigma_{zz}$, the conditional distribution of $u$ given $z$ has mean $\mu_u + \Sigma_{uz} \Sigma_{zz}^{-1}(z - \mu_z)$ and covariance $\Sigma_{uu} - \Sigma_{uz} \Sigma_{zz}^{-1} \Sigma_{zu}$. Identifying $u = \theta_t$, $z = y_t$, $\Sigma_{uz} = R_t F_t$, $\Sigma_{zz} = Q_t$:
+*Update by Gaussian conditioning.* Apply the conditional-Gaussian formula (Chapters 3 and 5): for a joint Gaussian with blocks $\Sigma_{uu}$, $\Sigma_{uz}$, $\Sigma_{zz}$, the conditional distribution of $u$ given $z$ has mean $\mu_u + \Sigma_{uz} \Sigma_{zz}^{-1}(z - \mu_z)$ and covariance $\Sigma_{uu} - \Sigma_{uz} \Sigma_{zz}^{-1} \Sigma_{zu}$. Identifying $u = \theta_t$, $z = y_t$, $\Sigma_{uz} = R_t F_t$, $\Sigma_{zz} = Q_t$:
 
 $$
 m_t = a_t + A_t (y_t - f_t), \qquad C_t = R_t - A_t Q_t A_t^\top, \qquad A_t = R_t F_t Q_t^{-1}.
@@ -178,13 +178,13 @@ Inside the Gibbs loop, FFBS and the conjugate variance updates alternate. Each f
 
 **Proof.**
 
-**Factorization via the Markov property.** The state sequence $\theta_{0:T}$ satisfies the Markov property: $\theta_t$ depends on the past only through $\theta_{t-1}$, and on the observations only through the observations available at time $t$ and the future states. Precisely, given $\theta_{t+1}$, the state $\theta_t$ is conditionally independent of the future data $y_{t+1:T}$, because those observations influence $\theta_t$ only through the chain $\theta_t \to \theta_{t+1} \to \cdots$, which is blocked by conditioning on $\theta_{t+1}$. Applying this to the joint smoothing posterior by the chain rule of probability:
+*Factorization via the Markov property.* The state sequence $\theta_{0:T}$ satisfies the Markov property: $\theta_t$ depends on the past only through $\theta_{t-1}$, and on the observations only through the observations available at time $t$ and the future states. Precisely, given $\theta_{t+1}$, the state $\theta_t$ is conditionally independent of the future data $y_{t+1:T}$, because those observations influence $\theta_t$ only through the chain $\theta_t \to \theta_{t+1} \to \cdots$, which is blocked by conditioning on $\theta_{t+1}$. Applying this to the joint smoothing posterior by the chain rule of probability:
 
 $$
 p(\theta_{0:T} \mid y_{1:T}) = p(\theta_T \mid y_{1:T}) \prod_{t=0}^{T-1} p(\theta_t \mid \theta_{t+1},\, y_{1:t}).
 $$
 
-**Each factor is Gaussian.** The terminal factor $p(\theta_T \mid y_{1:T}) = \mathcal{N}(m_T, C_T)$ is the final filtered posterior, produced by the Kalman forward pass (Proof P1). Each backward factor $p(\theta_t \mid \theta_{t+1}, y_{1:t})$ is a Gaussian conditioning problem: starting from the filtered distribution $\theta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$ and the evolution link $\theta_{t+1} = G_{t+1} \theta_t + w_{t+1}$, the pair $(\theta_t, \theta_{t+1})$ given $y_{1:t}$ is jointly Gaussian with
+*Each factor is Gaussian.* The terminal factor $p(\theta_T \mid y_{1:T}) = \mathcal{N}(m_T, C_T)$ is the final filtered posterior, produced by the Kalman forward pass (Proof P1). Each backward factor $p(\theta_t \mid \theta_{t+1}, y_{1:t})$ is a Gaussian conditioning problem: starting from the filtered distribution $\theta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$ and the evolution link $\theta_{t+1} = G_{t+1} \theta_t + w_{t+1}$, the pair $(\theta_t, \theta_{t+1})$ given $y_{1:t}$ is jointly Gaussian with
 
 $$
 \begin{aligned}
@@ -200,7 +200,7 @@ $$
 \theta_t \mid \theta_{t+1}, y_{1:t} \sim \mathcal{N}\!\left(m_t + B_t(\theta_{t+1} - a_{t+1}),\; C_t - B_t R_{t+1} B_t^\top\right), \quad B_t = C_t G_{t+1}^\top R_{t+1}^{-1}.
 $$
 
-**Conclusion.** The joint smoothing posterior factors into a product of Gaussians, each computable from the stored Kalman filter quantities. Drawing $\theta_T \sim \mathcal{N}(m_T, C_T)$ and then each $\theta_t$ backward from its Gaussian conditional, using the already-drawn $\theta_{t+1}$, samples exactly from the factored joint, which equals $p(\theta_{0:T} \mid y_{1:T})$. $\blacksquare$
+*Conclusion.* The joint smoothing posterior factors into a product of Gaussians, each computable from the stored Kalman filter quantities. Drawing $\theta_T \sim \mathcal{N}(m_T, C_T)$ and then each $\theta_t$ backward from its Gaussian conditional, using the already-drawn $\theta_{t+1}$, samples exactly from the factored joint, which equals $p(\theta_{0:T} \mid y_{1:T})$. $\blacksquare$
 
 ### Rung 6 — The conjugacy-vs-MCMC boundary
 
@@ -212,7 +212,7 @@ Proofs P1 and P2 together establish the DLM's central lesson. With variances $V$
 
 **Proof.**
 
-**Part 1 — Known $(V, W)$.** By Proof P1, $\theta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$ at every $t$, with recursions that are finite compositions of affine-Gaussian operations on a starting Gaussian — exact and closed-form. The marginal likelihood $p(y_{1:T})$ factors through the one-step-ahead predictive distributions via the **prediction-error (innovations) decomposition**:
+*Part 1 — Known $(V, W)$.* By Proof P1, $\theta_t \mid y_{1:t} \sim \mathcal{N}(m_t, C_t)$ at every $t$, with recursions that are finite compositions of affine-Gaussian operations on a starting Gaussian — exact and closed-form. The marginal likelihood $p(y_{1:T})$ factors through the one-step-ahead predictive distributions via the **prediction-error (innovations) decomposition**:
 
 $$
 p(y_{1:T}) = \prod_{t=1}^{T} p(y_t \mid y_{1:t-1}) = \prod_{t=1}^{T} \mathcal{N}(y_t;\, f_t,\, Q_t),
@@ -220,7 +220,7 @@ $$
 
 since each $y_t \mid y_{1:t-1}$ is the Gaussian forecast produced by the filter with mean $f_t = F_t^\top a_t$ and variance $Q_t = F_t^\top R_t F_t + V$. The product of Gaussian densities evaluated at the observed data is a closed-form function of $(V, W)$ — it can be maximized directly (classical maximum-likelihood estimation of the variance parameters, no sampling required).
 
-**Part 2 — Unknown $(V, W)$.** Place prior distributions on $(V, W)$ — for concreteness, conjugate inverse-gamma priors. The joint posterior is
+*Part 2 — Unknown $(V, W)$.* Place prior distributions on $(V, W)$ — for concreteness, conjugate inverse-gamma priors. The joint posterior is
 
 $$
 p(\theta_{0:T}, V, W \mid y_{1:T}) \;\propto\; p(V)\,p(W)\,p(\theta_0)\prod_{t=1}^{T} p(y_t \mid \theta_t, V)\,p(\theta_t \mid \theta_{t-1}, W).

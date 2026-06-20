@@ -76,7 +76,7 @@ is nonsingular.
 
 **Proof.** We work through four steps: derive the Fisher information for this model; show that singularity of $I(\theta_0)$ is equivalent to the existence of a direction along which the likelihood is flat; apply that equivalence to the MMM mean function; and read off the answer to Chapter 15's open question.
 
-**Step 1 — Deriving the Fisher information.** The joint log-likelihood, under independence across $t$, is
+*Step 1 — Deriving the Fisher information.* The joint log-likelihood, under independence across $t$, is
 
 $$
 \ell(\theta) = -\frac{1}{2\sigma^2}\sum_{t=1}^{T}\big(y_t - \mu_t(\theta)\big)^2 + \text{const}.
@@ -102,7 +102,7 @@ $$
 
 This is a sum of rank-one outer products; its rank equals the dimension of the span of $\{\nabla_\theta\mu_t(\theta)\}_{t=1}^T$.
 
-**Step 2 — Singular $I(\theta_0)$ if and only if a likelihood-flat direction exists.** Suppose $I(\theta_0)$ is singular. Choose a nonzero vector $d$ in its null space, so $I(\theta_0)\,d = 0$. Then
+*Step 2 — Singular $I(\theta_0)$ if and only if a likelihood-flat direction exists.* Suppose $I(\theta_0)$ is singular. Choose a nonzero vector $d$ in its null space, so $I(\theta_0)\,d = 0$. Then
 
 $$
 0 = d^\top I(\theta_0)\, d = \frac{1}{\sigma^2}\sum_{t=1}^{T}\big(\nabla_\theta\mu_t(\theta_0)^\top d\big)^2.
@@ -110,7 +110,7 @@ $$
 
 This is a sum of non-negative squares equal to zero, so each term must vanish: $\nabla_\theta\mu_t(\theta_0)^\top d = 0$ for every $t = 1, \ldots, T$. By the chain rule, displacing $\theta$ from $\theta_0$ by a small step $\epsilon d$ changes each mean function to first order by $\mu_t(\theta_0 + \epsilon d) = \mu_t(\theta_0) + \epsilon\,\nabla_\theta\mu_t(\theta_0)^\top d + O(\epsilon^2) = \mu_t(\theta_0) + O(\epsilon^2)$. The mean trajectory is therefore unchanged to first order, the log-likelihood is unchanged to first order, and the direction $d$ is a **likelihood-flat direction** at $\theta_0$: moving along $d$ leaves the data distribution unaltered, so $\theta_0$ is not locally identified. Conversely, if $I(\theta_0)$ is nonsingular, its null space is trivial and no such direction $d$ exists. For every nonzero $d$, the quadratic form $d^\top I(\theta_0)\, d > 0$, which means at least one term $(\nabla_\theta\mu_t^\top d)^2 > 0$: some mean $\mu_t$ is sensitive to displacement along $d$. The log-likelihood is therefore strictly curved in every direction at $\theta_0$, and $\theta_0$ is locally identified.
 
-**Step 3 — Application to the MMM.** The mean function $\mu_t(\theta) = \text{baseline}_t + \sum_i \beta_i\, g(a_\lambda(x_{i,t});\, K_i, n_i)$ passes spend through the adstock operator $a_\lambda$ and the Hill saturation $g$, so each component of $\nabla_\theta\mu_t$ depends on the operating point $x_t$ at time $t$. If all spend observations are confined to a single value $x_0$ — so that $x_t = x_0$ for all $t$ — then every gradient $\nabla_\theta\mu_t$ equals the same vector $v = \nabla_\theta\mu(\theta_0;\, x_0)$. The information matrix collapses to
+*Step 3 — Application to the MMM.* The mean function $\mu_t(\theta) = \text{baseline}_t + \sum_i \beta_i\, g(a_\lambda(x_{i,t});\, K_i, n_i)$ passes spend through the adstock operator $a_\lambda$ and the Hill saturation $g$, so each component of $\nabla_\theta\mu_t$ depends on the operating point $x_t$ at time $t$. If all spend observations are confined to a single value $x_0$ — so that $x_t = x_0$ for all $t$ — then every gradient $\nabla_\theta\mu_t$ equals the same vector $v = \nabla_\theta\mu(\theta_0;\, x_0)$. The information matrix collapses to
 
 $$
 I(\theta_0) = \frac{T}{\sigma^2}\, v\, v^\top,
@@ -120,7 +120,7 @@ which has rank $1 < \dim\theta$: it is singular. This is the information-matrix 
 
 When spend instead spans a range of operating points, the gradient vectors $\{\nabla_\theta\mu_t\}_{t=1}^T$ vary with $t$. If they collectively span the full parameter space $\mathbb{R}^{\dim\theta}$, then $I(\theta_0)$ has full rank by the outer-product construction in Step 1, and $\theta_0$ is locally identified.
 
-**Step 4 — Answering Chapter 15's open question.** Chapter 15 closed with the question: *how much spend variation is enough?* The Fisher information matrix gives a crisp answer. Spend variation is sufficient for local identifiability if and only if the resulting gradient vectors $\{\nabla_\theta\mu_t(\theta_0)\}_{t=1}^T$ span the parameter space — equivalently, if $I(\theta_0)$ is nonsingular. For the two-parameter slice $(\beta, K)$ of the worked example to follow, this means at least two time points whose spending levels produce non-parallel gradient vectors: two distinct operating points on the Hill curve whose tangent directions in $(\beta, K)$-space are linearly independent. One operating point is always insufficient, because it yields a rank-one $I(\theta_0)$; two generic operating points generically suffice. $\blacksquare$
+*Step 4 — Answering Chapter 15's open question.* Chapter 15 closed with the question: *how much spend variation is enough?* The Fisher information matrix gives a crisp answer. Spend variation is sufficient for local identifiability if and only if the resulting gradient vectors $\{\nabla_\theta\mu_t(\theta_0)\}_{t=1}^T$ span the parameter space — equivalently, if $I(\theta_0)$ is nonsingular. For the two-parameter slice $(\beta, K)$ of the worked example to follow, this means at least two time points whose spending levels produce non-parallel gradient vectors: two distinct operating points on the Hill curve whose tangent directions in $(\beta, K)$-space are linearly independent. One operating point is always insufficient, because it yields a rank-one $I(\theta_0)$; two generic operating points generically suffice. $\blacksquare$
 
 ### Rung 4 — The fitting workflow
 
