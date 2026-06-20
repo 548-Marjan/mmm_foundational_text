@@ -3,7 +3,7 @@
 ::: {.content-hidden when-meta="show-solutions"}
 The worked solutions are kept as a separate **answer key** and are not printed in
 this edition of the book. Instructors and readers who would like the full answer
-key can request it by reaching out to [**548 Marjan**](https://548marjan.com).
+key can request it by reaching out to [**548 Marjan**](https://www.548marjan.com).
 
 Try each exercise fully before consulting the answer key.
 
