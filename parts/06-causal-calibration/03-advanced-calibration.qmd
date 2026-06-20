@@ -118,7 +118,14 @@ $$
 with calibration precision $1/s^2 = 1/0.04 = 25$. Applying the Rung 2 rank-one update with $c = 1$ (since $g(\theta) = \theta$ is already linear in $\theta$ with coefficient $1$): the posterior precision is $4 + 25 = 29$, the posterior variance is $1/29 \approx 0.0345$, and the posterior standard deviation is $1/\sqrt{29} \approx 0.186$. The posterior mean is:
 
 $$
-m_{\text{post}} = \frac{m_{\text{obs}}/\sigma_{\text{obs}}^2 + \hat\Delta/s^2}{1/\sigma_{\text{obs}}^2 + 1/s^2} = \frac{2/0.25 + 2/0.04}{29} = \frac{8 + 50}{29} = \frac{58}{29} = 2.0 .
+\begin{aligned}
+m_{\text{post}}
+&= \frac{m_{\text{obs}}/\sigma_{\text{obs}}^2 + \hat\Delta/s^2}{1/\sigma_{\text{obs}}^2 + 1/s^2} \\[6pt]
+&= \frac{2/0.25 + 2/0.04}{29}
+ = \frac{8 + 50}{29}
+ = \frac{58}{29}
+ = 2.0 .
+\end{aligned}
 $$
 
 The lift experiment pins the scale: the posterior mean remains at the truth $\theta = 2$ (the prior and calibration factor agree), while the standard deviation tightens from $0.5$ to $0.186$ — a factor of $2.7$ reduction. The fitted curve $S(x;\theta)$ and its marginal return $S'(x;\theta) = \theta/(2\sqrt{x})$ both tighten with $\theta$: the optimizer's inputs, which depend on $S'$, inherit the precision gain directly. What had been a diffuse posterior over possible marginal returns — wide enough to send the optimizer to materially different allocations — collapses around the calibrated value.
