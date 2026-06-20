@@ -63,22 +63,29 @@ The Gaussian two-level model of Rung 1 is exactly the Gaussian conjugate setup o
 **Theorem (partial-pooling shrinkage).** For the Gaussian hierarchical model with known $\sigma^2$, $\mu$, and $\tau^2$, where $\bar y_g \mid \theta_g \sim \mathcal{N}(\theta_g, \sigma^2/n_g)$ and $\theta_g \sim \mathcal{N}(\mu, \tau^2)$, the posterior mean of $\theta_g$ is
 
 $$
-\hat\theta_g \;=\; \lambda_g\,\bar y_g + (1 - \lambda_g)\,\mu, \qquad \lambda_g \;=\; \frac{n_g/\sigma^2}{n_g/\sigma^2 + 1/\tau^2}.
+\begin{aligned}
+\hat\theta_g &\;=\; \lambda_g\,\bar y_g + (1 - \lambda_g)\,\mu, \\[6pt]
+\lambda_g    &\;=\; \frac{n_g/\sigma^2}{n_g/\sigma^2 + 1/\tau^2}.
+\end{aligned}
 $$
 
-**Proof.** Apply Chapter 5 Rung 3 with prior mean $\mu_0 = \mu$, prior variance $\tau^2$, and data precision $n_g/\sigma^2$ (the contribution of $n_g$ observations each with variance $\sigma^2$, so the sufficient statistic $\bar y_g$ carries precision $n_g/\sigma^2$). By "precisions add," the posterior mean of $\theta_g$ is the precision-weighted average
+**Proof.** Write $a_g = n_g/\sigma^2$ for the data precision and $b = 1/\tau^2$ for the prior precision. Apply Chapter 5 Rung 3 with prior mean $\mu_0 = \mu$ (the contribution of $n_g$ observations each with variance $\sigma^2$ is that the sufficient statistic $\bar y_g$ carries precision $a_g$). By "precisions add," the posterior mean of $\theta_g$ is the precision-weighted average
 
 $$
-\hat\theta_g \;=\; \frac{(n_g/\sigma^2)\,\bar y_g + (1/\tau^2)\,\mu}{n_g/\sigma^2 + 1/\tau^2}.
+\hat\theta_g \;=\; \frac{a_g\,\bar y_g + b\,\mu}{a_g + b}.
 $$
 
-Define $\lambda_g = (n_g/\sigma^2)/(n_g/\sigma^2 + 1/\tau^2)$, so that $1 - \lambda_g = (1/\tau^2)/(n_g/\sigma^2 + 1/\tau^2)$. Multiplying through identifies the two terms in the numerator as $\lambda_g(n_g/\sigma^2 + 1/\tau^2)\bar y_g$ and $(1-\lambda_g)(n_g/\sigma^2 + 1/\tau^2)\mu$; dividing by the common denominator gives
+Now set $\lambda_g = \dfrac{a_g}{a_g + b}$, so that $1 - \lambda_g = \dfrac{b}{a_g + b}$. Splitting the single fraction into its two terms,
 
 $$
-\hat\theta_g \;=\; \lambda_g\,\bar y_g + (1 - \lambda_g)\,\mu.
+\begin{aligned}
+\hat\theta_g
+&\;=\; \frac{a_g}{a_g + b}\,\bar y_g \;+\; \frac{b}{a_g + b}\,\mu \\[6pt]
+&\;=\; \lambda_g\,\bar y_g + (1 - \lambda_g)\,\mu.
+\end{aligned}
 $$
 
-$\blacksquare$
+Restoring $a_g = n_g/\sigma^2$ and $b = 1/\tau^2$ gives the stated $\lambda_g$. $\qquad\blacksquare$
 
 The limits of $\lambda_g$ recover the Rung 1 stances exactly. As $n_g \to \infty$ the data precision dominates and $\lambda_g \to 1$, so $\hat\theta_g \to \bar y_g$ — no pooling, trust the local data. As $n_g \to 0$, or equivalently $\tau^2 \to 0$, the prior precision dominates and $\lambda_g \to 0$, so $\hat\theta_g \to \mu$ — complete pooling, trust the population mean. For finite $n_g$ and finite $\tau^2$, $\lambda_g \in (0, 1)$ and the posterior mean sits strictly between the local estimate and the grand mean. Every geography receives its own $\lambda_g$ determined by the ratio of its data precision to the prior precision — the formula answers "by exactly how much" in terms of quantities the data determine.
 
@@ -119,7 +126,12 @@ where $\nabla\!\cdot g = \sum_{i=1}^G \partial g_i/\partial z_i$. It suffices to
 *Computing $\lVert g(z)\rVert^2$.* Since $g(z) = -c\,z$ with scalar $c = (G-2)\sigma^2/\lVert z\rVert^2$,
 
 $$
-\lVert g(z)\rVert^2 \;=\; c^2\lVert z\rVert^2 \;=\; \frac{(G-2)^2\sigma^4}{\lVert z\rVert^4}\cdot\lVert z\rVert^2 \;=\; \frac{(G-2)^2\sigma^4}{\lVert z\rVert^2}.
+\begin{aligned}
+\lVert g(z)\rVert^2
+&\;=\; c^2\lVert z\rVert^2 \\[4pt]
+&\;=\; \frac{(G-2)^2\sigma^4}{\lVert z\rVert^4}\cdot\lVert z\rVert^2 \\[4pt]
+&\;=\; \frac{(G-2)^2\sigma^4}{\lVert z\rVert^2}.
+\end{aligned}
 $$
 
 *Computing $\nabla\!\cdot g$.* Differentiating $g_i(z) = -(G-2)\sigma^2\,z_i/\lVert z\rVert^2$ with respect to $z_i$ gives
@@ -131,13 +143,22 @@ $$
 Summing over all $i$ and using $\sum_i z_i^2 = \lVert z\rVert^2$:
 
 $$
-\nabla\!\cdot g \;=\; -(G-2)\sigma^2\!\left(\frac{G}{\lVert z\rVert^2} - \frac{2\lVert z\rVert^2}{\lVert z\rVert^4}\right) \;=\; -(G-2)\sigma^2\cdot\frac{G-2}{\lVert z\rVert^2} \;=\; -\frac{(G-2)^2\sigma^2}{\lVert z\rVert^2}.
+\begin{aligned}
+\nabla\!\cdot g
+&\;=\; -(G-2)\sigma^2\!\left(\frac{G}{\lVert z\rVert^2} - \frac{2\lVert z\rVert^2}{\lVert z\rVert^4}\right) \\[4pt]
+&\;=\; -(G-2)\sigma^2\cdot\frac{G-2}{\lVert z\rVert^2} \\[4pt]
+&\;=\; -\frac{(G-2)^2\sigma^2}{\lVert z\rVert^2}.
+\end{aligned}
 $$
 
 *Combining.* Substituting both pieces into the SURE expression:
 
 $$
-2\sigma^2\,\nabla\!\cdot g + \lVert g\rVert^2 \;=\; -\frac{2(G-2)^2\sigma^4}{\lVert z\rVert^2} + \frac{(G-2)^2\sigma^4}{\lVert z\rVert^2} \;=\; -\frac{(G-2)^2\sigma^4}{\lVert z\rVert^2}.
+\begin{aligned}
+2\sigma^2\,\nabla\!\cdot g + \lVert g\rVert^2
+&\;=\; -\frac{2(G-2)^2\sigma^4}{\lVert z\rVert^2} + \frac{(G-2)^2\sigma^4}{\lVert z\rVert^2} \\[4pt]
+&\;=\; -\frac{(G-2)^2\sigma^4}{\lVert z\rVert^2}.
+\end{aligned}
 $$
 
 Therefore
