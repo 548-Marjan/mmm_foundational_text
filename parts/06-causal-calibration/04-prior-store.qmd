@@ -26,7 +26,17 @@ $$
 
 *so folding studies in one at a time — sequentially, as the store receives them — yields exactly the batch posterior that conditions on all $k$ experiments at once.*
 
-**Proof.** By induction on $k$. For the base case $k = 1$, the recursion gives $p_1 \propto p_0 L_1$, which is the product form. For the inductive step, assume $p_{k-1} \propto p_0 \prod_{j=1}^{k-1} L_j$; the recursion gives $p_k \propto p_{k-1} L_k \propto p_0 \prod_{j=1}^{k-1} L_j \cdot L_k = p_0 \prod_{j=1}^{k} L_j$, using associativity of multiplication. That the joint experimental likelihood factors as $\prod_j L_j$ is licensed by conditional independence of the experiments given $\theta$: each randomization is a separate data source, so conditioning on the parameters renders the experimental outcomes independent. $\blacksquare$
+**Proof.** By induction on $k$. For the base case $k = 1$, the recursion gives $p_1 \propto p_0 L_1$, which is the product form. For the inductive step, assume $p_{k-1} \propto p_0 \prod_{j=1}^{k-1} L_j$. The recursion then gives
+
+$$
+\begin{aligned}
+p_k &\propto p_{k-1} L_k                                && \text{(recursion)} \\
+    &\propto p_0 \prod_{j=1}^{k-1} L_j \cdot L_k        && \text{(inductive hypothesis)} \\
+    &= p_0 \prod_{j=1}^{k} L_j                          && \text{(associativity).}
+\end{aligned}
+$$
+
+That the joint experimental likelihood factors as $\prod_j L_j$ is licensed by conditional independence of the experiments given $\theta$: each randomization is a separate data source, so conditioning on the parameters renders the experimental outcomes independent. $\blacksquare$
 
 This is the **correctness guarantee** of an incremental store. Because multiplication commutes and associates, the order in which studies are appended does not change the posterior, and a study can be folded in without re-fitting the model from scratch. The MMM reading is operational: the store is an append-only ledger of likelihood factors, and the live posterior is their product, recomputable at any time by replaying the ledger.
 
@@ -64,7 +74,11 @@ the inequality holding in the Loewner (positive-semidefinite) order because each
 
 **Theorem (monotone EVPI decay and convergence).** *The Chapter 18 EVPI is an increasing function of the ridge-direction variance $\sigma_u^2 = u^\top \Sigma_k u$. Therefore $\mathrm{EVPI}_k$ is non-increasing in $k$; and if studies are repeatedly aimed at the ridge direction $u$ — so that the accumulated ridge precision $\Lambda_{0,u} + \sum_j w_j s_j^{-2} (u^\top c_j)^2 \to \infty$ — then $\sigma_u^2 \to 0$ and $\mathrm{EVPI}_k \to 0$.*
 
-**Proof.** The Lemma gives $\sigma_u^2 = u^\top \Sigma_k u$ non-increasing in $k$. The EVPI is monotone increasing in $\sigma_u^2$: the optimizer's-curse gap $\mathbb{E}[\max_b V] - \max_b \mathbb{E}[V]$ is driven by the spread of the optimal-allocation posterior, which is controlled by the contrast variance along the ridge; as $\sigma_u^2 \to 0$ the curve is pinned along $u$, the optimal-allocation posterior collapses to a point, and the gap closes to zero. Composing, $\mathrm{EVPI}_k$ is non-increasing. For the rate, take equal per-study ridge precision $\bar\kappa = w s^{-2} (u^\top c)^2$; the accumulated ridge precision is then $\Lambda_{0,u} + k\bar\kappa$, so $\sigma_u^2 = 1/(\Lambda_{0,u} + k\bar\kappa) = O(1/k)$ and hence $\mathrm{EVPI}_k = O(1/k) \to 0$. $\blacksquare$
+**Proof.** The Lemma gives $\sigma_u^2 = u^\top \Sigma_k u$ non-increasing in $k$. The EVPI is monotone increasing in $\sigma_u^2$: the optimizer's-curse gap $\mathbb{E}[\max_b V] - \max_b \mathbb{E}[V]$ is driven by the spread of the optimal-allocation posterior, which is controlled by the contrast variance along the ridge; as $\sigma_u^2 \to 0$ the curve is pinned along $u$, the optimal-allocation posterior collapses to a point, and the gap closes to zero. Composing, $\mathrm{EVPI}_k$ is non-increasing. For the rate, take equal per-study ridge precision $\bar\kappa = w s^{-2} (u^\top c)^2$; the accumulated ridge precision is then $\Lambda_{0,u} + k\bar\kappa$, so
+
+$$
+\sigma_u^2 = \frac{1}{\Lambda_{0,u} + k\bar\kappa} = O(1/k) \quad\Longrightarrow\quad \mathrm{EVPI}_k = O(1/k) \to 0. \qquad\blacksquare
+$$
 
 This is the loop closing. Chapter 21 showed one experiment shrinks the EVPI; here the accumulating store drives it to zero. The wound named in Chapter 18 — the optimizer commits to a confidently-wrong allocation because the curve is unidentified along the ridge — and shown structural in Chapter 19 is not merely reduced but eliminated in the limit, provided the store keeps acquiring evidence in the flat direction. The convergence is deterministic in the Gaussian-conjugate setting because precision adds; in a general nonlinear posterior the same statement holds in expectation, since a surprising study can transiently widen the posterior in some direction even as information accrues on average.
 

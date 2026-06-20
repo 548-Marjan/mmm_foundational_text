@@ -72,7 +72,16 @@ $$
 \frac{1}{2}\!\left(\frac{S(x{+}\delta)-S(x)}{\delta}+\frac{S(x)-S(x{-}\delta)}{\delta}\right)=S'(x)+O(\delta^2) .
 $$
 
-**Proof.** The first display is Taylor's theorem with Lagrange remainder: $S(x+\delta) = S(x) + \delta S'(x) + \tfrac{\delta^2}{2}S''(\xi)$ for some $\xi \in (x, x+\delta)$; rearranging gives the stated identity. For the corollary, expand both one-sided secants to third order: $S(x \pm \delta) = S(x) \pm \delta S'(x) + \tfrac{\delta^2}{2}S''(x) \pm \tfrac{\delta^3}{6}S'''(x) + O(\delta^4)$. The forward secant is $[S(x+\delta)-S(x)]/\delta = S'(x) + \tfrac{\delta}{2}S''(x) + O(\delta^2)$ and the backward secant is $[S(x)-S(x-\delta)]/\delta = S'(x) - \tfrac{\delta}{2}S''(x) + O(\delta^2)$. Their average is $S'(x) + O(\delta^2)$: the first-order curvature terms $\pm\tfrac{\delta}{2}S''(x)$ cancel by sign symmetry, leaving only the $O(\delta^2)$ residual. $\blacksquare$
+**Proof.** The first display is Taylor's theorem with Lagrange remainder: $S(x+\delta) = S(x) + \delta S'(x) + \tfrac{\delta^2}{2}S''(\xi)$ for some $\xi \in (x, x+\delta)$; rearranging gives the stated identity. For the corollary, expand both one-sided secants to third order: $S(x \pm \delta) = S(x) \pm \delta S'(x) + \tfrac{\delta^2}{2}S''(x) \pm \tfrac{\delta^3}{6}S'''(x) + O(\delta^4)$. The forward and backward one-sided secants are then
+
+$$
+\begin{aligned}
+\frac{S(x+\delta)-S(x)}{\delta} &= S'(x) + \tfrac{\delta}{2}S''(x) + O(\delta^2), \\
+\frac{S(x)-S(x-\delta)}{\delta} &= S'(x) - \tfrac{\delta}{2}S''(x) + O(\delta^2),
+\end{aligned}
+$$
+
+and their average is $S'(x) + O(\delta^2)$: the first-order curvature terms $\pm\tfrac{\delta}{2}S''(x)$ cancel by sign symmetry, leaving only the $O(\delta^2)$ residual. $\blacksquare$
 
 **Anchors.** For $S = 2\sqrt{x}$, $x = 4$, $\delta = 5$: secant $[S(9)-S(4)]/5 = 2/5 = 0.4$; tangent $S'(4) = 0.5$; gap $0.4 - 0.5 = -0.1$. The curvature correction satisfies $S''(\xi)\cdot\delta/2 = -0.1$, giving $S''(\xi) = -0.04$; solving $S''(\xi) = -1/(2\xi^{3/2}) = -0.04$ yields $\xi \approx 5.39 \in (4, 9)$, confirming the Lagrange remainder. For the paired bracketing about $x = 9$, $\delta = 4$: the up-secant $[S(13)-S(9)]/4 = (2\sqrt{13}-6)/4 \approx 0.303$, the down-secant $[S(9)-S(5)]/4 = (6-2\sqrt{5})/4 \approx 0.382$, their average $\approx 0.342$ against the tangent $S'(9) = 1/3 \approx 0.333$. Each individual secant is off by approximately $0.04$; the average is off by only $0.009$, demonstrating the second-order accuracy gain from the symmetric design.
 
