@@ -93,13 +93,21 @@ $$
 Set $a = \pi(x)\,q(y\mid x)$ and $b = \pi(y)\,q(x\mid y)$. Then
 
 $$
-\pi(x)\,P(x,y) = \pi(x)\,q(y\mid x)\,\min\!\left(1,\frac{\pi(y)\,q(x\mid y)}{\pi(x)\,q(y\mid x)}\right) = \min\!\bigl(\pi(x)\,q(y\mid x),\;\pi(y)\,q(x\mid y)\bigr).
+\begin{aligned}
+\pi(x)\,P(x,y)
+&= \pi(x)\,q(y\mid x)\,\min\!\left(1,\frac{\pi(y)\,q(x\mid y)}{\pi(x)\,q(y\mid x)}\right) \\[6pt]
+&= \min\!\bigl(\pi(x)\,q(y\mid x),\;\pi(y)\,q(x\mid y)\bigr).
+\end{aligned}
 $$
 
 The right-hand side is **symmetric in $x$ and $y$**: swapping $x \leftrightarrow y$ leaves $\min(a,b)$ unchanged. Performing the identical computation starting from $\pi(y)P(y,x)$,
 
 $$
-\pi(y)\,P(y,x) = \pi(y)\,q(x\mid y)\,\min\!\left(1,\frac{\pi(x)\,q(y\mid x)}{\pi(y)\,q(x\mid y)}\right) = \min\!\bigl(\pi(y)\,q(x\mid y),\;\pi(x)\,q(y\mid x)\bigr),
+\begin{aligned}
+\pi(y)\,P(y,x)
+&= \pi(y)\,q(x\mid y)\,\min\!\left(1,\frac{\pi(x)\,q(y\mid x)}{\pi(y)\,q(x\mid y)}\right) \\[6pt]
+&= \min\!\bigl(\pi(y)\,q(x\mid y),\;\pi(x)\,q(y\mid x)\bigr),
+\end{aligned}
 $$
 
 which is the identical quantity. Therefore $\pi(x)P(x,y) = \pi(y)P(y,x)$ for all $x \ne y$; the diagonal term satisfies detailed balance trivially ($\pi(x)P(x,x) = \pi(x)P(x,x)$). By Chapter 8's detailed-balance-implies-stationarity theorem, $\pi$ is stationary. $\blacksquare$
