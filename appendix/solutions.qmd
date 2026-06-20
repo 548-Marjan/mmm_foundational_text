@@ -1,15 +1,14 @@
 # Solutions {#sec-solutions .unnumbered}
 
 ::: {.content-hidden when-meta="show-solutions"}
-Solutions are intentionally not included in the reader edition of this book.
-
-To build the edition that contains worked solutions, render with the flag:
-
-```bash
-quarto render --metadata show-solutions:true
-```
+The worked solutions are kept as a separate **answer key** and are not printed in
+this edition of the book. Instructors and readers who would like the full answer
+key can request it by reaching out to **548 Marjan**.
 
 Try each exercise fully before consulting the answer key.
+
+<!-- Author note: the answer-key edition is produced internally with
+     `quarto render --metadata show-solutions:true`. -->
 :::
 
 ::: {.content-visible when-meta="show-solutions"}
