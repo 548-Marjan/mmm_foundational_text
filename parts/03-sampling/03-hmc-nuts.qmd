@@ -186,7 +186,12 @@ One HMC step from the current position $q$ proceeds in three sub-steps.
 *(ii) Leapfrog proposal with Metropolis correction.* Let $T$ denote the deterministic map "run $L$ leapfrog steps from $(q, p)$, then negate the final momentum." By Rung 3, leapfrog is **volume-preserving** ($|\det \partial T| = 1$) and $T$ is an **involution** ($T \circ T = \mathrm{id}$): applying momentum negation after $L$ leapfrog steps and then running $L$ more leapfrog steps and negating again returns exactly to $(q, p)$, because leapfrog composed with momentum negation is time-reversible. Proposing $T(q, p) = (q^*, p^*)$ and accepting with the Metropolis–Hastings rule gives acceptance probability
 
 $$
-\alpha = \min\!\left(1,\; \frac{\pi(T(q,p))}{\pi(q,p)}\,\bigl|\det \partial T\bigr|\right) = \min\!\left(1,\; \frac{e^{-H(q^*, p^*)}}{e^{-H(q, p)}}\right) = \min\!\bigl(1,\, e^{-\Delta H}\bigr),
+\begin{aligned}
+\alpha
+&= \min\!\left(1,\; \frac{\pi(T(q,p))}{\pi(q,p)}\,\bigl|\det \partial T\bigr|\right) \\[6pt]
+&= \min\!\left(1,\; \frac{e^{-H(q^*, p^*)}}{e^{-H(q, p)}}\right)
+ = \min\!\bigl(1,\, e^{-\Delta H}\bigr),
+\end{aligned}
 $$
 
 with **no Jacobian factor** ($|\det \partial T| = 1$ drops out by volume preservation) and **no proposal-density ratio** (the proposal is deterministic and $T$ is an involution, so the forward proposal from $(q, p)$ and the reverse proposal from $(q^*, p^*)$ coincide). This kernel satisfies detailed balance with respect to $e^{-H}$ by Chapter 9's Metropolis–Hastings theorem. Since both sub-steps preserve $e^{-H}$, the $q$-marginal $\pi(q)$ is invariant under the full HMC step. $\blacksquare$
