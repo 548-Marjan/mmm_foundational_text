@@ -2,6 +2,7 @@ project:
   type: book
   resources:
     - CNAME
+    - og-card.png
 
 # Build with solutions:  quarto render --metadata show-solutions:true
 show-solutions: false
@@ -10,6 +11,11 @@ book:
   title: "The Mathematics and Engineering of Marketing Mix Modeling"
   site-url: https://book.548marjan.com
   subtitle: "A self-contained path from calculus, linear algebra, and calculus-based statistics to advanced MMM practice."
+  # Social preview card (Open Graph + Twitter) — shown when the site is shared.
+  image: og-card.png
+  open-graph: true
+  twitter-card:
+    card-style: summary_large_image
   author:
     name: "548 Marjan"
     url: https://www.548marjan.com
