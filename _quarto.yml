@@ -25,6 +25,7 @@ book:
   repo-actions: [issue]
   page-footer:
     left: "© 2026 [548 Marjan](https://www.548marjan.com). All rights reserved."
+    center: "[Privacy](/privacy.qmd)"
     right: "Built with [Quarto](https://quarto.org)."
   chapters:
     - index.qmd
@@ -77,6 +78,7 @@ book:
   appendices:
     - appendix/btvc-mechanics.qmd
     - appendix/solutions.qmd
+    - privacy.qmd
 
 bibliography: references.bib
 
@@ -90,6 +92,8 @@ format:
     toc: true
     number-sections: true
     html-math-method: katex
+    include-in-header:
+      - snitcher-head.html
   pdf:
     documentclass: scrreprt
     number-sections: true
