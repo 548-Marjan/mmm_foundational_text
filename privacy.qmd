@@ -1,0 +1,17 @@
+---
+title: "Privacy"
+---
+
+This textbook site (`book.548marjan.com`) is published by **548 Marjan LLC**. It is
+separate from the main site at 548marjan.com and its privacy policy.
+
+**Analytics and visitor identification.** When you read the book, our infrastructure
+receives limited technical information (such as your IP address, browser type, and
+pages viewed). We use a third-party service to identify the **company or
+organization** associated with a visitor's IP address, so we can understand which
+businesses find the material useful. This is company-level information derived from
+your IP address; **we do not use it to identify you personally by name**, and we do
+not build an advertising profile of you.
+
+**Questions or requests.** Email <james@548marjan.com> to ask about this notice or to
+request that we not associate your organization with your visits.
