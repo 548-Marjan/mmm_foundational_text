@@ -11,6 +11,8 @@ A private, personal Quarto book — a field guide to founder-led selling, synthe
 
 Plus a curated founder-led sales resource list and a weekly operating cadence.
 
+> **A pre-rendered PDF is committed at [`The-Selling-Playbook.pdf`](The-Selling-Playbook.pdf)** so you can read it straight from GitHub without building anything. Re-render it (see below) after editing any chapter to keep it current.
+
 ## This is not published online
 
 `sales/` is a **separate Quarto project** from the root MMM book (it has its own `_quarto.yml`). The root `quarto render` and the Render Book CI workflow do **not** descend into it, so this book is **never built in CI and never deployed to GitHub Pages**. The source is committed to the private repo; you render it locally when you want to read it.
