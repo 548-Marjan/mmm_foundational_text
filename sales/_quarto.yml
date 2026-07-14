@@ -36,3 +36,10 @@ format:
     toc: true
     toc-depth: 3
     number-sections: false
+  pdf:
+    documentclass: scrbook
+    toc: true
+    number-sections: false
+    colorlinks: true
+    geometry:
+      - margin=1in
