@@ -1,0 +1,38 @@
+# Standalone Quarto book — separate project from the root MMM book.
+# Because this directory has its own _quarto.yml, the root `quarto render`
+# and the Render Book CI workflow do NOT descend into it. This book is
+# built locally on demand and is never deployed to GitHub Pages.
+#
+# Build locally:   cd sales && quarto render
+# Preview live:    cd sales && quarto preview
+
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "The Selling Playbook"
+  subtitle: "A personal field guide to founder-led sales, synthesized from six books."
+  author: "JLH"
+  date: today
+  search: true
+  chapters:
+    - index.qmd
+    - chapters/00-cheatsheet.qmd
+    - part: "The Stage Playbook"
+      chapters:
+        - chapters/01-pipeline.qmd
+        - chapters/02-discovery.qmd
+        - chapters/03-demand.qmd
+        - chapters/04-psychology.qmd
+        - chapters/05-trusted-advisor.qmd
+        - chapters/06-closing-negotiation.qmd
+    - chapters/07-founder-resources.qmd
+    - chapters/08-operating-cadence.qmd
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: false

@@ -1,0 +1,36 @@
+# Create Demand Through Insight {#sec-demand}
+
+**Source: *The Challenger Sale*, Dixon & Adamson**
+
+## Core idea
+
+The research sorted reps into five profiles — Hard Worker, Relationship Builder, Lone Wolf, Reactive Problem Solver, and **Challenger**. In complex solution sales, Challengers dominate and pure Relationship Builders underperform. A Challenger wins by **Teach, Tailor, Take Control**:
+
+- **Teach** the customer something new and provocative about *their own business* — an insight they'd pay for even without buying from you.
+- **Tailor** that message to the specific stakeholder's economic drivers and KPIs.
+- **Take control** of the conversation — comfortable talking about money and comfortable with a little constructive tension.
+
+## Commercial Teaching — the six-step pitch that reframes
+
+1. **The Warmer** — open by showing you understand their world and their challenges (earn the right to teach). *Not* about you yet.
+2. **The Reframe** — deliver a surprising insight that recategorizes the problem. This is the hinge of the whole sale. ("The real issue isn't X, it's Y — and Y is costing you more than X ever did.")
+3. **Rational Drowning** — quantify it. Build the business case with data until the status quo feels genuinely uncomfortable.
+4. **Emotional Impact** — make them see *themselves* in the story. "This is you. This is what it's costing your team." Move it from abstract to personal.
+5. **A New Way** — describe the ideal solution *as a set of requirements*, before naming yourself. Get them nodding at the criteria.
+6. **Your Solution / Value Prop** — now show that you are uniquely best at delivering that new way. The insight must lead *back to your strength* — teaching that points anywhere is just charity.
+
+## Target the Mobilizer, not the Talker
+
+(From the follow-up work, *The Challenger Customer*.) In a group buying decision, build consensus through **Mobilizers** — Go-Getters, Teachers, and Skeptics who can drive change internally — rather than the friendly **Talkers** who give you great meetings and no traction.
+
+## The honest caution (why I keep this consultative)
+
+Challenger's "take control" can curdle into pushiness, and its insight-led opening can feel like a lecture if you haven't earned it. I use the *Teach* and *Reframe* — genuinely valuable to the buyer — but I ground the "control" in Khalsa's intent (see @sec-trusted-advisor): I'm assertive *on their behalf*, not to force my agenda. Insight that serves the buyer builds trust; insight deployed to trap them destroys it. When in doubt, err toward the trusted-advisor posture.
+
+## Founder tuning
+
+This is a founder's home turf. You have a point of view about the market — that *is* the reframe. The insight you built the company around is your commercial teaching pitch. Sharpen it into steps 1–6 and you have a demand-creation engine most reps can't replicate, because they don't actually believe anything. You do.
+
+## When it's going wrong
+
+Your "insight" is really just a feature list; the buyer already knew everything you "taught" them; you're creating tension without having earned credibility first.

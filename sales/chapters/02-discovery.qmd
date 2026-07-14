@@ -1,0 +1,36 @@
+# Run Discovery {#sec-discovery}
+
+**Source: *SPIN Selling*, Neil Rackham**
+
+## Core idea
+
+Based on research across ~35,000 sales calls: in *large, complex* sales, the seller who asks the right questions in the right order wins — and classic "always be closing" tactics actively *hurt*. Discovery isn't a phase before selling. In a complex sale, discovery *is* the selling.
+
+## The SPIN sequence
+
+Four question types, in order:
+
+1. **Situation questions** — facts about their current state ("What are you using now? How's the team structured?"). Necessary but *low value* and tiresome. Do your homework first so you ask few of these and only the ones you couldn't Google.
+2. **Problem questions** — probe difficulties and dissatisfactions ("Where does that process break down? What's frustrating about the current tool?"). These surface *implied needs* — hints of pain.
+3. **Implication questions** — the power move, and the hardest. Take a problem and expand its consequences until the buyer *feels its true size* ("So when that breaks, what does it cost you downstream? How does that affect the rest of the team / the quarter / the customer?"). Implication questions turn a small annoyance into an expensive, urgent problem — in the buyer's own words.
+4. **Need-payoff questions** — get the buyer to articulate the *value of solving it* ("If you could fix that, what would it be worth? How would that help?"). Now the buyer is selling themselves. This builds positive energy and pre-empts objections, because people don't argue with their own conclusions.
+
+## Implied vs. explicit needs
+
+An implied need is a complaint ("it's slow"). An explicit need is a stated want ("I need something faster"). In small sales, implied needs are enough to close. In large sales, you must *develop* implied needs into explicit ones — and Implication + Need-payoff questions are the machine that does it.
+
+## Features, Advantages, Benefits
+
+Features and advantages fall flat early. **Benefits** — capabilities tied to an *explicit need the buyer has already stated* — are what move large sales. This is why order matters: benefits only land after need-payoff.
+
+## The counterintuitive finding on closing
+
+Rackham's data showed that traditional closing techniques *reduce* success in large sales (they work only in small transactional ones). Instead of "closing," aim for an **Advance** — a concrete action that moves the deal forward (a scheduled next meeting with the economic buyer, a pilot, access to a stakeholder) — versus a **Continuation** (a vague "we'll be in touch") that is really a polite no.
+
+## Founder tuning
+
+Founders love their solution and reflexively demo too early. SPIN is the antidote: bite your tongue, and don't show the product until the buyer has articulated an explicit need it fills. Your product knowledge is a weapon *after* discovery, not a substitute for it.
+
+## When it's going wrong
+
+You're doing most of the talking; you demoed in the first ten minutes; the buyer is politely nodding but hasn't said out loud what the problem costs them.

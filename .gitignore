@@ -1,6 +1,10 @@
 # Quarto
 /.quarto/
 /_book/
+# Sales book (sales/) is a separate Quarto project; its build artifacts are
+# local-only and never deployed. Commit the source, ignore the render output.
+/sales/.quarto/
+/sales/_book/
 # Note: _freeze/ is intentionally committed so cached computation results
 # (e.g. MCMC sampling) are reused on render and in CI.
 *.tex
