@@ -52,12 +52,13 @@ jobs:
           echo "Render failed after 2 attempts."
           exit 1
 
-      - name: Upload book artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: book
-          path: _book/
-
+      # NOTE: deploy-pages@v4 fails with "Found 2 artifact(s)" + HTTP 422
+      # (Validation Failed) whenever the deploying run contains more than one
+      # artifact, and it cannot yet be pinned to a specific artifact id. So the
+      # run must upload EXACTLY ONE artifact — the Pages tarball below. The
+      # rendered book is still downloadable from that "github-pages" artifact
+      # (it contains the full _book/ tree), so a separate "book" upload is
+      # redundant; re-adding one would reintroduce the deploy failure.
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
