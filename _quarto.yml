@@ -2,7 +2,7 @@ project:
   type: book
   resources:
     - CNAME
-    - og-card.png
+    - og-card-navy.png
 
 # Build with solutions:  quarto render --metadata show-solutions:true
 show-solutions: false
@@ -12,12 +12,19 @@ book:
   site-url: https://book.548marjan.com
   subtitle: "A self-contained path from calculus, linear algebra, and calculus-based statistics to advanced MMM practice."
   # Social preview card (Open Graph + Twitter) — shown when the site is shared.
-  # og-card.png is GENERATED, not hand-made: `node scripts/make-graphics.mjs
-  # book-og-card` in the 548-marjan-site repo, which reads the firm's palette out
-  # of src/styles/tokens.css so this card cannot drift from the site. It is built
-  # there rather than here because that repo holds the fonts and the tokens; this
-  # one is Quarto and Python. Do not edit the PNG by hand — regenerate it.
-  image: og-card.png
+  # GENERATED, not hand-made: `node scripts/make-graphics.mjs book-og-card` in the
+  # 548-marjan-site repo, which reads the firm's palette out of src/styles/tokens.css
+  # so this card cannot drift from the site. It is built there rather than here
+  # because that repo holds the fonts and the tokens; this one is Quarto and Python.
+  # Do not edit the PNG by hand — regenerate it.
+  #
+  # The filename carries the colorway on purpose. LinkedIn (and Facebook, and Slack)
+  # cache the image BY URL, independently of the page metadata: replacing the bytes
+  # at a URL they have already fetched does nothing, and re-running the Post
+  # Inspector re-reads the page but still serves their stored copy. Only a new URL
+  # forces a re-fetch. So when the colorway changes, RENAME THIS FILE rather than
+  # overwriting it — otherwise the old card keeps appearing in shared links.
+  image: og-card-navy.png
   open-graph: true
   twitter-card:
     card-style: summary_large_image
