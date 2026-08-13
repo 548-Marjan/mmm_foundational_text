@@ -12,6 +12,11 @@ book:
   site-url: https://book.548marjan.com
   subtitle: "A self-contained path from calculus, linear algebra, and calculus-based statistics to advanced MMM practice."
   # Social preview card (Open Graph + Twitter) — shown when the site is shared.
+  # og-card.png is GENERATED, not hand-made: `node scripts/make-graphics.mjs
+  # book-og-card` in the 548-marjan-site repo, which reads the firm's palette out
+  # of src/styles/tokens.css so this card cannot drift from the site. It is built
+  # there rather than here because that repo holds the fonts and the tokens; this
+  # one is Quarto and Python. Do not edit the PNG by hand — regenerate it.
   image: og-card.png
   open-graph: true
   twitter-card:
